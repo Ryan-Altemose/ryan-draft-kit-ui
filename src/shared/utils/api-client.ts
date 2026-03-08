@@ -14,14 +14,28 @@ class ApiClient {
     this.apiKey = apiKey;
   }
 
-  private getHeaders(customHeaders?: HeadersInit): HeadersInit {
-    const headers: HeadersInit = {
+  private getHeaders(customHeaders?: HeadersInit): Record<string, string> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...customHeaders,
     };
 
     if (this.apiKey) {
       headers['x-api-key'] = this.apiKey;
+    }
+
+    // Merge custom headers
+    if (customHeaders) {
+      if (customHeaders instanceof Headers) {
+        customHeaders.forEach((value, key) => {
+          headers[key] = value;
+        });
+      } else if (Array.isArray(customHeaders)) {
+        customHeaders.forEach(([key, value]) => {
+          headers[key] = value;
+        });
+      } else {
+        Object.assign(headers, customHeaders);
+      }
     }
 
     return headers;
