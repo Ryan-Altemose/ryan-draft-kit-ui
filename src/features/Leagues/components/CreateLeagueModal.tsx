@@ -60,29 +60,40 @@ export default function CreateLeagueModal({
   onClose,
 }: CreateLeagueModalProps) {
   const createLeagueMutation = useCreateLeague();
-  const [leagueName, setLeagueName] = useState('');
-  const [teams, setTeams] = useState(12);
-  const [draftType, setDraftType] = useState<'auction'>('auction');
-  const [rosterSlots, setRosterSlots] =
-    useState<RosterSlots>(DEFAULT_ROSTER_SLOTS);
+  type LeagueForm = {
+    leagueName: string;
+    teams: number;
+    draftType: 'auction';
+    rosterSlots: RosterSlots;
+  };
+
+  const DEFAULT_FORM: LeagueForm = {
+    leagueName: '',
+    teams: 12,
+    draftType: 'auction',
+    rosterSlots: { ...DEFAULT_ROSTER_SLOTS },
+  };
+
+  const [form, setForm] = useState<LeagueForm>(DEFAULT_FORM);
 
   const canSubmit = useMemo(() => {
-    return leagueName.trim().length > 0 && teams > 1;
-  }, [leagueName, teams]);
+    return form.leagueName.trim().length > 0 && form.teams > 1;
+  }, [form.leagueName, form.teams]);
 
   function handleRosterSlotChange(position: keyof RosterSlots, value: string) {
     const parsed = Number.parseInt(value, 10);
-    setRosterSlots((prev) => ({
+
+    setForm((prev) => ({
       ...prev,
-      [position]: Number.isNaN(parsed) || parsed < 0 ? 0 : parsed,
+      rosterSlots: {
+        ...prev.rosterSlots,
+        [position]: Number.isNaN(parsed) || parsed < 0 ? 0 : parsed,
+      },
     }));
   }
 
   function resetForm() {
-    setLeagueName('');
-    setTeams(12);
-    setDraftType('auction');
-    setRosterSlots(DEFAULT_ROSTER_SLOTS);
+    setForm(DEFAULT_FORM);
   }
 
   function handleClose() {
@@ -95,15 +106,19 @@ export default function CreateLeagueModal({
     if (!canSubmit) return;
 
     const payload: CreateLeagueInput = {
-      name: leagueName.trim(),
-      teams,
-      draftType,
-      rosterSlots,
+      name: form.leagueName.trim(),
+      teams: form.teams,
+      draftType: form.draftType,
+      rosterSlots: form.rosterSlots,
     };
 
-    await createLeagueMutation.mutateAsync(payload);
-    resetForm();
-    handleClose();
+    try {
+      await createLeagueMutation.mutateAsync(payload);
+      resetForm();
+      handleClose();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   return (
@@ -115,33 +130,46 @@ export default function CreateLeagueModal({
         <ModalBody>
           <VStack spacing={4} align="stretch">
             <FormControl isRequired>
-              <FormLabel>League Name</FormLabel>
+              <FormLabel htmlFor="leagueName">League Name</FormLabel>
               <Input
+                id="leagueName"
                 placeholder="Enter league name"
-                value={leagueName}
-                onChange={(e) => setLeagueName(e.target.value)}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel># of Teams</FormLabel>
-              <Input
-                type="number"
-                min={2}
-                value={teams}
+                value={form.leagueName}
                 onChange={(e) =>
-                  setTeams(
-                    Math.max(2, Number.parseInt(e.target.value || '2', 10)),
-                  )
+                  setForm((prev) => ({ ...prev, leagueName: e.target.value }))
                 }
               />
             </FormControl>
 
             <FormControl isRequired>
-              <FormLabel>Draft Type</FormLabel>
+              <FormLabel htmlFor="teams"># of Teams</FormLabel>
+              <Input
+                id="teams"
+                type="number"
+                min={2}
+                value={form.teams}
+                onChange={(e) => {
+                  const value = Number.parseInt(e.target.value, 10);
+
+                  setForm((prev) => ({
+                    ...prev,
+                    teams: Number.isNaN(value) ? 2 : Math.max(2, value),
+                  }));
+                }}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel htmlFor="draftType">Draft Type</FormLabel>
               <Select
-                value={draftType}
-                onChange={(e) => setDraftType(e.target.value as 'auction')}
+                id="draftType"
+                value={form.draftType}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    draftType: e.target.value as 'auction',
+                  }))
+                }
               >
                 <option value="auction">Auction</option>
               </Select>
@@ -153,13 +181,18 @@ export default function CreateLeagueModal({
                 {ROSTER_POSITIONS.map((position) => (
                   <GridItem key={position}>
                     <FormControl>
-                      <FormLabel fontSize="sm" mb={1}>
+                      <FormLabel
+                        fontSize="sm"
+                        mb={1}
+                        htmlFor={`roster-${position}`}
+                      >
                         {position}
                       </FormLabel>
                       <Input
+                        id={`roster-${position}`}
                         type="number"
                         min={0}
-                        value={rosterSlots[position]}
+                        value={form.rosterSlots[position]}
                         onChange={(e) =>
                           handleRosterSlotChange(position, e.target.value)
                         }
