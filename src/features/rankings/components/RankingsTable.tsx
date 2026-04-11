@@ -48,7 +48,12 @@ type Player = {
   pitchHand?: string;
 };
 
-const DEPTH_CHART_STATUSES = ['starter', 'backup', 'reserve', 'minors'] as const;
+const DEPTH_CHART_STATUSES = [
+  'starter',
+  'backup',
+  'reserve',
+  'minors',
+] as const;
 
 const DEPTH_CHART_COLORS: Record<string, string> = {
   starter: 'green',
@@ -75,7 +80,9 @@ export default function RankingsTable() {
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedDepthStatuses, setSelectedDepthStatuses] = useState<string[]>([]);
+  const [selectedDepthStatuses, setSelectedDepthStatuses] = useState<string[]>(
+    [],
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);

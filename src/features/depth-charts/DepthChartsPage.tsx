@@ -15,12 +15,36 @@ import {
 import { apiClient } from '@/shared/utils/api-client';
 
 const TEAMS = [
-  'ARI', 'ATH', 'ATL', 'BAL', 'BOS',
-  'CHC', 'CIN', 'CLE', 'COL', 'CWS',
-  'DET', 'HOU', 'KC',  'LAA', 'LAD',
-  'MIA', 'MIL', 'MIN', 'NYM', 'NYY',
-  'PHI', 'PIT', 'SD',  'SEA', 'SF',
-  'STL', 'TB',  'TEX', 'TOR', 'WSH',
+  'ARI',
+  'ATH',
+  'ATL',
+  'BAL',
+  'BOS',
+  'CHC',
+  'CIN',
+  'CLE',
+  'COL',
+  'CWS',
+  'DET',
+  'HOU',
+  'KC',
+  'LAA',
+  'LAD',
+  'MIA',
+  'MIL',
+  'MIN',
+  'NYM',
+  'NYY',
+  'PHI',
+  'PIT',
+  'SD',
+  'SEA',
+  'SF',
+  'STL',
+  'TB',
+  'TEX',
+  'TOR',
+  'WSH',
 ];
 
 const POSITION_ORDER = ['C', '1B', '2B', '3B', 'SS', 'OF', 'DH', 'SP', 'RP'];
@@ -201,7 +225,11 @@ export default function DepthChartsPage() {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
           {POSITION_ORDER.map((pos) => (
-            <PositionGroup key={pos} position={pos} players={groups[pos] ?? []} />
+            <PositionGroup
+              key={pos}
+              position={pos}
+              players={groups[pos] ?? []}
+            />
           ))}
         </SimpleGrid>
       )}

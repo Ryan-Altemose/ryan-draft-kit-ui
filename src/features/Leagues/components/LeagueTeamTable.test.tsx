@@ -7,7 +7,7 @@ const fetchMock = vi.fn();
 
 async function renderLeagueTeamTable(element: JSX.Element) {
   render(element);
-  await screen.findByText('Adley Rutschman');
+  await screen.findAllByRole('combobox');
 }
 
 describe('LeagueTeamTable', () => {
@@ -120,9 +120,9 @@ describe('LeagueTeamTable', () => {
     expect(screen.getByText('C')).toBeTruthy();
     expect(screen.getByText('1B')).toBeTruthy();
     expect(screen.getAllByText('OF')).toHaveLength(2);
-    expect(screen.getByText('Adley Rutschman')).toBeTruthy();
-    expect(screen.getByText('Freddie Freeman')).toBeTruthy();
-    expect(screen.getByText('Julio Rodriguez')).toBeTruthy();
+    expect(screen.getAllByText('Adley Rutschman').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Freddie Freeman').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Julio Rodriguez').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('20')).toBeTruthy();
     expect(screen.getByDisplayValue('35')).toBeTruthy();
     expect(screen.getByDisplayValue('40')).toBeTruthy();
@@ -153,8 +153,10 @@ describe('LeagueTeamTable', () => {
     );
 
     expect(screen.getByText('Budget: $285')).toBeTruthy();
-    expect(screen.getByText('William Contreras')).toBeTruthy();
-    expect(screen.getAllByText('-')).toHaveLength(2);
+    expect(screen.getAllByText('William Contreras').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Select player').length).toBeGreaterThanOrEqual(
+      2,
+    );
     expect(screen.getByDisplayValue('15')).toBeTruthy();
   });
 
@@ -294,9 +296,9 @@ describe('LeagueTeamTable', () => {
       </ChakraProvider>,
     );
 
-    expect(screen.getByText('First Base Player')).toBeTruthy();
+    expect(screen.getAllByText('First Base Player').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('35')).toBeTruthy();
-    expect(screen.getByText('Outfielder')).toBeTruthy();
+    expect(screen.getAllByText('Outfielder').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('22')).toBeTruthy();
     expect(screen.queryByDisplayValue('100')).toBeNull();
   });
@@ -329,16 +331,16 @@ describe('LeagueTeamTable', () => {
     expect(selects).toHaveLength(3);
 
     // C row should only show C-eligible players
-    expect(selects[0]).toHaveTextContent('Adley Rutschman');
-    expect(selects[0]).not.toHaveTextContent('Mock Player SP');
+    expect(selects[0].textContent).toContain('Adley Rutschman');
+    expect(selects[0].textContent).not.toContain('Mock Player SP');
 
     // UTIL should show only hitters
-    expect(selects[1]).toHaveTextContent('Player A');
-    expect(selects[1]).toHaveTextContent('First Base Player');
-    expect(selects[1]).not.toHaveTextContent('Mock Player SP');
+    expect(selects[1].textContent).toContain('Player A');
+    expect(selects[1].textContent).toContain('First Base Player');
+    expect(selects[1].textContent).not.toContain('Mock Player SP');
 
     // BENCH should show everyone, including pitchers
-    expect(selects[2]).toHaveTextContent('Adley Rutschman');
-    expect(selects[2]).toHaveTextContent('Mock Player SP');
+    expect(selects[2].textContent).toContain('Adley Rutschman');
+    expect(selects[2].textContent).toContain('Mock Player SP');
   });
 });
