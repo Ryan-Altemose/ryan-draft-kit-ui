@@ -25,60 +25,70 @@ describe('LeagueTeamTable', () => {
           {
             _id: 'player-adley',
             name: 'Adley Rutschman',
+            team: 'BAL',
             positions: ['C'],
             playerType: 'hitter',
           },
           {
             _id: 'player-freddie',
             name: 'Freddie Freeman',
+            team: 'LAD',
             positions: ['1B'],
             playerType: 'hitter',
           },
           {
             _id: 'player-julio',
             name: 'Julio Rodriguez',
+            team: 'SEA',
             positions: ['OF'],
             playerType: 'hitter',
           },
           {
             _id: 'player-william',
             name: 'William Contreras',
+            team: 'MIL',
             positions: ['C'],
             playerType: 'hitter',
           },
           {
             _id: 'player-a',
             name: 'Player A',
+            team: 'BOS',
             positions: ['C'],
             playerType: 'hitter',
           },
           {
             _id: 'player-b',
             name: 'Player B',
+            team: 'NYY',
             positions: ['1B'],
             playerType: 'hitter',
           },
           {
             _id: 'player-catcher',
             name: 'Catcher Player',
+            team: 'ATL',
             positions: ['C'],
             playerType: 'hitter',
           },
           {
             _id: 'player-firstbase',
             name: 'First Base Player',
+            team: 'TEX',
             positions: ['1B'],
             playerType: 'hitter',
           },
           {
             _id: 'player-outfielder',
             name: 'Outfielder',
+            team: 'CIN',
             positions: ['OF'],
             playerType: 'hitter',
           },
           {
             _id: 'player-sp',
             name: 'Mock Player SP',
+            team: 'BOS',
             positions: ['SP'],
             playerType: 'pitcher',
           },
@@ -125,9 +135,12 @@ describe('LeagueTeamTable', () => {
     expect(screen.getByText('C')).toBeTruthy();
     expect(screen.getByText('1B')).toBeTruthy();
     expect(screen.getAllByText('OF')).toHaveLength(2);
-    expect(screen.getByDisplayValue('Adley Rutschman')).toBeTruthy();
-    expect(screen.getByDisplayValue('Freddie Freeman')).toBeTruthy();
-    expect(screen.getByDisplayValue('Julio Rodriguez')).toBeTruthy();
+    expect(screen.getByDisplayValue('A. Rutschman')).toBeTruthy();
+    expect(screen.getByDisplayValue('F. Freeman')).toBeTruthy();
+    expect(screen.getByDisplayValue('J. Rodriguez')).toBeTruthy();
+    expect(screen.getByText('BAL')).toBeTruthy();
+    expect(screen.getByText('LAD')).toBeTruthy();
+    expect(screen.getByText('SEA')).toBeTruthy();
     expect(screen.getByDisplayValue('20')).toBeTruthy();
     expect(screen.getByDisplayValue('35')).toBeTruthy();
     expect(screen.getByDisplayValue('40')).toBeTruthy();
@@ -158,7 +171,8 @@ describe('LeagueTeamTable', () => {
     );
 
     expect(screen.getByText('Budget: $285')).toBeTruthy();
-    expect(screen.getByDisplayValue('William Contreras')).toBeTruthy();
+    expect(screen.getByDisplayValue('W. Contreras')).toBeTruthy();
+    expect(screen.getByText('MIL')).toBeTruthy();
     expect(
       screen.getAllByPlaceholderText('Search players...').length,
     ).toBeGreaterThanOrEqual(2);
@@ -301,7 +315,7 @@ describe('LeagueTeamTable', () => {
       </ChakraProvider>,
     );
 
-    expect(screen.getByDisplayValue('First Base Player')).toBeTruthy();
+    expect(screen.getByDisplayValue('F. Player')).toBeTruthy();
     expect(screen.getByDisplayValue('35')).toBeTruthy();
     expect(screen.getByDisplayValue('Outfielder')).toBeTruthy();
     expect(screen.getByDisplayValue('22')).toBeTruthy();

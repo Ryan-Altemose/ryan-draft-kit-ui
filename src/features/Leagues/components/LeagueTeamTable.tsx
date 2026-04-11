@@ -44,6 +44,7 @@ type TeamTableRow = {
   position: string;
   playerId: string;
   search: string;
+  team: string;
   price: string;
 };
 
@@ -52,6 +53,7 @@ type Player = {
   name: string;
   positions: string[];
   playerType: 'hitter' | 'pitcher';
+  team: string;
 };
 
 type PlayersResponse = {
@@ -60,6 +62,15 @@ type PlayersResponse = {
     totalPages?: number;
   };
 };
+
+function formatPlayerDisplay(player: Player) {
+  const words = player.name.trim().split(' ').filter(Boolean);
+  if (words.length < 2) return player.name;
+
+  const firstInitial = `${words[0][0]}.`;
+  const lastName = words[words.length - 1];
+  return `${firstInitial} ${lastName}`;
+}
 
 function isPlayerAllowedForRow(player: Player, position: string) {
   if (position === 'BENCH') return true;
@@ -83,6 +94,7 @@ function buildTeamRows(
         position,
         playerId: player?.[0] ?? '',
         search: '',
+        team: '',
         price: String(player?.[3] ?? 0),
       };
     }),
@@ -131,7 +143,11 @@ export default function LeagueTeamTable({
               (player) => player._id === row.playerId,
             );
             return matchingPlayer
-              ? { ...row, search: matchingPlayer.name }
+              ? {
+                  ...row,
+                  search: formatPlayerDisplay(matchingPlayer),
+                  team: matchingPlayer.team,
+                }
               : row;
           })
         : propRows,
@@ -186,6 +202,28 @@ export default function LeagueTeamTable({
     };
   }, []);
 
+  useEffect(() => {
+    if (players.length === 0) return;
+
+    setLocalRows((currentRows) =>
+      currentRows.map((row) => {
+        if (!row.playerId || row.search) return row;
+
+        const matchingPlayer = players.find(
+          (player) => player._id === row.playerId,
+        );
+
+        return matchingPlayer
+          ? {
+              ...row,
+              search: formatPlayerDisplay(matchingPlayer),
+              team: matchingPlayer.team,
+            }
+          : row;
+      }),
+    );
+  }, [players]);
+
   const rows = localRows;
   const currentBudget = calculateCurrentBudgetFromRows(startingBudget, rows);
   const isDirty =
@@ -224,13 +262,15 @@ export default function LeagueTeamTable({
           isPlayerAllowedForRow(player, row.position),
         );
         const exactMatch = allowedPlayers.find(
-          (player) => player.name === value,
+          (player) =>
+            player.name === value || formatPlayerDisplay(player) === value,
         );
 
         return {
           ...row,
-          search: value,
+          search: exactMatch ? formatPlayerDisplay(exactMatch) : value,
           playerId: exactMatch?._id ?? '',
+          team: exactMatch?.team ?? '',
         };
       }),
     );
@@ -285,8 +325,9 @@ export default function LeagueTeamTable({
         <Table size="sm">
           <Thead>
             <Tr>
-              <Th>Position</Th>
+              <Th>Pos</Th>
               <Th>Player</Th>
+              <Th>Team</Th>
               <Th isNumeric>Price</Th>
             </Tr>
           </Thead>
@@ -320,6 +361,7 @@ export default function LeagueTeamTable({
                       ))}
                   </datalist>
                 </Td>
+                <Td>{row.team || '-'}</Td>
                 <Td isNumeric>
                   <Input
                     type="number"
@@ -331,7 +373,8 @@ export default function LeagueTeamTable({
                     }}
                     textAlign="right"
                     size="sm"
-                    width="88px"
+                    width="50px"
+                    minWidth="50px"
                     marginLeft="auto"
                     isDisabled={isSaving}
                   />
