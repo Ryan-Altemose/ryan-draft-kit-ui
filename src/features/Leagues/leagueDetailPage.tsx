@@ -176,6 +176,8 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           },
           totalBudget: currentLeague.totalBudget ?? 0,
           minorLeagueSlotsPerTeam: currentLeague.minorLeagueSlotsPerTeam,
+          battingCategories: currentLeague.battingCategories,
+          pitchingCategories: currentLeague.pitchingCategories,
           takenPlayers: nextTakenPlayers,
           teamsData: nextTeams,
         },

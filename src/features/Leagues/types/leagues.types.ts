@@ -114,6 +114,8 @@ export type CreateLeagueInput = {
   rosterSlots: RosterSlots;
   totalBudget: number;
   minorLeagueSlotsPerTeam?: number;
+  battingCategories: string[];
+  pitchingCategories: string[];
   takenPlayers?: TakenPlayer[];
   teamsData?: LeagueTeam[];
 };

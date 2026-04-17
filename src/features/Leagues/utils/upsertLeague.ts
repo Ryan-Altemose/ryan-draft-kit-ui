@@ -7,8 +7,8 @@ import type {
   TakenPlayer,
 } from '../types/leagues.types';
 
-const DEFAULT_BATTING_CATEGORIES = ['R', 'HR', 'RBI', 'SB', 'AVG'] as const;
-const DEFAULT_PITCHING_CATEGORIES = ['W', 'SV', 'K', 'ERA', 'WHIP'] as const;
+// const DEFAULT_BATTING_CATEGORIES = ['R', 'HR', 'RBI', 'SB', 'AVG'] as const;
+// const DEFAULT_PITCHING_CATEGORIES = ['W', 'SV', 'K', 'ERA', 'WHIP'] as const;
 
 function toExternalId(name: string): string {
   const slug = name
@@ -82,12 +82,8 @@ export async function upsertLeague(
     description: `${input.teams} teams`,
     format: existingLeague?.format ?? 'roto',
     draftType: input.draftType,
-    battingCategories: existingLeague?.battingCategories ?? [
-      ...DEFAULT_BATTING_CATEGORIES,
-    ],
-    pitchingCategories: existingLeague?.pitchingCategories ?? [
-      ...DEFAULT_PITCHING_CATEGORIES,
-    ],
+    battingCategories: input.battingCategories,
+    pitchingCategories: input.pitchingCategories,
     rosterSlots: input.rosterSlots,
     totalBudget: input.totalBudget,
     taken_players: takenPlayers,
