@@ -175,6 +175,9 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
             BENCH: 0,
           },
           totalBudget: currentLeague.totalBudget ?? 0,
+          minorLeagueSlotsPerTeam: currentLeague.minorLeagueSlotsPerTeam,
+          battingCategories: currentLeague.battingCategories,
+          pitchingCategories: currentLeague.pitchingCategories,
           takenPlayers: nextTakenPlayers,
           teamsData: nextTeams,
         },
@@ -207,7 +210,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
         <Heading>{league.name}</Heading>
 
         <TableContainer borderWidth="1px" borderRadius="md">
-          <Table size="sm">
+          <Table size="sm" w="auto">
             <Thead>
               <Tr>
                 <Th>Field</Th>
@@ -215,10 +218,6 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
               </Tr>
             </Thead>
             <Tbody>
-              <Tr>
-                <Td>ID</Td>
-                <Td>{league._id}</Td>
-              </Tr>
               <Tr>
                 <Td>Teams</Td>
                 <Td>{teamCount ?? '-'}</Td>
@@ -234,6 +233,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     ? `$${league.totalBudget}`
                     : '-'}
                 </Td>
+              </Tr>
+              <Tr>
+                <Td>Batting Categories</Td>
+                <Td>{league.battingCategories?.join(', ') ?? '-'}</Td>
+              </Tr>
+              <Tr>
+                <Td>Pitching Categories</Td>
+                <Td>{league.pitchingCategories?.join(', ') ?? '-'}</Td>
               </Tr>
             </Tbody>
           </Table>
@@ -262,6 +269,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     rosterSlots={league.rosterSlots}
                     takenPlayers={takenPlayersForTeam}
                     startingBudget={league.totalBudget ?? 0}
+                    minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
                     isSaving={upsertLeagueMutation.isPending}
                     onSaveChanges={({ teamName, rows }) => {
                       const nextTeams = displayTeams.map((currentTeam) =>

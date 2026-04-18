@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
+  Checkbox,
   FormControl,
   FormLabel,
   Grid,
@@ -18,11 +19,17 @@ import {
   Select,
   Text,
   VStack,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import type {
   CreateLeagueInput,
   League,
   RosterSlots,
+} from '../types/leagues.types';
+import {
+  BattingCategorySchema,
+  PitchingCategorySchema,
 } from '../types/leagues.types';
 import { useUpsertLeague } from '../hooks/useUpsertLeague';
 import {
@@ -30,6 +37,11 @@ import {
   parseTeamsFromDescription,
   ROSTER_POSITIONS,
 } from '../utils/leagueForm';
+
+const ALL_BATTING_CATEGORIES = BattingCategorySchema.options;
+const ALL_PITCHING_CATEGORIES = PitchingCategorySchema.options;
+const DEFAULT_BATTING = ['R', 'HR', 'RBI', 'SB', 'AVG'];
+const DEFAULT_PITCHING = ['W', 'SV', 'K', 'ERA', 'WHIP'];
 
 type UpsertLeagueModalProps = {
   isOpen: boolean;
@@ -48,8 +60,11 @@ export default function UpsertLeagueModal({
     leagueName: string;
     teams: string;
     totalBudget: string;
+    minorLeagueSlotsPerTeam: string;
     draftType: 'auction';
     rosterSlots: Record<keyof RosterSlots, string>;
+    battingCategories: string[];
+    pitchingCategories: string[];
   };
 
   const DEFAULT_FORM: LeagueForm = useMemo(() => {
@@ -62,6 +77,9 @@ export default function UpsertLeagueModal({
       leagueName: initialLeague?.name ?? '',
       teams: String(teams),
       totalBudget: String(initialLeague?.totalBudget ?? 260),
+      minorLeagueSlotsPerTeam: String(
+        initialLeague?.minorLeagueSlotsPerTeam ?? 0,
+      ),
       draftType: 'auction',
       rosterSlots: ROSTER_POSITIONS.reduce(
         (acc, position) => {
@@ -73,6 +91,8 @@ export default function UpsertLeagueModal({
         },
         {} as Record<keyof RosterSlots, string>,
       ),
+      battingCategories: initialLeague?.battingCategories ?? DEFAULT_BATTING,
+      pitchingCategories: initialLeague?.pitchingCategories ?? DEFAULT_PITCHING,
     };
   }, [initialLeague]);
 
@@ -86,18 +106,45 @@ export default function UpsertLeagueModal({
   const canSubmit = useMemo(() => {
     const parsedTeams = Number.parseInt(form.teams, 10);
     const parsedTotalBudget = Number.parseInt(form.totalBudget, 10);
+    const parsedMinorLeagueSlots = Number.parseInt(
+      form.minorLeagueSlotsPerTeam,
+      10,
+    );
 
     return (
       form.leagueName.trim().length > 0 &&
       !Number.isNaN(parsedTeams) &&
       parsedTeams > 1 &&
       !Number.isNaN(parsedTotalBudget) &&
-      parsedTotalBudget >= 0
+      parsedTotalBudget >= 0 &&
+      !Number.isNaN(parsedMinorLeagueSlots) &&
+      parsedMinorLeagueSlots >= 0 &&
+      form.battingCategories.length > 0 &&
+      form.pitchingCategories.length > 0
     );
-  }, [form.leagueName, form.teams, form.totalBudget]);
+  }, [
+    form.leagueName,
+    form.teams,
+    form.totalBudget,
+    form.minorLeagueSlotsPerTeam,
+    form.battingCategories,
+    form.pitchingCategories,
+  ]);
+
+  function toggleCategory(
+    field: 'battingCategories' | 'pitchingCategories',
+    category: string,
+  ) {
+    setForm((prev) => {
+      const current = prev[field];
+      const next = current.includes(category)
+        ? current.filter((c) => c !== category)
+        : [...current, category];
+      return { ...prev, [field]: next };
+    });
+  }
 
   function handleRosterSlotChange(position: keyof RosterSlots, value: string) {
-    // Allow users to freely edit (including empty), without snapping values.
     if (value !== '' && !/^\d+$/.test(value)) return;
     setForm((prev) => ({
       ...prev,
@@ -123,7 +170,16 @@ export default function UpsertLeagueModal({
 
     const parsedTeams = Number.parseInt(form.teams, 10);
     const parsedTotalBudget = Number.parseInt(form.totalBudget, 10);
-    if (Number.isNaN(parsedTeams) || Number.isNaN(parsedTotalBudget)) return;
+    const parsedMinorLeagueSlots = Number.parseInt(
+      form.minorLeagueSlotsPerTeam,
+      10,
+    );
+    if (
+      Number.isNaN(parsedTeams) ||
+      Number.isNaN(parsedTotalBudget) ||
+      Number.isNaN(parsedMinorLeagueSlots)
+    )
+      return;
 
     const rosterSlots = ROSTER_POSITIONS.reduce((acc, position) => {
       const raw = form.rosterSlots[position];
@@ -138,6 +194,9 @@ export default function UpsertLeagueModal({
       draftType: form.draftType,
       rosterSlots,
       totalBudget: Math.max(0, parsedTotalBudget),
+      minorLeagueSlotsPerTeam: Math.max(0, parsedMinorLeagueSlots),
+      battingCategories: form.battingCategories,
+      pitchingCategories: form.pitchingCategories,
     };
 
     try {
@@ -218,6 +277,74 @@ export default function UpsertLeagueModal({
                   setForm((prev) => ({ ...prev, totalBudget: next }));
                 }}
               />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel htmlFor="minorLeagueSlotsPerTeam">
+                Minor League Players Per Team
+              </FormLabel>
+              <Input
+                id="minorLeagueSlotsPerTeam"
+                type="number"
+                min={0}
+                value={form.minorLeagueSlotsPerTeam}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next !== '' && !/^\d+$/.test(next)) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    minorLeagueSlotsPerTeam: next,
+                  }));
+                }}
+              />
+            </FormControl>
+
+            <FormControl
+              isRequired
+              isInvalid={form.battingCategories.length === 0}
+            >
+              <FormLabel>Batting Categories</FormLabel>
+              <Wrap spacing={3}>
+                {ALL_BATTING_CATEGORIES.map((cat) => (
+                  <WrapItem key={cat}>
+                    <Checkbox
+                      isChecked={form.battingCategories.includes(cat)}
+                      onChange={() => toggleCategory('battingCategories', cat)}
+                    >
+                      {cat}
+                    </Checkbox>
+                  </WrapItem>
+                ))}
+              </Wrap>
+              {form.battingCategories.length === 0 && (
+                <Text color="red.500" fontSize="sm" mt={1}>
+                  Select at least one batting category.
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl
+              isRequired
+              isInvalid={form.pitchingCategories.length === 0}
+            >
+              <FormLabel>Pitching Categories</FormLabel>
+              <Wrap spacing={3}>
+                {ALL_PITCHING_CATEGORIES.map((cat) => (
+                  <WrapItem key={cat}>
+                    <Checkbox
+                      isChecked={form.pitchingCategories.includes(cat)}
+                      onChange={() => toggleCategory('pitchingCategories', cat)}
+                    >
+                      {cat}
+                    </Checkbox>
+                  </WrapItem>
+                ))}
+              </Wrap>
+              {form.pitchingCategories.length === 0 && (
+                <Text color="red.500" fontSize="sm" mt={1}>
+                  Select at least one pitching category.
+                </Text>
+              )}
             </FormControl>
 
             <FormControl>

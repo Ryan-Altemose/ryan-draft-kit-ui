@@ -83,6 +83,7 @@ export const LeagueSchema = z.object({
   teams: z.array(LeagueTeamSchema).optional(),
   isDefault: z.boolean().default(false),
   categoryWeights: z.record(z.string(), z.number()).optional(),
+  minorLeagueSlotsPerTeam: z.number().int().min(0).optional(),
 });
 
 export const LeagueFiltersSchema = z.object({
@@ -112,6 +113,9 @@ export type CreateLeagueInput = {
   draftType: 'auction';
   rosterSlots: RosterSlots;
   totalBudget: number;
+  minorLeagueSlotsPerTeam?: number;
+  battingCategories: string[];
+  pitchingCategories: string[];
   takenPlayers?: TakenPlayer[];
   teamsData?: LeagueTeam[];
 };
