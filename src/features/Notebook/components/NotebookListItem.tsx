@@ -8,6 +8,7 @@ type NotebookListItemProps = {
   notebook: NotebookListEntry;
   isSelected: boolean;
   onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onOpen: (id: string) => void;
 };
 
@@ -15,6 +16,7 @@ export default function NotebookListItem({
   notebook,
   isSelected,
   onRename,
+  onDelete,
   onOpen,
 }: NotebookListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -64,18 +66,31 @@ export default function NotebookListItem({
       )}
 
       {!isEditing ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          color="gray.600"
-          onClick={(event) => {
-            event.stopPropagation();
-            setDraftName(notebook.name);
-            setIsEditing(true);
-          }}
-        >
-          Rename
-        </Button>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="gray.600"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDraftName(notebook.name);
+              setIsEditing(true);
+            }}
+          >
+            Rename
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="red.500"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(notebook._id);
+            }}
+          >
+            Delete
+          </Button>
+        </Box>
       ) : null}
     </Box>
   );

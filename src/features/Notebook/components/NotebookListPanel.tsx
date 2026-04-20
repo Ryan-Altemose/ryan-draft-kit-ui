@@ -9,6 +9,7 @@ type NotebookListPanelProps = {
   selectedNotebookId: string | null;
   onAddNotebook: () => void;
   onRenameNotebook: (id: string, name: string) => void;
+  onDeleteNotebook: (id: string) => void;
   onOpenNotebook: (id: string) => void;
   isLoading?: boolean;
   error?: string | null;
@@ -19,6 +20,7 @@ export default function NotebookListPanel({
   selectedNotebookId,
   onAddNotebook,
   onRenameNotebook,
+  onDeleteNotebook,
   onOpenNotebook,
   isLoading,
   error,
@@ -46,6 +48,7 @@ export default function NotebookListPanel({
             notebook={notebook}
             isSelected={notebook._id === selectedNotebookId}
             onRename={onRenameNotebook}
+            onDelete={onDeleteNotebook}
             onOpen={onOpenNotebook}
           />
         ))}

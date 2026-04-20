@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Notebook, Player } from '../types/notebook.types';
 import { useCreateNotebook } from './useCreateNotebook';
+import { useDeleteNotebook } from './useDeleteNotebook';
 import { useNotebooks } from './useNotebooks';
 import { useUpdateNotebook } from './useUpdateNotebook';
 import { useUpsertPlayerNotebook } from './useUpsertPlayerNotebook';
@@ -52,6 +53,7 @@ export function useNotebookManager() {
 
   const notebooksQuery = useNotebooks();
   const createNotebookMutation = useCreateNotebook();
+  const deleteNotebookMutation = useDeleteNotebook();
   const updateNotebookMutation = useUpdateNotebook();
   const upsertPlayerNotebookMutation = useUpsertPlayerNotebook();
 
@@ -171,6 +173,28 @@ export function useNotebookManager() {
     scheduleNotebookSave(id, { name });
   };
 
+  const removeNotebook = async (id: string) => {
+    clearTimeout(notebookSaveTimeoutsRef.current[id]);
+    delete notebookSaveTimeoutsRef.current[id];
+    delete notebookPendingUpdatesRef.current[id];
+
+    try {
+      await deleteNotebookMutation.mutateAsync(id);
+
+      setLocalNotebooks((current) =>
+        current.filter((notebook) => notebook._id !== id),
+      );
+
+      if (selectedNotebookId === id) {
+        setSelectedNotebookId(null);
+      }
+
+      setSaveError(null);
+    } catch {
+      setSaveError('Unable to delete notebook.');
+    }
+  };
+
   const updateNotebookContent = (id: string, content: string) => {
     setLocalNotebooks((current) =>
       current.map((notebook) =>
@@ -236,6 +260,7 @@ export function useNotebookManager() {
     saveError,
     addNotebook,
     renameNotebook,
+    removeNotebook,
     updateNotebookContent,
     updatePlayerContent,
     openNotebook,

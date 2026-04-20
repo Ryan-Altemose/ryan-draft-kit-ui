@@ -1,18 +1,10 @@
 [
   {
-    "_id": "8d147d8f-fc3a-4a73-8ec2-328bb85f5e55",
-    "kind": "custom",
-    "name": "New Notebook bananan",
-    "content": "",
-    "createdAt": "2026-04-20T19:44:58.660Z",
-    "updatedAt": "2026-04-20T19:54:50.586Z"
-  },
-  {
-    "_id": "f9feb534-c477-4807-9d08-e28d0ceed0c7",
+    "_id": "87654e58-8a55-4fbf-8c47-8c370e722a79",
     "kind": "custom",
     "name": "New Notebook",
-    "content": "apples\n",
-    "createdAt": "2026-04-20T19:45:05.908Z",
-    "updatedAt": "2026-04-20T19:54:44.809Z"
+    "content": "",
+    "createdAt": "2026-04-20T20:19:40.886Z",
+    "updatedAt": "2026-04-20T20:19:40.886Z"
   }
 ]

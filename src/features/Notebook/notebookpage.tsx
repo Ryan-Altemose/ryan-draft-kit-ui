@@ -18,6 +18,7 @@ export default function NotebookPage() {
     saveError,
     addNotebook,
     renameNotebook,
+    removeNotebook,
     updateNotebookContent,
     updatePlayerContent,
     openNotebook,
@@ -50,6 +51,7 @@ export default function NotebookPage() {
           selectedNotebookId={selectedNotebookId}
           onAddNotebook={addNotebook}
           onRenameNotebook={renameNotebook}
+          onDeleteNotebook={removeNotebook}
           isLoading={isLoadingNotebooks}
           error={notebooksError}
           onOpenNotebook={openNotebook}
