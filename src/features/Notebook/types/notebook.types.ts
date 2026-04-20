@@ -1,5 +1,7 @@
 'use client';
 
+import type { BaseEntity } from '@/shared/types/api';
+
 export type Player = {
   _id: string;
   name: string;
@@ -15,19 +17,41 @@ export type Player = {
 };
 
 export type PlayersResponse = {
+  success?: boolean;
   data?: Player[];
   pagination?: {
     totalPages?: number;
   };
 };
 
-export type Notebook = {
-  id: number;
+export type NotebookKind = 'custom' | 'player';
+
+export type Notebook = BaseEntity & {
+  kind: NotebookKind;
   name: string;
   content: string;
+  playerName?: string;
+  playerId?: string;
 };
 
-export type NotebookListEntry = Pick<Notebook, 'id' | 'name'>;
+export type NotebookListEntry = Pick<Notebook, '_id' | 'name'>;
+
+export type UpdateNotebookInput = {
+  name?: string;
+  content?: string;
+  playerName?: string;
+  playerId?: string;
+};
+
+export type NotebookResponse = {
+  success: boolean;
+  data: Notebook;
+};
+
+export type NotebooksResponse = {
+  success: boolean;
+  data: Notebook[];
+};
 
 export type NotebookWindowRect = {
   x: number;

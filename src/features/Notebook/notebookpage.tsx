@@ -1,87 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { Box, Flex } from '@chakra-ui/react';
-import type { Notebook, Player } from './types/notebook.types';
+import { Alert, AlertIcon, Box, Flex } from '@chakra-ui/react';
 import NotebookListPanel from './components/NotebookListPanel';
 import NotebookWorkspace from './components/NotebookWorkspace';
+import { useNotebookManager } from './hooks/useNotebookManager';
 
 export default function NotebookPage() {
-  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [selectedNotebookId, setSelectedNotebookId] = useState<number | null>(
-    null,
-  );
-  const [playerNotes, setPlayerNotes] = useState<Record<string, string>>({});
-  const [selectedPlayerName, setSelectedPlayerName] = useState<string | null>(
-    null,
-  );
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-
-  const addNotebook = () => {
-    const newNotebook = {
-      id: Date.now(),
-      name: 'New Notebook',
-      content: '',
-    };
-
-    setNotebooks((current) => [...current, newNotebook]);
-    setSelectedPlayerName(null);
-    setSelectedPlayer(null);
-    setSelectedNotebookId(newNotebook.id);
-  };
-
-  const renameNotebook = (id: number, name: string) => {
-    setNotebooks((current) =>
-      current.map((notebook) =>
-        notebook.id === id ? { ...notebook, name } : notebook,
-      ),
-    );
-  };
-
-  const updateNotebookContent = (id: number, content: string) => {
-    setNotebooks((current) =>
-      current.map((notebook) =>
-        notebook.id === id ? { ...notebook, content } : notebook,
-      ),
-    );
-  };
-
-  const updatePlayerContent = (playerName: string, content: string) => {
-    setPlayerNotes((current) => ({
-      ...current,
-      [playerName]: content,
-    }));
-  };
-
-  const openPlayerNotebook = (player: Player) => {
-    setSelectedNotebookId(null);
-    setSelectedPlayerName(player.name);
-    setSelectedPlayer(player);
-  };
-
-  const selectedNotebook =
-    notebooks.find((notebook) => notebook.id === selectedNotebookId) ?? null;
-  const selectedItemName = selectedPlayerName ?? selectedNotebook?.name ?? null;
-  const selectedItemContent = selectedPlayerName
-    ? (playerNotes[selectedPlayerName] ?? '')
-    : (selectedNotebook?.content ?? '');
+  const {
+    notebooks,
+    selectedNotebookId,
+    selectedNotebookName,
+    selectedNotebookContent,
+    selectedPlayerName,
+    selectedPlayer,
+    isLoadingNotebooks,
+    notebooksError,
+    saveError,
+    addNotebook,
+    renameNotebook,
+    updateNotebookContent,
+    updatePlayerContent,
+    openNotebook,
+    openPlayerNotebook,
+    closeNotebook,
+  } = useNotebookManager();
 
   return (
     <Box p={8}>
+      {saveError ? (
+        <Alert status="error" mb={4} borderRadius="md">
+          <AlertIcon />
+          {saveError}
+        </Alert>
+      ) : null}
       <Flex gap={8} align="stretch" minH="calc(100vh - 140px)">
         <NotebookWorkspace
-          selectedNotebookId={selectedNotebook?.id ?? null}
-          selectedNotebookName={selectedItemName}
-          selectedNotebookContent={selectedItemContent}
+          selectedNotebookId={selectedNotebookId}
+          selectedNotebookName={selectedNotebookName}
+          selectedNotebookContent={selectedNotebookContent}
           onNotebookContentChange={updateNotebookContent}
           onPlayerContentChange={updatePlayerContent}
           selectedPlayerName={selectedPlayerName}
           selectedPlayer={selectedPlayer}
-          onCloseNotebook={() => {
-            setSelectedNotebookId(null);
-            setSelectedPlayerName(null);
-            setSelectedPlayer(null);
-          }}
+          onCloseNotebook={closeNotebook}
           onOpenPlayerNotebook={openPlayerNotebook}
         />
         <NotebookListPanel
@@ -89,11 +50,9 @@ export default function NotebookPage() {
           selectedNotebookId={selectedNotebookId}
           onAddNotebook={addNotebook}
           onRenameNotebook={renameNotebook}
-          onOpenNotebook={(id) => {
-            setSelectedPlayerName(null);
-            setSelectedPlayer(null);
-            setSelectedNotebookId(id);
-          }}
+          isLoading={isLoadingNotebooks}
+          error={notebooksError}
+          onOpenNotebook={openNotebook}
         />
       </Flex>
     </Box>

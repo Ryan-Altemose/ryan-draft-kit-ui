@@ -7,8 +7,8 @@ import type { NotebookListEntry } from '../types/notebook.types';
 type NotebookListItemProps = {
   notebook: NotebookListEntry;
   isSelected: boolean;
-  onRename: (id: number, name: string) => void;
-  onOpen: (id: number) => void;
+  onRename: (id: string, name: string) => void;
+  onOpen: (id: string) => void;
 };
 
 export default function NotebookListItem({
@@ -22,7 +22,7 @@ export default function NotebookListItem({
 
   const commitRename = () => {
     const trimmedName = draftName.trim();
-    onRename(notebook.id, trimmedName || notebook.name);
+    onRename(notebook._id, trimmedName || notebook.name);
     setDraftName(trimmedName || notebook.name);
     setIsEditing(false);
   };
@@ -42,7 +42,7 @@ export default function NotebookListItem({
       _hover={{ bg: 'gray.50', borderColor: 'gray.400' }}
       transition="all 0.15s ease"
       cursor="default"
-      onDoubleClick={() => onOpen(notebook.id)}
+      onDoubleClick={() => onOpen(notebook._id)}
     >
       {isEditing ? (
         <Input

@@ -17,10 +17,10 @@ import {
 import TopPlayersPanel from './TopPlayersPanel';
 
 type NotebookWorkspaceProps = {
-  selectedNotebookId: number | null;
+  selectedNotebookId: string | null;
   selectedNotebookName: string | null;
   selectedNotebookContent: string;
-  onNotebookContentChange: (id: number, content: string) => void;
+  onNotebookContentChange: (id: string, content: string) => void;
   onPlayerContentChange: (playerName: string, content: string) => void;
   selectedPlayerName: string | null;
   selectedPlayer: Player | null;
