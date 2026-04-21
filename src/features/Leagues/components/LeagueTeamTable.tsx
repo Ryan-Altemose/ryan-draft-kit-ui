@@ -339,6 +339,18 @@ export default function LeagueTeamTable({
     );
   }
 
+  function handleClearTable() {
+    setLocalRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        playerId: '',
+        search: '',
+        team: '',
+        price: '0',
+      })),
+    );
+  }
+
   function handleSaveChanges() {
     const invalidRows = rows.filter((row) => {
       const price = parsePrice(row.price);
@@ -472,8 +484,8 @@ export default function LeagueTeamTable({
         </Table>
       </TableContainer>
 
-      {onSaveChanges ? (
-        <Box px={4} py={3} borderTopWidth="1px" bg="gray.50">
+      <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
+        {onSaveChanges ? (
           <Button
             size="sm"
             colorScheme="blue"
@@ -483,8 +495,17 @@ export default function LeagueTeamTable({
           >
             Save Changes
           </Button>
-        </Box>
-      ) : null}
+        ) : null}
+        <Button
+          size="sm"
+          colorScheme="red"
+          variant="outline"
+          onClick={handleClearTable}
+          isDisabled={isSaving}
+        >
+          Clear
+        </Button>
+      </Flex>
     </Box>
   );
 }
