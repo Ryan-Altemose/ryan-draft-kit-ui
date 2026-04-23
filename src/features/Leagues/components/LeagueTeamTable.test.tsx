@@ -18,6 +18,9 @@ const fetchMock = vi.fn();
 
 async function renderLeagueTeamTable(element: JSX.Element) {
   render(element);
+  // Tables start collapsed — click the header to expand before asserting content
+  const header = await screen.findByText(/Budget:/);
+  fireEvent.click(header);
   await screen.findAllByPlaceholderText('Search players...', undefined, {
     timeout: 3000,
   });
@@ -471,6 +474,78 @@ describe('LeagueTeamTable', () => {
     ).map((o) => o.value);
     // C-0 should still see Adley as a valid option for its own slot
     expect(firstOptions).toContain('Adley Rutschman');
+  });
+
+  it('starts collapsed showing only the header, not the table rows', async () => {
+    render(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-collapse', 'CollapseTest', 0]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-collapse', 'C-0', 10]]}
+        />
+      </ChakraProvider>,
+    );
+
+    expect(screen.getByDisplayValue('CollapseTest')).toBeTruthy();
+    expect(screen.getByText('Budget: $90')).toBeTruthy();
+    expect(screen.queryByPlaceholderText('Search players...')).toBeNull();
+    expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
+  });
+
+  it('expands to show table rows when header is clicked and collapses again on second click', async () => {
+    render(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-toggle', 'ToggleTest', 0]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-toggle', 'C-0', 10]]}
+          onSaveChanges={vi.fn()}
+        />
+      </ChakraProvider>,
+    );
+
+    const budgetText = screen.getByText('Budget: $90');
+
+    // Expand
+    fireEvent.click(budgetText);
+    await screen.findByPlaceholderText('Search players...');
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeTruthy();
+
+    // Collapse again
+    fireEvent.click(budgetText);
+    expect(screen.queryByPlaceholderText('Search players...')).toBeNull();
+    expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
   });
 
   it('filters dropdown options by position and allows all hitters in UTIL and all players in BENCH', async () => {

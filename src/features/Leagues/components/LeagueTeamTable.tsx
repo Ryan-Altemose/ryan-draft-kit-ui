@@ -157,6 +157,7 @@ export default function LeagueTeamTable({
   const [localRows, setLocalRows] = useState(propRows);
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   useEffect(() => {
     setLocalTeamName(teamName);
@@ -398,11 +399,15 @@ export default function LeagueTeamTable({
         px={4}
         py={3}
         bg="gray.50"
-        borderBottomWidth="1px"
+        borderBottomWidth={isCollapsed ? undefined : '1px'}
+        onClick={() => setIsCollapsed((c) => !c)}
+        cursor="pointer"
+        userSelect="none"
       >
         <Input
           value={localTeamName}
           onChange={(e) => setLocalTeamName(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
           size="sm"
           maxW="180px"
           fontWeight="bold"
@@ -414,98 +419,111 @@ export default function LeagueTeamTable({
         </Text>
       </Flex>
 
-      <TableContainer w="auto">
-        <Table size="sm">
-          <Thead>
-            <Tr>
-              <Th>Pos</Th>
-              <Th>Player</Th>
-              <Th>Team</Th>
-              <Th isNumeric>Price</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {rows.map((row, rowIndex) => (
-              <Tr key={row.rowId}>
-                <Td>{row.position}</Td>
-                <Td>
-                  <Input
-                    size="sm"
-                    bg="white"
-                    value={row.search}
-                    placeholder={
-                      isLoadingPlayers
-                        ? 'Loading players...'
-                        : 'Search players...'
-                    }
-                    list={`player-options-${row.rowId}`}
-                    onChange={(e) =>
-                      handlePlayerSearchChange(rowIndex, e.target.value)
-                    }
-                    isDisabled={isSaving || isLoadingPlayers}
-                  />
-                  <datalist id={`player-options-${row.rowId}`}>
-                    {players
-                      .filter((player) => {
-                        const unavailable = getUnavailablePlayerIds(rowIndex);
-                        return (
-                          (row.position === 'MiLB'
-                            ? !player.mlbDebutDate
-                            : isPlayerAllowedForRow(player, row.position)) &&
-                          !unavailable.has(player._id)
-                        );
-                      })
-                      .map((player) => (
-                        <option key={player._id} value={player.name} />
-                      ))}
-                  </datalist>
-                </Td>
-                <Td>{row.team || '-'}</Td>
-                <Td isNumeric>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={startingBudget}
-                    value={row.price}
-                    onChange={(e) => {
-                      handleLocalPriceChange(rowIndex, e.target.value);
-                    }}
-                    textAlign="right"
-                    size="sm"
-                    width="50px"
-                    minWidth="50px"
-                    marginLeft="auto"
-                    isDisabled={isSaving || row.position === 'MiLB'}
-                  />
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
+      {!isCollapsed && (
+        <>
+          <TableContainer w="auto">
+            <Table size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Pos</Th>
+                  <Th>Player</Th>
+                  <Th>Team</Th>
+                  <Th isNumeric>Price</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {rows.map((row, rowIndex) => (
+                  <Tr key={row.rowId}>
+                    <Td>{row.position}</Td>
+                    <Td>
+                      <Input
+                        size="sm"
+                        bg="white"
+                        value={row.search}
+                        placeholder={
+                          isLoadingPlayers
+                            ? 'Loading players...'
+                            : 'Search players...'
+                        }
+                        list={`player-options-${row.rowId}`}
+                        onChange={(e) =>
+                          handlePlayerSearchChange(rowIndex, e.target.value)
+                        }
+                        isDisabled={isSaving || isLoadingPlayers}
+                      />
+                      <datalist id={`player-options-${row.rowId}`}>
+                        {players
+                          .filter((player) => {
+                            const unavailable =
+                              getUnavailablePlayerIds(rowIndex);
+                            return (
+                              (row.position === 'MiLB'
+                                ? !player.mlbDebutDate
+                                : isPlayerAllowedForRow(
+                                    player,
+                                    row.position,
+                                  )) && !unavailable.has(player._id)
+                            );
+                          })
+                          .map((player) => (
+                            <option key={player._id} value={player.name} />
+                          ))}
+                      </datalist>
+                    </Td>
+                    <Td>{row.team || '-'}</Td>
+                    <Td isNumeric>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={startingBudget}
+                        value={row.price}
+                        onChange={(e) => {
+                          handleLocalPriceChange(rowIndex, e.target.value);
+                        }}
+                        textAlign="right"
+                        size="sm"
+                        width="50px"
+                        minWidth="50px"
+                        marginLeft="auto"
+                        isDisabled={isSaving || row.position === 'MiLB'}
+                      />
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
 
-      <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
-        {onSaveChanges ? (
-          <Button
-            size="sm"
-            colorScheme="blue"
-            onClick={handleSaveChanges}
-            isLoading={isSaving}
-            isDisabled={!isDirty}
-          >
-            Save Changes
-          </Button>
-        ) : null}
-        <Button
-          size="sm"
-          colorScheme="red"
-          variant="outline"
-          onClick={handleClearTable}
-          isDisabled={isSaving}
-        >
-          Clear
-        </Button>
-      </Flex>
+          <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
+            {onSaveChanges ? (
+              <Button
+                size="sm"
+                colorScheme="blue"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveChanges();
+                }}
+                isLoading={isSaving}
+                isDisabled={!isDirty}
+              >
+                Save Changes
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              colorScheme="red"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearTable();
+              }}
+              isDisabled={isSaving}
+            >
+              Clear
+            </Button>
+          </Flex>
+        </>
+      )}
     </Box>
   );
 }
