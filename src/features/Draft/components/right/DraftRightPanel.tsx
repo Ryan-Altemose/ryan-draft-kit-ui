@@ -34,6 +34,7 @@ export default function DraftRightPanel({ league }: Props) {
             )}
             startingBudget={league.totalBudget ?? 0}
             minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
+            readOnly
           />
         );
       })}

@@ -39,6 +39,7 @@ type LeagueTeamTableProps = {
     }>;
   }) => void;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 type TeamTableRow = {
@@ -146,6 +147,7 @@ export default function LeagueTeamTable({
   minorLeagueSlots = 0,
   onSaveChanges,
   isSaving = false,
+  readOnly = false,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [, teamName] = team;
@@ -412,7 +414,8 @@ export default function LeagueTeamTable({
           maxW="180px"
           fontWeight="bold"
           bg="white"
-          isDisabled={isSaving}
+          isDisabled={isSaving || readOnly}
+          isReadOnly={readOnly}
         />
         <Text fontWeight="semibold" color="gray.700">
           Budget: ${currentBudget}
@@ -449,7 +452,7 @@ export default function LeagueTeamTable({
                         onChange={(e) =>
                           handlePlayerSearchChange(rowIndex, e.target.value)
                         }
-                        isDisabled={isSaving || isLoadingPlayers}
+                        isDisabled={isSaving || isLoadingPlayers || readOnly}
                       />
                       <datalist id={`player-options-${row.rowId}`}>
                         {players
@@ -485,7 +488,9 @@ export default function LeagueTeamTable({
                         width="50px"
                         minWidth="50px"
                         marginLeft="auto"
-                        isDisabled={isSaving || row.position === 'MiLB'}
+                        isDisabled={
+                          isSaving || row.position === 'MiLB' || readOnly
+                        }
                       />
                     </Td>
                   </Tr>
@@ -494,34 +499,36 @@ export default function LeagueTeamTable({
             </Table>
           </TableContainer>
 
-          <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
-            {onSaveChanges ? (
+          {!readOnly && (
+            <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
+              {onSaveChanges ? (
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSaveChanges();
+                  }}
+                  isLoading={isSaving}
+                  isDisabled={!isDirty}
+                >
+                  Save Changes
+                </Button>
+              ) : null}
               <Button
                 size="sm"
-                colorScheme="blue"
+                colorScheme="red"
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleSaveChanges();
+                  handleClearTable();
                 }}
-                isLoading={isSaving}
-                isDisabled={!isDirty}
+                isDisabled={isSaving}
               >
-                Save Changes
+                Clear
               </Button>
-            ) : null}
-            <Button
-              size="sm"
-              colorScheme="red"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClearTable();
-              }}
-              isDisabled={isSaving}
-            >
-              Clear
-            </Button>
-          </Flex>
+            </Flex>
+          )}
         </>
       )}
     </Box>
