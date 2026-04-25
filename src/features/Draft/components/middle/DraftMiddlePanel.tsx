@@ -1,14 +1,21 @@
 'use client';
 
 import { Box, Flex, Input, Text } from '@chakra-ui/react';
-import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
+import type {
+  LeagueTeam,
+  TakenPlayer,
+} from '@/features/Leagues/types/leagues.types';
 import DraftBoard from './DraftBoard';
 
 type DraftMiddlePanelProps = {
   teams?: LeagueTeam[];
+  takenPlayers?: TakenPlayer[];
 };
 
-export default function DraftMiddlePanel({ teams }: DraftMiddlePanelProps) {
+export default function DraftMiddlePanel({
+  teams,
+  takenPlayers,
+}: DraftMiddlePanelProps) {
   return (
     <Flex direction="column" h="100%">
       <Box
@@ -17,7 +24,7 @@ export default function DraftMiddlePanel({ teams }: DraftMiddlePanelProps) {
         borderColor="gray.200"
         overflow="hidden"
       >
-        <DraftBoard teams={teams} />
+        <DraftBoard teams={teams} takenPlayers={takenPlayers} />
       </Box>
       <Flex flex="1" direction="column" gap={3} p={4}>
         <Text color="gray.400" fontSize="sm">

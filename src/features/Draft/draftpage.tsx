@@ -28,7 +28,10 @@ export default function DraftPage() {
         borderColor="gray.200"
         overflow="hidden"
       >
-        <DraftMiddlePanel teams={selectedLeague?.teams ?? []} />
+        <DraftMiddlePanel
+          teams={selectedLeague?.teams ?? []}
+          takenPlayers={selectedLeague?.taken_players ?? []}
+        />
       </Box>
       <Box flex={1} minH={0} overflowY="auto">
         <DraftRightPanel league={selectedLeague} />

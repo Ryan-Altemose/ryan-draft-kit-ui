@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import {
   Box,
   Input,
@@ -11,12 +12,16 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
+import type {
+  LeagueTeam,
+  TakenPlayer,
+} from '@/features/Leagues/types/leagues.types';
 import { usePlayers } from '@/shared/hooks/usePlayers';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 
 type DraftBoardProps = {
   teams?: LeagueTeam[];
+  takenPlayers?: TakenPlayer[];
 };
 
 const COLUMNS = [
@@ -27,8 +32,17 @@ const COLUMNS = [
   'Salary',
 ];
 
-export default function DraftBoard({ teams = [] }: DraftBoardProps) {
+export default function DraftBoard({
+  teams = [],
+  takenPlayers = [],
+}: DraftBoardProps) {
   const { players, isLoading } = usePlayers();
+  const [playerSearch, setPlayerSearch] = useState('');
+
+  const takenPlayerIds = useMemo(
+    () => new Set(takenPlayers.map(([id]) => id)),
+    [takenPlayers],
+  );
 
   return (
     <Box h="100%" overflowY="auto">
@@ -65,9 +79,9 @@ export default function DraftBoard({ teams = [] }: DraftBoardProps) {
             <Td>
               <PlayerSearchInput
                 players={players}
-                unavailablePlayerIds={new Set()}
-                value=""
-                onChange={() => {}}
+                unavailablePlayerIds={takenPlayerIds}
+                value={playerSearch}
+                onChange={(searchText) => setPlayerSearch(searchText)}
                 isDisabled={isLoading}
                 placeholder={
                   isLoading ? 'Loading players...' : 'Search player...'
