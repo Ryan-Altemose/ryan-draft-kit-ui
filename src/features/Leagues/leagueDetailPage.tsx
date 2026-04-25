@@ -131,12 +131,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
       }
 
       handledSlots.add(positionSlot);
-      updatedTakenPlayers.push([
-        matchingRow.playerId || playerId,
-        teamId,
-        positionSlot,
-        matchingRow.price,
-      ]);
+      if (matchingRow.playerId) {
+        updatedTakenPlayers.push([
+          matchingRow.playerId,
+          teamId,
+          positionSlot,
+          matchingRow.price,
+        ]);
+      }
     });
 
     rows.forEach((row) => {
