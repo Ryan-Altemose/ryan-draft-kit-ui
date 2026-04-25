@@ -22,7 +22,9 @@ import type {
   TakenPlayer,
 } from '../types/leagues.types';
 import { DEFAULT_ROSTER_SLOTS, ROSTER_POSITIONS } from '../utils/leagueForm';
-import { externalApiClient } from '@/shared/utils/api-client';
+import { usePlayers } from '@/shared/hooks/usePlayers';
+import { formatPlayerDisplay } from '@/shared/utils/format';
+import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 
 type LeagueTeamTableProps = {
   team: LeagueTeam;
@@ -50,41 +52,6 @@ type TeamTableRow = {
   team: string;
   price: string;
 };
-
-type Player = {
-  _id: string;
-  name: string;
-  positions: string[];
-  playerType: 'hitter' | 'pitcher';
-  team: string;
-  mlbDebutDate?: string;
-};
-
-type PlayersResponse = {
-  data?: Player[];
-  pagination?: {
-    totalPages?: number;
-  };
-};
-
-function formatPlayerDisplay(player: Player) {
-  const words = player.name.trim().split(' ').filter(Boolean);
-  if (words.length < 2) return player.name;
-
-  const firstInitial = `${words[0][0]}.`;
-  const lastName = words[words.length - 1];
-  return `${firstInitial} ${lastName}`;
-}
-
-function isPlayerAllowedForRow(player: Player, position: string) {
-  if (position === 'BENCH') return true;
-  if (position === 'UTIL') return player.playerType === 'hitter';
-  if (position === 'CI')
-    return player.positions.includes('1B') || player.positions.includes('3B');
-  if (position === 'MI')
-    return player.positions.includes('2B') || player.positions.includes('SS');
-  return player.positions.includes(position);
-}
 
 function buildTeamRows(
   rosterSlots: RosterSlots,
@@ -157,9 +124,9 @@ export default function LeagueTeamTable({
   );
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const { players, isLoading: isLoadingPlayers } = usePlayers();
 
   useEffect(() => {
     setLocalTeamName(teamName);
@@ -182,57 +149,6 @@ export default function LeagueTeamTable({
         : propRows,
     );
   }, [propRows, teamName, players]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadPlayers() {
-      try {
-        setIsLoadingPlayers(true);
-
-        const firstPage = await externalApiClient.get<PlayersResponse>(
-          '/api/players',
-          {
-            params: { limit: 100, page: 1 },
-          },
-        );
-        const firstBatch = firstPage.data ?? [];
-        const totalPages = firstPage.pagination?.totalPages ?? 1;
-        const pageRequests: Promise<PlayersResponse>[] = [];
-
-        for (let page = 2; page <= totalPages; page += 1) {
-          pageRequests.push(
-            externalApiClient.get<PlayersResponse>('/api/players', {
-              params: { limit: 100, page },
-            }),
-          );
-        }
-
-        const remainingPages = await Promise.all(pageRequests);
-        const allPlayers = [
-          ...firstBatch,
-          ...remainingPages.flatMap((page) => page.data ?? []),
-        ];
-
-        if (!active) return;
-        setPlayers(allPlayers);
-      } catch {
-        if (active) {
-          setPlayers([]);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingPlayers(false);
-        }
-      }
-    }
-
-    loadPlayers();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (players.length === 0) return;
@@ -275,6 +191,7 @@ export default function LeagueTeamTable({
     });
     return ids;
   }
+
   const isDirty =
     localTeamName !== teamName ||
     rows.some(
@@ -302,37 +219,18 @@ export default function LeagueTeamTable({
     });
   }
 
-  function handlePlayerSearchChange(rowIndex: number, value: string) {
+  function handlePlayerSearchChange(
+    rowIndex: number,
+    searchText: string,
+    playerId: string,
+    team: string,
+  ) {
     setLocalRows((prev) =>
-      prev.map((row, index) => {
-        if (index !== rowIndex) return row;
-
-        // Build unavailable set from prev (fresh state) to avoid stale closure
-        const unavailable = new Set(leagueTakenPlayerIds);
-        prev.forEach((otherRow, otherIndex) => {
-          if (otherIndex !== rowIndex && otherRow.playerId) {
-            unavailable.add(otherRow.playerId);
-          }
-        });
-        const allowedPlayers = players.filter(
-          (player) =>
-            (row.position === 'MiLB'
-              ? !player.mlbDebutDate
-              : isPlayerAllowedForRow(player, row.position)) &&
-            !unavailable.has(player._id),
-        );
-        const exactMatch = allowedPlayers.find(
-          (player) =>
-            player.name === value || formatPlayerDisplay(player) === value,
-        );
-
-        return {
-          ...row,
-          search: exactMatch ? formatPlayerDisplay(exactMatch) : value,
-          playerId: exactMatch?._id ?? '',
-          team: exactMatch?.team ?? '',
-        };
-      }),
+      prev.map((row, index) =>
+        index !== rowIndex
+          ? row
+          : { ...row, search: searchText, playerId, team },
+      ),
     );
   }
 
@@ -433,39 +331,27 @@ export default function LeagueTeamTable({
                   <Tr key={row.rowId}>
                     <Td>{row.position}</Td>
                     <Td>
-                      <Input
-                        size="sm"
-                        bg="white"
+                      <PlayerSearchInput
+                        players={players}
+                        unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
+                        position={row.position}
                         value={row.search}
+                        onChange={(searchText, playerId, team) =>
+                          handlePlayerSearchChange(
+                            rowIndex,
+                            searchText,
+                            playerId,
+                            team,
+                          )
+                        }
+                        isDisabled={isSaving || isLoadingPlayers || readOnly}
                         placeholder={
                           isLoadingPlayers
                             ? 'Loading players...'
                             : 'Search players...'
                         }
-                        list={`player-options-${row.rowId}`}
-                        onChange={(e) =>
-                          handlePlayerSearchChange(rowIndex, e.target.value)
-                        }
-                        isDisabled={isSaving || isLoadingPlayers || readOnly}
+                        listId={`player-options-${row.rowId}`}
                       />
-                      <datalist id={`player-options-${row.rowId}`}>
-                        {players
-                          .filter((player) => {
-                            const unavailable =
-                              getUnavailablePlayerIds(rowIndex);
-                            return (
-                              (row.position === 'MiLB'
-                                ? !player.mlbDebutDate
-                                : isPlayerAllowedForRow(
-                                    player,
-                                    row.position,
-                                  )) && !unavailable.has(player._id)
-                            );
-                          })
-                          .map((player) => (
-                            <option key={player._id} value={player.name} />
-                          ))}
-                      </datalist>
                     </Td>
                     <Td>{row.team || '-'}</Td>
                     <Td isNumeric>
