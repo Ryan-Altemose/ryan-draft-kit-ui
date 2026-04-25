@@ -442,7 +442,7 @@ describe('LeagueTeamTable', () => {
     expect(secondOptions).toContain('William Contreras');
   });
 
-  it('still shows the assigned player in their own slot dropdown', async () => {
+  it('excludes a taken player from every datalist in the league, including their own slot', async () => {
     await renderLeagueTeamTable(
       <ChakraProvider>
         <LeagueTeamTable
@@ -469,11 +469,16 @@ describe('LeagueTeamTable', () => {
     );
 
     const datalists = document.querySelectorAll('datalist');
-    const firstOptions = Array.from(
-      datalists[0].querySelectorAll('option'),
-    ).map((o) => o.value);
-    // C-0 should still see Adley as a valid option for its own slot
-    expect(firstOptions).toContain('Adley Rutschman');
+    for (const datalist of datalists) {
+      const options = Array.from(datalist.querySelectorAll('option')).map(
+        (o) => o.value,
+      );
+      // Adley is taken in C-0 — should not appear in any slot's dropdown,
+      // including C-0 itself
+      expect(options).not.toContain('Adley Rutschman');
+      // Other eligible players should still be available
+      expect(options).toContain('William Contreras');
+    }
   });
 
   it('starts collapsed showing only the header, not the table rows', async () => {

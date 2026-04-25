@@ -259,16 +259,10 @@ export default function LeagueTeamTable({
   const rows = localRows;
   const currentBudget = calculateCurrentBudgetFromRows(startingBudget, rows);
 
-  // Player IDs taken by other teams in the league (excludes this team's own players)
-  const [teamId] = team;
+  // All player IDs already taken anywhere in the league
   const leagueTakenPlayerIds = useMemo(
-    () =>
-      new Set(
-        takenPlayers
-          .filter(([, takenByTeamId]) => takenByTeamId !== teamId)
-          .map(([playerId]) => playerId),
-      ),
-    [takenPlayers, teamId],
+    () => new Set(takenPlayers.map(([playerId]) => playerId)),
+    [takenPlayers],
   );
 
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
