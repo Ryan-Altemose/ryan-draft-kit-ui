@@ -481,6 +481,42 @@ describe('LeagueTeamTable', () => {
     }
   });
 
+  it('excludes players taken by other teams when allTakenPlayers is provided', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+          allTakenPlayers={[['player-adley', 'team-2', 'C-0', 20]]}
+        />
+      </ChakraProvider>,
+    );
+
+    const datalist = document.querySelector('datalist');
+    expect(datalist).toBeTruthy();
+    const options = Array.from(datalist!.querySelectorAll('option')).map(
+      (o) => o.value,
+    );
+    expect(options).not.toContain('Adley Rutschman');
+    expect(options).toContain('William Contreras');
+  });
+
   it('starts collapsed showing only the header, not the table rows', async () => {
     render(
       <ChakraProvider>

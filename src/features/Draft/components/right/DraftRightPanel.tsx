@@ -29,6 +29,7 @@ export default function DraftRightPanel({ league }: Props) {
             key={teamId}
             team={team}
             rosterSlots={league.rosterSlots}
+            allTakenPlayers={takenPlayers}
             takenPlayers={takenPlayers.filter(
               ([, takenByTeamId]) => takenByTeamId === teamId,
             )}

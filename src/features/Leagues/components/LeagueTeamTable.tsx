@@ -30,6 +30,7 @@ type LeagueTeamTableProps = {
   team: LeagueTeam;
   rosterSlots?: RosterSlots;
   takenPlayers?: TakenPlayer[];
+  allTakenPlayers?: TakenPlayer[];
   startingBudget: number;
   minorLeagueSlots?: number;
   onSaveChanges?: (payload: {
@@ -117,6 +118,7 @@ export default function LeagueTeamTable({
   team,
   rosterSlots = DEFAULT_ROSTER_SLOTS,
   takenPlayers = [],
+  allTakenPlayers,
   startingBudget,
   minorLeagueSlots = 0,
   onSaveChanges,
@@ -187,9 +189,10 @@ export default function LeagueTeamTable({
   );
 
   // All player IDs already taken anywhere in the league
+  const takenPlayersForAvailability = allTakenPlayers ?? takenPlayers;
   const leagueTakenPlayerIds = useMemo(
-    () => new Set(takenPlayers.map(([playerId]) => playerId)),
-    [takenPlayers],
+    () => new Set(takenPlayersForAvailability.map(([playerId]) => playerId)),
+    [takenPlayersForAvailability],
   );
 
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table

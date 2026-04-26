@@ -268,6 +268,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     key={teamId}
                     team={team}
                     rosterSlots={league.rosterSlots}
+                    allTakenPlayers={editedTakenPlayers}
                     takenPlayers={takenPlayersForTeam}
                     startingBudget={league.totalBudget ?? 0}
                     minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
