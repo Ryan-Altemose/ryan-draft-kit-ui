@@ -51,6 +51,13 @@ export function formatDecimal(value: number, decimals = 2): string {
   return value.toFixed(decimals);
 }
 
+// Player Formatting
+export function formatPlayerDisplay(player: { name: string }): string {
+  const words = player.name.trim().split(' ').filter(Boolean);
+  if (words.length < 2) return player.name;
+  return `${words[0][0]}. ${words[words.length - 1]}`;
+}
+
 // String Formatting
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;

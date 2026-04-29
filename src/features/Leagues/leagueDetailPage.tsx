@@ -118,7 +118,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     const handledSlots = new Set<string>();
 
     currentTakenPlayers.forEach((takenPlayer) => {
-      const [playerId, takenPlayerTeamId, positionSlot] = takenPlayer;
+      const [, takenPlayerTeamId, positionSlot] = takenPlayer;
       if (takenPlayerTeamId !== teamId) {
         updatedTakenPlayers.push(takenPlayer);
         return;
@@ -131,12 +131,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
       }
 
       handledSlots.add(positionSlot);
-      updatedTakenPlayers.push([
-        matchingRow.playerId || playerId,
-        teamId,
-        positionSlot,
-        matchingRow.price,
-      ]);
+      if (matchingRow.playerId) {
+        updatedTakenPlayers.push([
+          matchingRow.playerId,
+          teamId,
+          positionSlot,
+          matchingRow.price,
+        ]);
+      }
     });
 
     rows.forEach((row) => {
@@ -266,6 +268,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     key={teamId}
                     team={team}
                     rosterSlots={league.rosterSlots}
+                    allTakenPlayers={editedTakenPlayers}
                     takenPlayers={takenPlayersForTeam}
                     startingBudget={league.totalBudget ?? 0}
                     minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}

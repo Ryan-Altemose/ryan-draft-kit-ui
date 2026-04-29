@@ -2,6 +2,7 @@ import { backendClient } from '@/shared/utils/api-client';
 import type {
   CreateLeagueInput,
   CreateLeagueResponse,
+  DraftPick,
   League,
   LeagueTeam,
   TakenPlayer,
@@ -69,6 +70,8 @@ export async function upsertLeague(
   const externalId = existingLeague?.externalId ?? toExternalId(input.name);
   const takenPlayers =
     input.takenPlayers ?? existingLeague?.taken_players ?? [];
+  const draftPicks: DraftPick[] =
+    input.draftPicks ?? existingLeague?.draft_picks ?? [];
   const teams = buildLeagueTeams(
     input.teams,
     input.totalBudget,
@@ -87,6 +90,7 @@ export async function upsertLeague(
     rosterSlots: input.rosterSlots,
     totalBudget: input.totalBudget,
     taken_players: takenPlayers,
+    draft_picks: draftPicks,
     teams,
     isDefault: existingLeague?.isDefault ?? false,
     categoryWeights: existingLeague?.categoryWeights,

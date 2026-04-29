@@ -22,12 +22,15 @@ import type {
   TakenPlayer,
 } from '../types/leagues.types';
 import { DEFAULT_ROSTER_SLOTS, ROSTER_POSITIONS } from '../utils/leagueForm';
-import { externalApiClient } from '@/shared/utils/api-client';
+import { usePlayers } from '@/shared/hooks/usePlayers';
+import { formatPlayerDisplay } from '@/shared/utils/format';
+import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 
 type LeagueTeamTableProps = {
   team: LeagueTeam;
   rosterSlots?: RosterSlots;
   takenPlayers?: TakenPlayer[];
+  allTakenPlayers?: TakenPlayer[];
   startingBudget: number;
   minorLeagueSlots?: number;
   onSaveChanges?: (payload: {
@@ -39,6 +42,7 @@ type LeagueTeamTableProps = {
     }>;
   }) => void;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 type TeamTableRow = {
@@ -49,41 +53,6 @@ type TeamTableRow = {
   team: string;
   price: string;
 };
-
-type Player = {
-  _id: string;
-  name: string;
-  positions: string[];
-  playerType: 'hitter' | 'pitcher';
-  team: string;
-  mlbDebutDate?: string;
-};
-
-type PlayersResponse = {
-  data?: Player[];
-  pagination?: {
-    totalPages?: number;
-  };
-};
-
-function formatPlayerDisplay(player: Player) {
-  const words = player.name.trim().split(' ').filter(Boolean);
-  if (words.length < 2) return player.name;
-
-  const firstInitial = `${words[0][0]}.`;
-  const lastName = words[words.length - 1];
-  return `${firstInitial} ${lastName}`;
-}
-
-function isPlayerAllowedForRow(player: Player, position: string) {
-  if (position === 'BENCH') return true;
-  if (position === 'UTIL') return player.playerType === 'hitter';
-  if (position === 'CI')
-    return player.positions.includes('1B') || player.positions.includes('3B');
-  if (position === 'MI')
-    return player.positions.includes('2B') || player.positions.includes('SS');
-  return player.positions.includes(position);
-}
 
 function buildTeamRows(
   rosterSlots: RosterSlots,
@@ -133,19 +102,28 @@ function parsePrice(value: string): number {
 function calculateCurrentBudgetFromRows(
   startingBudget: number,
   rows: TeamTableRow[],
+  takenPlayers: TakenPlayer[],
 ): number {
-  const spent = rows.reduce((sum, row) => sum + parsePrice(row.price), 0);
-  return Math.max(0, startingBudget - spent);
+  const rowSlots = new Set(rows.map((r) => r.rowId));
+  const rowSpend = rows.reduce((sum, row) => sum + parsePrice(row.price), 0);
+  // Also deduct spending from taken players whose slot has no corresponding row
+  // (e.g. 'DRAFT' sentinel entries from live auction picks)
+  const extraSpend = takenPlayers
+    .filter(([, , slot]) => !rowSlots.has(slot))
+    .reduce((sum, [, , , price]) => sum + price, 0);
+  return Math.max(0, startingBudget - rowSpend - extraSpend);
 }
 
 export default function LeagueTeamTable({
   team,
   rosterSlots = DEFAULT_ROSTER_SLOTS,
   takenPlayers = [],
+  allTakenPlayers,
   startingBudget,
   minorLeagueSlots = 0,
   onSaveChanges,
   isSaving = false,
+  readOnly = false,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [, teamName] = team;
@@ -155,8 +133,9 @@ export default function LeagueTeamTable({
   );
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const { players, isLoading: isLoadingPlayers } = usePlayers();
 
   useEffect(() => {
     setLocalTeamName(teamName);
@@ -181,57 +160,6 @@ export default function LeagueTeamTable({
   }, [propRows, teamName, players]);
 
   useEffect(() => {
-    let active = true;
-
-    async function loadPlayers() {
-      try {
-        setIsLoadingPlayers(true);
-
-        const firstPage = await externalApiClient.get<PlayersResponse>(
-          '/api/players',
-          {
-            params: { limit: 100, page: 1 },
-          },
-        );
-        const firstBatch = firstPage.data ?? [];
-        const totalPages = firstPage.pagination?.totalPages ?? 1;
-        const pageRequests: Promise<PlayersResponse>[] = [];
-
-        for (let page = 2; page <= totalPages; page += 1) {
-          pageRequests.push(
-            externalApiClient.get<PlayersResponse>('/api/players', {
-              params: { limit: 100, page },
-            }),
-          );
-        }
-
-        const remainingPages = await Promise.all(pageRequests);
-        const allPlayers = [
-          ...firstBatch,
-          ...remainingPages.flatMap((page) => page.data ?? []),
-        ];
-
-        if (!active) return;
-        setPlayers(allPlayers);
-      } catch {
-        if (active) {
-          setPlayers([]);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingPlayers(false);
-        }
-      }
-    }
-
-    loadPlayers();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (players.length === 0) return;
 
     setLocalRows((currentRows) =>
@@ -254,18 +182,17 @@ export default function LeagueTeamTable({
   }, [players]);
 
   const rows = localRows;
-  const currentBudget = calculateCurrentBudgetFromRows(startingBudget, rows);
+  const currentBudget = calculateCurrentBudgetFromRows(
+    startingBudget,
+    rows,
+    takenPlayers,
+  );
 
-  // Player IDs taken by other teams in the league (excludes this team's own players)
-  const [teamId] = team;
+  // All player IDs already taken anywhere in the league
+  const takenPlayersForAvailability = allTakenPlayers ?? takenPlayers;
   const leagueTakenPlayerIds = useMemo(
-    () =>
-      new Set(
-        takenPlayers
-          .filter(([, takenByTeamId]) => takenByTeamId !== teamId)
-          .map(([playerId]) => playerId),
-      ),
-    [takenPlayers, teamId],
+    () => new Set(takenPlayersForAvailability.map(([playerId]) => playerId)),
+    [takenPlayersForAvailability],
   );
 
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
@@ -278,6 +205,7 @@ export default function LeagueTeamTable({
     });
     return ids;
   }
+
   const isDirty =
     localTeamName !== teamName ||
     rows.some(
@@ -305,37 +233,18 @@ export default function LeagueTeamTable({
     });
   }
 
-  function handlePlayerSearchChange(rowIndex: number, value: string) {
+  function handlePlayerSearchChange(
+    rowIndex: number,
+    searchText: string,
+    playerId: string,
+    team: string,
+  ) {
     setLocalRows((prev) =>
-      prev.map((row, index) => {
-        if (index !== rowIndex) return row;
-
-        // Build unavailable set from prev (fresh state) to avoid stale closure
-        const unavailable = new Set(leagueTakenPlayerIds);
-        prev.forEach((otherRow, otherIndex) => {
-          if (otherIndex !== rowIndex && otherRow.playerId) {
-            unavailable.add(otherRow.playerId);
-          }
-        });
-        const allowedPlayers = players.filter(
-          (player) =>
-            (row.position === 'MiLB'
-              ? !player.mlbDebutDate
-              : isPlayerAllowedForRow(player, row.position)) &&
-            !unavailable.has(player._id),
-        );
-        const exactMatch = allowedPlayers.find(
-          (player) =>
-            player.name === value || formatPlayerDisplay(player) === value,
-        );
-
-        return {
-          ...row,
-          search: exactMatch ? formatPlayerDisplay(exactMatch) : value,
-          playerId: exactMatch?._id ?? '',
-          team: exactMatch?.team ?? '',
-        };
-      }),
+      prev.map((row, index) =>
+        index !== rowIndex
+          ? row
+          : { ...row, search: searchText, playerId, team },
+      ),
     );
   }
 
@@ -398,114 +307,124 @@ export default function LeagueTeamTable({
         px={4}
         py={3}
         bg="gray.50"
-        borderBottomWidth="1px"
+        borderBottomWidth={isCollapsed ? undefined : '1px'}
+        onClick={() => setIsCollapsed((c) => !c)}
+        cursor="pointer"
+        userSelect="none"
       >
         <Input
           value={localTeamName}
           onChange={(e) => setLocalTeamName(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
           size="sm"
           maxW="180px"
           fontWeight="bold"
           bg="white"
-          isDisabled={isSaving}
+          isDisabled={isSaving || readOnly}
+          isReadOnly={readOnly}
         />
         <Text fontWeight="semibold" color="gray.700">
           Budget: ${currentBudget}
         </Text>
       </Flex>
 
-      <TableContainer w="auto">
-        <Table size="sm">
-          <Thead>
-            <Tr>
-              <Th>Pos</Th>
-              <Th>Player</Th>
-              <Th>Team</Th>
-              <Th isNumeric>Price</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {rows.map((row, rowIndex) => (
-              <Tr key={row.rowId}>
-                <Td>{row.position}</Td>
-                <Td>
-                  <Input
-                    size="sm"
-                    bg="white"
-                    value={row.search}
-                    placeholder={
-                      isLoadingPlayers
-                        ? 'Loading players...'
-                        : 'Search players...'
-                    }
-                    list={`player-options-${row.rowId}`}
-                    onChange={(e) =>
-                      handlePlayerSearchChange(rowIndex, e.target.value)
-                    }
-                    isDisabled={isSaving || isLoadingPlayers}
-                  />
-                  <datalist id={`player-options-${row.rowId}`}>
-                    {players
-                      .filter((player) => {
-                        const unavailable = getUnavailablePlayerIds(rowIndex);
-                        return (
-                          (row.position === 'MiLB'
-                            ? !player.mlbDebutDate
-                            : isPlayerAllowedForRow(player, row.position)) &&
-                          !unavailable.has(player._id)
-                        );
-                      })
-                      .map((player) => (
-                        <option key={player._id} value={player.name} />
-                      ))}
-                  </datalist>
-                </Td>
-                <Td>{row.team || '-'}</Td>
-                <Td isNumeric>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={startingBudget}
-                    value={row.price}
-                    onChange={(e) => {
-                      handleLocalPriceChange(rowIndex, e.target.value);
-                    }}
-                    textAlign="right"
-                    size="sm"
-                    width="50px"
-                    minWidth="50px"
-                    marginLeft="auto"
-                    isDisabled={isSaving || row.position === 'MiLB'}
-                  />
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
+      {!isCollapsed && (
+        <>
+          <TableContainer w="auto">
+            <Table size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Pos</Th>
+                  <Th>Player</Th>
+                  <Th>Team</Th>
+                  <Th isNumeric>Price</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {rows.map((row, rowIndex) => (
+                  <Tr key={row.rowId}>
+                    <Td>{row.position}</Td>
+                    <Td>
+                      <PlayerSearchInput
+                        players={players}
+                        unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
+                        position={row.position}
+                        value={row.search}
+                        onChange={(searchText, playerId, team) =>
+                          handlePlayerSearchChange(
+                            rowIndex,
+                            searchText,
+                            playerId,
+                            team,
+                          )
+                        }
+                        isDisabled={isSaving || isLoadingPlayers || readOnly}
+                        placeholder={
+                          isLoadingPlayers
+                            ? 'Loading players...'
+                            : 'Search players...'
+                        }
+                        listId={`player-options-${row.rowId}`}
+                      />
+                    </Td>
+                    <Td>{row.team || '-'}</Td>
+                    <Td isNumeric>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={startingBudget}
+                        value={row.price}
+                        onChange={(e) => {
+                          handleLocalPriceChange(rowIndex, e.target.value);
+                        }}
+                        textAlign="right"
+                        size="sm"
+                        width="50px"
+                        minWidth="50px"
+                        marginLeft="auto"
+                        isDisabled={
+                          isSaving || row.position === 'MiLB' || readOnly
+                        }
+                      />
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
 
-      <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
-        {onSaveChanges ? (
-          <Button
-            size="sm"
-            colorScheme="blue"
-            onClick={handleSaveChanges}
-            isLoading={isSaving}
-            isDisabled={!isDirty}
-          >
-            Save Changes
-          </Button>
-        ) : null}
-        <Button
-          size="sm"
-          colorScheme="red"
-          variant="outline"
-          onClick={handleClearTable}
-          isDisabled={isSaving}
-        >
-          Clear
-        </Button>
-      </Flex>
+          {!readOnly && (
+            <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
+              {onSaveChanges ? (
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSaveChanges();
+                  }}
+                  isLoading={isSaving}
+                  isDisabled={!isDirty}
+                >
+                  Save Changes
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                colorScheme="red"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClearTable();
+                }}
+                isDisabled={isSaving}
+              >
+                Clear
+              </Button>
+            </Flex>
+          )}
+        </>
+      )}
     </Box>
   );
 }
