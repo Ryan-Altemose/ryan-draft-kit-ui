@@ -43,6 +43,7 @@ type LeagueTeamTableProps = {
   }) => void;
   isSaving?: boolean;
   readOnly?: boolean;
+  draftMode?: boolean;
 };
 
 type TeamTableRow = {
@@ -124,6 +125,7 @@ export default function LeagueTeamTable({
   onSaveChanges,
   isSaving = false,
   readOnly = false,
+  draftMode = false,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [, teamName] = team;
@@ -195,8 +197,18 @@ export default function LeagueTeamTable({
     [takenPlayersForAvailability],
   );
 
+  // In draft mode, only show players already on this team
+  const ownTeamPlayerIds = useMemo(
+    () => new Set(takenPlayers.map(([playerId]) => playerId)),
+    [takenPlayers],
+  );
+  const availablePlayers = draftMode
+    ? players.filter((p) => ownTeamPlayerIds.has(p._id))
+    : players;
+
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
   function getUnavailablePlayerIds(currentRowIndex: number): Set<string> {
+    if (draftMode) return new Set();
     const ids = new Set(leagueTakenPlayerIds);
     rows.forEach((row, index) => {
       if (index !== currentRowIndex && row.playerId) {
@@ -239,6 +251,26 @@ export default function LeagueTeamTable({
     playerId: string,
     team: string,
   ) {
+    if (draftMode && playerId) {
+      setLocalRows((prev) => {
+        const sourceIndex = prev.findIndex((r) => r.playerId === playerId);
+        const salary = sourceIndex >= 0 ? prev[sourceIndex].price : '0';
+        return prev.map((row, index) => {
+          if (index === rowIndex)
+            return {
+              ...row,
+              search: searchText,
+              playerId,
+              team,
+              price: salary,
+            };
+          if (index === sourceIndex)
+            return { ...row, playerId: '', search: '', team: '', price: '0' };
+          return row;
+        });
+      });
+      return;
+    }
     setLocalRows((prev) =>
       prev.map((row, index) =>
         index !== rowIndex
@@ -346,7 +378,7 @@ export default function LeagueTeamTable({
                     <Td>{row.position}</Td>
                     <Td>
                       <PlayerSearchInput
-                        players={players}
+                        players={availablePlayers}
                         unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
                         position={row.position}
                         value={row.search}
@@ -358,7 +390,12 @@ export default function LeagueTeamTable({
                             team,
                           )
                         }
-                        isDisabled={isSaving || isLoadingPlayers || readOnly}
+                        isDisabled={
+                          isSaving ||
+                          isLoadingPlayers ||
+                          readOnly ||
+                          (draftMode && !!row.playerId)
+                        }
                         placeholder={
                           isLoadingPlayers
                             ? 'Loading players...'
@@ -383,7 +420,10 @@ export default function LeagueTeamTable({
                         minWidth="50px"
                         marginLeft="auto"
                         isDisabled={
-                          isSaving || row.position === 'MiLB' || readOnly
+                          isSaving ||
+                          row.position === 'MiLB' ||
+                          readOnly ||
+                          draftMode
                         }
                       />
                     </Td>
@@ -393,7 +433,7 @@ export default function LeagueTeamTable({
             </Table>
           </TableContainer>
 
-          {!readOnly && (
+          {!readOnly && !draftMode && (
             <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
               {onSaveChanges ? (
                 <Button

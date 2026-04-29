@@ -273,14 +273,7 @@ export default function DraftBoard({
         </Tbody>
         <Tfoot>
           <Tr>
-            <Td
-              colSpan={COLUMNS.length}
-              position="sticky"
-              bottom={0}
-              bg="white"
-              borderTopWidth="2px"
-              py={2}
-            >
+            <Td colSpan={COLUMNS.length} borderTopWidth="2px" py={2}>
               <Flex gap={2}>
                 <Button size="sm" colorScheme="blue" onClick={handleEnterPick}>
                   Enter Pick

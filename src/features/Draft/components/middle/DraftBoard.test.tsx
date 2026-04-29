@@ -33,6 +33,21 @@ const TEAMS: LeagueTeam[] = [
 
 const STARTING_BUDGET = 260;
 
+const ROSTER_SLOTS = {
+  C: 1,
+  '1B': 1,
+  '2B': 1,
+  '3B': 1,
+  SS: 1,
+  CI: 0,
+  MI: 0,
+  OF: 3,
+  SP: 2,
+  RP: 2,
+  UTIL: 0,
+  BENCH: 0,
+};
+
 async function renderDraftBoard(
   props: {
     takenPlayers?: TakenPlayer[];
@@ -48,6 +63,7 @@ async function renderDraftBoard(
         startingBudget={STARTING_BUDGET}
         takenPlayers={[]}
         draftPicks={[]}
+        rosterSlots={ROSTER_SLOTS}
         {...props}
       />
     </ChakraProvider>,
@@ -164,7 +180,7 @@ describe('DraftBoard', () => {
 
     expect(onPickEntered).toHaveBeenCalledWith(
       [1, 'team-1', 'team-2', 'player-adley', 30],
-      ['player-adley', 'team-2', 'DRAFT', 30],
+      ['player-adley', 'team-2', 'C-0', 30],
     );
   });
 
