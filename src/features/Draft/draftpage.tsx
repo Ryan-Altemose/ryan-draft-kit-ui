@@ -11,7 +11,12 @@ import { useUpsertLeague } from '@/features/Leagues/hooks/useUpsertLeague';
 import DraftLeftPanel from './components/left/DraftLeftPanel';
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
-import { ensureLeagueHasDraftPicks } from './utils/draftPicks';
+import {
+  applyDraftPick,
+  initializeDraftState,
+  toDraftLeagueInput,
+  undoLastDraftPick,
+} from './utils/draftState';
 
 export default function DraftPage() {
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
@@ -23,87 +28,31 @@ export default function DraftPage() {
       return;
     }
 
-    setSelectedLeague(ensureLeagueHasDraftPicks(league));
+    setSelectedLeague(initializeDraftState(league));
   }
 
   function handleUndo() {
     if (!selectedLeague) return;
-    const picks = selectedLeague.draft_picks ?? [];
-    if (picks.length === 0) return;
+    const nextLeague = undoLastDraftPick(selectedLeague);
+    if (nextLeague === selectedLeague) return;
 
-    const [, , winningTeamId, playerId] = picks[picks.length - 1];
-
-    let removed = false;
-    const newTakenPlayers = (selectedLeague.taken_players ?? []).filter(
-      ([pid, tid, slot]) => {
-        if (
-          !removed &&
-          pid === playerId &&
-          tid === winningTeamId &&
-          slot === 'DRAFT'
-        ) {
-          removed = true;
-          return false;
-        }
-        return true;
-      },
-    );
-    const newDraftPicks = picks.slice(0, -1);
-
-    setSelectedLeague({
-      ...selectedLeague,
-      taken_players: newTakenPlayers,
-      draft_picks: newDraftPicks,
-    });
+    setSelectedLeague(nextLeague);
 
     void upsertLeagueMutation.mutateAsync({
-      input: {
-        name: selectedLeague.name,
-        teams: selectedLeague.teams?.length ?? 0,
-        draftType: selectedLeague.draftType as 'auction',
-        rosterSlots: selectedLeague.rosterSlots,
-        totalBudget: selectedLeague.totalBudget ?? 0,
-        battingCategories: selectedLeague.battingCategories,
-        pitchingCategories: selectedLeague.pitchingCategories,
-        minorLeagueSlotsPerTeam: selectedLeague.minorLeagueSlotsPerTeam,
-        takenPlayers: newTakenPlayers,
-        draftPicks: newDraftPicks,
-        teamsData: selectedLeague.teams,
-      },
-      existingLeague: selectedLeague,
+      input: toDraftLeagueInput(nextLeague),
+      existingLeague: nextLeague,
     });
   }
 
   function handlePickEntered(pick: DraftPick, takenEntry: TakenPlayer) {
     if (!selectedLeague) return;
+    const nextLeague = applyDraftPick(selectedLeague, pick, takenEntry);
 
-    const newTakenPlayers = [
-      ...(selectedLeague.taken_players ?? []),
-      takenEntry,
-    ];
-    const newDraftPicks = [...(selectedLeague.draft_picks ?? []), pick];
-
-    setSelectedLeague({
-      ...selectedLeague,
-      taken_players: newTakenPlayers,
-      draft_picks: newDraftPicks,
-    });
+    setSelectedLeague(nextLeague);
 
     void upsertLeagueMutation.mutateAsync({
-      input: {
-        name: selectedLeague.name,
-        teams: selectedLeague.teams?.length ?? 0,
-        draftType: selectedLeague.draftType as 'auction',
-        rosterSlots: selectedLeague.rosterSlots,
-        totalBudget: selectedLeague.totalBudget ?? 0,
-        battingCategories: selectedLeague.battingCategories,
-        pitchingCategories: selectedLeague.pitchingCategories,
-        minorLeagueSlotsPerTeam: selectedLeague.minorLeagueSlotsPerTeam,
-        takenPlayers: newTakenPlayers,
-        draftPicks: newDraftPicks,
-        teamsData: selectedLeague.teams,
-      },
-      existingLeague: selectedLeague,
+      input: toDraftLeagueInput(nextLeague),
+      existingLeague: nextLeague,
     });
   }
 
