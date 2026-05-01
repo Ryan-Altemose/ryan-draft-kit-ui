@@ -4,9 +4,12 @@ import type {
   League,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
+import type { Player } from '@/shared/hooks/usePlayers';
 import {
   applyDraftPick,
   initializeDraftState,
+  serializeDraftStateJson,
+  toDraftStateJson,
   toDraftLeagueInput,
   undoLastDraftPick,
 } from './draftState';
@@ -50,6 +53,22 @@ function buildLeague(overrides: Partial<League> = {}): League {
 describe('draftState utils', () => {
   const pick: DraftPick = [1, 'team-1', 'team-2', 'player-1', 22];
   const takenEntry: TakenPlayer = ['player-1', 'team-2', 'DRAFT', 22];
+  const players: Player[] = [
+    {
+      _id: 'player-1',
+      name: 'Adley Rutschman',
+      positions: ['C'],
+      playerType: 'hitter',
+      team: 'BAL',
+    },
+    {
+      _id: 'player-9',
+      name: 'Tarik Skubal',
+      positions: ['SP'],
+      playerType: 'pitcher',
+      team: 'DET',
+    },
+  ];
 
   it('initializes draft state from taken players when draft picks are missing', () => {
     const league = buildLeague({
@@ -118,5 +137,160 @@ describe('draftState utils', () => {
       draftPicks: [pick],
       teamsData: league.teams,
     });
+  });
+
+  it('formats the current draft state into JSON with league, teams, players, and draft pick details', () => {
+    const secondPick: DraftPick = [2, 'team-1', 'team-2', 'player-1', 22];
+    const league = buildLeague({
+      draft_picks: [[1, 'team-1', 'team-1', 'player-9', 11], secondPick],
+      taken_players: [['player-9', 'team-1', 'SP-0', 11], takenEntry],
+    });
+
+    expect(toDraftStateJson(league, players)).toEqual({
+      league: {
+        leagueId: 'league-1',
+        externalId: 'ext-1',
+        name: 'League',
+        draftType: 'auction',
+        totalBudget: 260,
+        battingCategories: ['R'],
+        pitchingCategories: ['K'],
+        rosterSlots: league.rosterSlots,
+        minorLeagueSlotsPerTeam: 0,
+        teamCount: 2,
+      },
+      teams: [
+        {
+          teamId: 'team-1',
+          teamName: 'Alpha',
+          budgetRemaining: 249,
+          budgetSpent: 11,
+          players: [
+            {
+              playerId: 'player-9',
+              playerName: 'Tarik Skubal',
+              playerTeam: 'DET',
+              positions: ['SP'],
+              playerType: 'pitcher',
+              draftedByTeamId: 'team-1',
+              draftedByTeamName: 'Alpha',
+              nominatedByTeamId: 'team-1',
+              nominatedByTeamName: 'Alpha',
+              slot: 'SP-0',
+              purchasePrice: 11,
+              pickNumber: 1,
+            },
+          ],
+        },
+        {
+          teamId: 'team-2',
+          teamName: 'Beta',
+          budgetRemaining: 238,
+          budgetSpent: 22,
+          players: [
+            {
+              playerId: 'player-1',
+              playerName: 'Adley Rutschman',
+              playerTeam: 'BAL',
+              positions: ['C'],
+              playerType: 'hitter',
+              draftedByTeamId: 'team-2',
+              draftedByTeamName: 'Beta',
+              nominatedByTeamId: 'team-1',
+              nominatedByTeamName: 'Alpha',
+              slot: 'DRAFT',
+              purchasePrice: 22,
+              pickNumber: 2,
+            },
+          ],
+        },
+      ],
+      players: [
+        {
+          playerId: 'player-9',
+          playerName: 'Tarik Skubal',
+          playerTeam: 'DET',
+          positions: ['SP'],
+          playerType: 'pitcher',
+          draftedByTeamId: 'team-1',
+          draftedByTeamName: 'Alpha',
+          nominatedByTeamId: 'team-1',
+          nominatedByTeamName: 'Alpha',
+          slot: 'SP-0',
+          purchasePrice: 11,
+          pickNumber: 1,
+        },
+        {
+          playerId: 'player-1',
+          playerName: 'Adley Rutschman',
+          playerTeam: 'BAL',
+          positions: ['C'],
+          playerType: 'hitter',
+          draftedByTeamId: 'team-2',
+          draftedByTeamName: 'Beta',
+          nominatedByTeamId: 'team-1',
+          nominatedByTeamName: 'Alpha',
+          slot: 'DRAFT',
+          purchasePrice: 22,
+          pickNumber: 2,
+        },
+      ],
+      draftPicks: [
+        {
+          pickNumber: 1,
+          nominatedByTeamId: 'team-1',
+          nominatedByTeamName: 'Alpha',
+          draftedByTeamId: 'team-1',
+          draftedByTeamName: 'Alpha',
+          playerId: 'player-9',
+          playerName: 'Tarik Skubal',
+          purchasePrice: 11,
+        },
+        {
+          pickNumber: 2,
+          nominatedByTeamId: 'team-1',
+          nominatedByTeamName: 'Alpha',
+          draftedByTeamId: 'team-2',
+          draftedByTeamName: 'Beta',
+          playerId: 'player-1',
+          playerName: 'Adley Rutschman',
+          purchasePrice: 22,
+        },
+      ],
+    });
+  });
+
+  it('falls back to ids when player metadata is missing from the loaded player list', () => {
+    const league = buildLeague({
+      draft_picks: [pick],
+      taken_players: [takenEntry],
+    });
+
+    expect(toDraftStateJson(league, [])).toMatchObject({
+      players: [
+        {
+          playerId: 'player-1',
+          playerName: 'player-1',
+          playerTeam: '',
+          positions: [],
+          draftedByTeamName: 'Beta',
+          purchasePrice: 22,
+          pickNumber: 1,
+        },
+      ],
+    });
+  });
+
+  it('serializes the draft state export as pretty-printed JSON', () => {
+    const league = buildLeague({
+      draft_picks: [pick],
+      taken_players: [takenEntry],
+    });
+
+    const serialized = serializeDraftStateJson(league, players);
+
+    expect(typeof serialized).toBe('string');
+    expect(JSON.parse(serialized)).toEqual(toDraftStateJson(league, players));
+    expect(serialized).toContain('\n  "league"');
   });
 });

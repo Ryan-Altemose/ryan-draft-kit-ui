@@ -89,6 +89,7 @@ export const LeagueSchema = z.object({
   taken_players: z.array(TakenPlayerSchema).optional(),
   draft_picks: z.array(DraftPickSchema).optional(),
   teams: z.array(LeagueTeamSchema).optional(),
+  draftStateJson: z.unknown().optional(),
   isDefault: z.boolean().default(false),
   categoryWeights: z.record(z.string(), z.number()).optional(),
   minorLeagueSlotsPerTeam: z.number().int().min(0).optional(),
@@ -114,7 +115,67 @@ export interface League extends LeagueInput {
   _id: string;
   createdAt?: Date;
   updatedAt?: Date;
+  draftStateJson?: DraftStateJson;
 }
+
+export type DraftStateJson = {
+  league: {
+    leagueId: string;
+    externalId: string;
+    name: string;
+    draftType: League['draftType'];
+    totalBudget: number;
+    battingCategories: League['battingCategories'];
+    pitchingCategories: League['pitchingCategories'];
+    rosterSlots: League['rosterSlots'];
+    minorLeagueSlotsPerTeam: number;
+    teamCount: number;
+  };
+  teams: Array<{
+    teamId: string;
+    teamName: string;
+    budgetRemaining: number;
+    budgetSpent: number;
+    players: Array<{
+      playerId: string;
+      playerName: string;
+      playerTeam: string;
+      positions: string[];
+      playerType: 'hitter' | 'pitcher';
+      draftedByTeamId: string;
+      draftedByTeamName: string;
+      nominatedByTeamId: string;
+      nominatedByTeamName: string;
+      slot: string;
+      purchasePrice: number;
+      pickNumber?: number;
+    }>;
+  }>;
+  players: Array<{
+    playerId: string;
+    playerName: string;
+    playerTeam: string;
+    positions: string[];
+    playerType: 'hitter' | 'pitcher';
+    draftedByTeamId: string;
+    draftedByTeamName: string;
+    nominatedByTeamId: string;
+    nominatedByTeamName: string;
+    slot: string;
+    purchasePrice: number;
+    pickNumber?: number;
+  }>;
+  draftPicks: Array<{
+    pickNumber: number;
+    nominatedByTeamId: string;
+    nominatedByTeamName: string;
+    draftedByTeamId: string;
+    draftedByTeamName: string;
+    playerId: string;
+    playerName: string;
+    purchasePrice: number;
+  }>;
+};
 
 export type CreateLeagueInput = {
   name: string;
@@ -128,11 +189,16 @@ export type CreateLeagueInput = {
   takenPlayers?: TakenPlayer[];
   draftPicks?: DraftPick[];
   teamsData?: LeagueTeam[];
+  draftStateJson?: DraftStateJson;
 };
 
 export interface CreateLeagueResponse {
   success: boolean;
   data: League;
+  debug?: {
+    receivedHasDraftStateJson?: boolean;
+    savedHasDraftStateJson?: boolean;
+  };
 }
 
 export interface LeaguesResponse {
