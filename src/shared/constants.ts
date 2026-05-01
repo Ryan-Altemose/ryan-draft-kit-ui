@@ -13,6 +13,7 @@ export const QUERY_KEYS = {
   LEAGUE: 'league',
   NOTEBOOKS: 'notebooks',
   NOTEBOOK: 'notebook',
+  CURRENT_USER_PROFILE: 'current-user-profile',
 } as const;
 
 // Pagination
