@@ -9,16 +9,21 @@ import {
 } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
+import { ERROR_MESSAGES } from '@/shared/constants';
+import { ApiError } from '@/shared/utils/api-client';
 import LeagueDetailPage from './leagueDetailPage';
 import type { League, LeagueTeam } from './types/leagues.types';
 
 const pushMock = vi.fn();
+const replaceMock = vi.fn();
 const deleteMutateAsyncMock = vi.fn();
 const upsertMutateAsyncMock = vi.fn();
 let mockLeague: League;
+let mockError: Error | null = null;
+let mockIsLoading = false;
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }));
 
 vi.mock('next/link', () => ({
@@ -29,8 +34,8 @@ vi.mock('next/link', () => ({
 
 vi.mock('./hooks/useLeague', () => ({
   useLeague: () => ({
-    isLoading: false,
-    error: null,
+    isLoading: mockIsLoading,
+    error: mockError,
     data: {
       data: mockLeague,
     },
@@ -148,6 +153,8 @@ vi.mock('./components/LeagueTeamTable', () => ({
 describe('LeagueDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockError = null;
+    mockIsLoading = false;
     upsertMutateAsyncMock.mockResolvedValue({});
     mockLeague = {
       _id: 'league-123',
@@ -179,6 +186,34 @@ describe('LeagueDetailPage', () => {
         BENCH: 0,
       },
     };
+  });
+
+  it('shows an access denied message for 403 responses', () => {
+    mockError = new ApiError(ERROR_MESSAGES.FORBIDDEN, 403);
+
+    render(
+      <ChakraProvider>
+        <LeagueDetailPage leagueId="league-123" />
+      </ChakraProvider>,
+    );
+
+    expect(screen.getByText(ERROR_MESSAGES.FORBIDDEN)).toBeTruthy();
+  });
+
+  it('redirects away from dead detail pages on 404 responses', async () => {
+    mockError = new ApiError(ERROR_MESSAGES.NOT_FOUND, 404);
+
+    render(
+      <ChakraProvider>
+        <LeagueDetailPage leagueId="league-123" />
+      </ChakraProvider>,
+    );
+
+    expect(screen.getByText(ERROR_MESSAGES.NOT_FOUND)).toBeTruthy();
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/leagues');
+    });
   });
 
   it('confirms and deletes a league, then navigates back to leagues list', async () => {

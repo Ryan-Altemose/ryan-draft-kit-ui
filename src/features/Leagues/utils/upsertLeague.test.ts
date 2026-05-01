@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { STORAGE_KEYS } from '@/shared/constants';
 import type { League } from '../types/leagues.types';
 import { upsertLeague } from './upsertLeague';
 
@@ -7,6 +8,7 @@ describe('upsertLeague', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('test-user-id'));
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({

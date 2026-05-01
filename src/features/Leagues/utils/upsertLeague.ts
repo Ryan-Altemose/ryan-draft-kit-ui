@@ -102,7 +102,7 @@ export async function upsertLeague(
           | undefined,
       });
 
-  return localApiClient.post<CreateLeagueResponse>('/api/draft-save/leagues', {
+  return localApiClient.post<CreateLeagueResponse>('/api/leagues', {
     externalId,
     name: input.name,
     description: `${input.teams} teams`,

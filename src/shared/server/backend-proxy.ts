@@ -44,6 +44,11 @@ function buildHeaders(request: Request): HeadersInit {
     headers['x-api-key'] = apiKey;
   }
 
+  const userId = request.headers.get('x-user-id');
+  if (userId) {
+    headers['X-User-Id'] = userId;
+  }
+
   return headers;
 }
 
