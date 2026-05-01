@@ -26,6 +26,8 @@ import {
 } from '@chakra-ui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ERROR_MESSAGES } from '@/shared/constants';
+import { isApiError } from '@/shared/utils/api-client';
 import LeagueTeamTable from './components/LeagueTeamTable';
 import { useLeague } from './hooks/useLeague';
 import { useDeleteLeague } from './hooks/useDeleteLeague';
@@ -62,6 +64,8 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     [],
   );
   const league = data?.data;
+  const isForbidden = isApiError(error) && error.status === 403;
+  const isNotFound = isApiError(error) && error.status === 404;
 
   useEffect(() => {
     if (!league) {
@@ -81,8 +85,24 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     setEditedTakenPlayers(nextTakenPlayers);
   }, [league]);
 
+  useEffect(() => {
+    if (isNotFound) {
+      router.replace('/leagues');
+    }
+  }, [isNotFound, router]);
+
   if (isLoading) return <Spinner />;
-  if (error) return <Text>Unable to load league</Text>;
+  if (error) {
+    if (isForbidden) {
+      return <Text>{ERROR_MESSAGES.FORBIDDEN}</Text>;
+    }
+
+    if (isNotFound) {
+      return <Text>{ERROR_MESSAGES.NOT_FOUND}</Text>;
+    }
+
+    return <Text>Unable to load league</Text>;
+  }
   if (!league) return <Text>League not found</Text>;
   const currentLeague = league;
   const teamCount =

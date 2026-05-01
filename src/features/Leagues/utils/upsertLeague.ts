@@ -1,4 +1,4 @@
-import { backendClient } from '@/shared/utils/api-client';
+import { localApiClient } from '@/shared/utils/api-client';
 import type {
   CreateLeagueInput,
   CreateLeagueResponse,
@@ -79,7 +79,7 @@ export async function upsertLeague(
     input.teamsData ?? existingLeague?.teams,
   );
 
-  return backendClient.post<CreateLeagueResponse>('/api/leagues', {
+  return localApiClient.post<CreateLeagueResponse>('/api/leagues', {
     externalId,
     name: input.name,
     description: `${input.teams} teams`,
