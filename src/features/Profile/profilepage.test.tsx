@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import ProfilePage from './profilepage';
 
 const reinitializeMock = vi.fn();
+const rotateAccountMock = vi.fn();
 const refetchMock = vi.fn();
 const mockUseUserSession = vi.fn();
 const mockUseCurrentUserProfile = vi.fn();
@@ -26,6 +27,7 @@ describe('ProfilePage', () => {
         name: 'Draft Kit User',
       },
       reinitialize: reinitializeMock,
+      rotateAccount: rotateAccountMock,
     });
     mockUseCurrentUserProfile.mockReturnValue({
       data: {
@@ -61,7 +63,7 @@ describe('ProfilePage', () => {
     expect(screen.getByText('2026-05-02T00:00:00.000Z')).toBeTruthy();
   });
 
-  it('wires the refresh and reinitialize actions', () => {
+  it('wires the refresh, reinitialize, and rotate actions', () => {
     render(
       <ChakraProvider>
         <ProfilePage />
@@ -72,9 +74,11 @@ describe('ProfilePage', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Reinitialize Session' }),
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate Account' }));
 
     expect(refetchMock).toHaveBeenCalledTimes(1);
     expect(reinitializeMock).toHaveBeenCalledTimes(1);
+    expect(rotateAccountMock).toHaveBeenCalledTimes(1);
   });
 
   it('shows a backend profile error', () => {

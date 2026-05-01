@@ -21,6 +21,7 @@ import type {
 import { setBackendUnauthorizedHandler } from '@/shared/utils/api-client';
 import {
   clearStoredBackendUserId,
+  clearStoredCurrentUser,
   getStoredCurrentUser,
 } from './user-session-storage';
 
@@ -28,6 +29,7 @@ type UserSessionContextValue = {
   currentUser: CurrentUser | null;
   status: UserSessionStatus;
   reinitialize: () => Promise<void>;
+  rotateAccount: () => Promise<void>;
 };
 
 const UserSessionContext = createContext<UserSessionContextValue | null>(null);
@@ -37,6 +39,7 @@ function clearUserOwnedQueries(): void {
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.LEAGUE] });
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.NOTEBOOKS] });
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.NOTEBOOK] });
+  queryClient.removeQueries({ queryKey: [QUERY_KEYS.CURRENT_USER_PROFILE] });
 }
 
 export function UserSessionProvider({ children }: { children: ReactNode }) {
@@ -105,13 +108,22 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
     };
   }, [initialize]);
 
+  const rotateAccount = useCallback(async () => {
+    clearStoredCurrentUser();
+    currentUserIdRef.current = null;
+    clearUserOwnedQueries();
+    setCurrentUser(null);
+    await initialize();
+  }, [initialize]);
+
   const value = useMemo<UserSessionContextValue>(
     () => ({
       currentUser,
       status,
       reinitialize: initialize,
+      rotateAccount,
     }),
-    [currentUser, initialize, status],
+    [currentUser, initialize, rotateAccount, status],
   );
 
   if (status === 'initializing') {

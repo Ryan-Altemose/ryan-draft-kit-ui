@@ -34,7 +34,7 @@ function ProfileField({
 }
 
 export default function ProfilePage() {
-  const { currentUser, reinitialize } = useUserSession();
+  const { currentUser, reinitialize, rotateAccount } = useUserSession();
   const userProfileQuery = useCurrentUserProfile(currentUser?.userId);
   const profile = userProfileQuery.data?.data;
   const errorMessage = userProfileQuery.error
@@ -64,6 +64,14 @@ export default function ProfilePage() {
               }}
             >
               Reinitialize Session
+            </Button>
+            <Button
+              colorScheme="orange"
+              onClick={() => {
+                void rotateAccount();
+              }}
+            >
+              Rotate Account
             </Button>
           </HStack>
         </HStack>
