@@ -132,7 +132,7 @@ export default function DraftPage() {
           onUndo={handleUndo}
         />
       </Box>
-      <Box flex={1} minH={0} overflowY="auto">
+      <Box flex={1} minW={0} overflow="hidden">
         <DraftRightPanel league={selectedLeague} />
       </Box>
     </Flex>
