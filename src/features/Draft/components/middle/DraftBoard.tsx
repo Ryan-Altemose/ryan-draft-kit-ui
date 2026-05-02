@@ -27,7 +27,6 @@ import { usePlayers } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 import { autoAssignSlot } from '../../utils/autoAssign';
-import { deriveDraftPicksFromTakenPlayers } from '../../utils/draftPicks';
 
 type DraftBoardProps = {
   teams?: LeagueTeam[];
@@ -51,6 +50,7 @@ const COLUMNS = [
 export default function DraftBoard({
   teams = [],
   takenPlayers = [],
+  draftPicks = [],
   startingBudget = 0,
   rosterSlots,
   minorLeagueSlots = 0,
@@ -61,8 +61,8 @@ export default function DraftBoard({
   const toast = useToast();
 
   const displayedDraftPicks = useMemo(
-    () => deriveDraftPicksFromTakenPlayers(takenPlayers),
-    [takenPlayers],
+    () => [...draftPicks].sort((a, b) => a[0] - b[0]),
+    [draftPicks],
   );
 
   const [nominatingTeamId, setNominatingTeamId] = useState('');

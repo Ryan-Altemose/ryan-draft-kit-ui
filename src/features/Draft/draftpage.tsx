@@ -18,15 +18,7 @@ export default function DraftPage() {
   const upsertLeagueMutation = useUpsertLeague();
 
   function handleLeagueChange(league: League | null) {
-    if (!league) {
-      setSelectedLeague(null);
-      return;
-    }
-
-    setSelectedLeague({
-      ...league,
-      draft_picks: deriveDraftPicksFromTakenPlayers(league.taken_players ?? []),
-    });
+    setSelectedLeague(league);
   }
 
   function handleUndo() {
