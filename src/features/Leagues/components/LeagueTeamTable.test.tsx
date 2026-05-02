@@ -589,6 +589,105 @@ describe('LeagueTeamTable', () => {
     expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
   });
 
+  it('moves a player from one position slot to another within the same team in draft mode', async () => {
+    const onDirtyChange = vi.fn();
+    const onCrossTeamTransfer = vi.fn();
+
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 0]}
+          startingBudget={260}
+          rosterSlots={{
+            C: 2,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-1', 'C-0', 30]]}
+          allTakenPlayers={[['player-adley', 'team-1', 'C-0', 30]]}
+          onDirtyChange={onDirtyChange}
+          onCrossTeamTransfer={onCrossTeamTransfer}
+          draftMode
+        />
+      </ChakraProvider>,
+    );
+
+    // C-0 should show player; wait for name to populate
+    await waitFor(() =>
+      expect(screen.getByDisplayValue('A. Rutschman')).toBeTruthy(),
+    );
+
+    // C-1 is empty — fire change to move player there
+    const searchInputs = screen.getAllByPlaceholderText('Search players...');
+    const emptyInput = searchInputs.find(
+      (el) => (el as HTMLInputElement).value === '',
+    )!;
+    fireEvent.change(emptyInput, { target: { value: 'Adley Rutschman' } });
+
+    // Player should now be in C-1; C-0 cleared
+    await waitFor(() => {
+      const inputs = screen.getAllByPlaceholderText('Search players...');
+      expect(
+        inputs.some((el) => (el as HTMLInputElement).value === 'A. Rutschman'),
+      ).toBe(true);
+    });
+
+    expect(onDirtyChange).toHaveBeenCalledWith('team-1', true);
+    expect(onCrossTeamTransfer).not.toHaveBeenCalled();
+  });
+
+  it('calls onCrossTeamTransfer when a drafted player from another team is assigned to a slot', async () => {
+    const onCrossTeamTransfer = vi.fn();
+
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 0]}
+          startingBudget={260}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+          allTakenPlayers={[['player-adley', 'team-2', 'C-0', 30]]}
+          onCrossTeamTransfer={onCrossTeamTransfer}
+          draftMode
+        />
+      </ChakraProvider>,
+    );
+
+    const searchInput = screen.getByPlaceholderText('Search players...');
+    fireEvent.change(searchInput, { target: { value: 'Adley Rutschman' } });
+
+    expect(onCrossTeamTransfer).toHaveBeenCalledWith('player-adley', 'team-1');
+
+    await waitFor(() =>
+      expect(
+        (screen.getByPlaceholderText('Search players...') as HTMLInputElement)
+          .value,
+      ).toBe('A. Rutschman'),
+    );
+  });
+
   it('filters dropdown options by position and allows all hitters in UTIL and all players in BENCH', async () => {
     await renderLeagueTeamTable(
       <ChakraProvider>

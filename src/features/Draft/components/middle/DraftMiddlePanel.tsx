@@ -4,6 +4,7 @@ import { Box, Flex, Input, Text } from '@chakra-ui/react';
 import type {
   DraftPick,
   LeagueTeam,
+  RosterSlots,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import DraftBoard from './DraftBoard';
@@ -13,6 +14,8 @@ type DraftMiddlePanelProps = {
   takenPlayers?: TakenPlayer[];
   draftPicks?: DraftPick[];
   startingBudget?: number;
+  rosterSlots?: RosterSlots;
+  minorLeagueSlots?: number;
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
 };
@@ -22,6 +25,8 @@ export default function DraftMiddlePanel({
   takenPlayers,
   draftPicks,
   startingBudget,
+  rosterSlots,
+  minorLeagueSlots,
   onPickEntered,
   onUndo,
 }: DraftMiddlePanelProps) {
@@ -38,6 +43,8 @@ export default function DraftMiddlePanel({
           takenPlayers={takenPlayers}
           draftPicks={draftPicks}
           startingBudget={startingBudget}
+          rosterSlots={rosterSlots}
+          minorLeagueSlots={minorLeagueSlots}
           onPickEntered={onPickEntered}
           onUndo={onUndo}
         />
