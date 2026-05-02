@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ERROR_MESSAGES } from '@/shared/constants';
+import { isApiError } from '@/shared/utils/api-client';
 import type { Notebook, Player } from '../types/notebook.types';
 import { useCreateNotebook } from './useCreateNotebook';
 import { useDeleteNotebook } from './useDeleteNotebook';
@@ -57,8 +59,41 @@ export function useNotebookManager() {
   const updateNotebookMutation = useUpdateNotebook();
   const upsertPlayerNotebookMutation = useUpsertPlayerNotebook();
 
-  const getMutationErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error && error.message ? error.message : fallback;
+  const getMutationErrorMessage = (error: unknown, fallback: string) => {
+    if (isApiError(error)) {
+      if (error.status === 403) {
+        return ERROR_MESSAGES.FORBIDDEN;
+      }
+
+      if (error.status === 404) {
+        return ERROR_MESSAGES.NOT_FOUND;
+      }
+    }
+
+    return error instanceof Error && error.message ? error.message : fallback;
+  };
+
+  const removeNotebookFromState = (id: string) => {
+    setLocalNotebooks((current) =>
+      current.filter((notebook) => notebook._id !== id),
+    );
+
+    if (selectedNotebookId === id) {
+      setSelectedNotebookId(null);
+    }
+  };
+
+  const handleNotebookMutationError = (
+    error: unknown,
+    notebookId: string,
+    fallback: string,
+  ) => {
+    if (isApiError(error) && (error.status === 403 || error.status === 404)) {
+      removeNotebookFromState(notebookId);
+    }
+
+    setSaveError(getMutationErrorMessage(error, fallback));
+  };
 
   useEffect(() => {
     if (!notebooksQuery.data?.data) {
@@ -79,6 +114,15 @@ export function useNotebookManager() {
     setLocalNotebooks(customNotebooks);
     setLocalPlayerNotes(playerNotebooks);
   }, [notebooksQuery.data]);
+
+  useEffect(() => {
+    if (
+      selectedNotebookId &&
+      !localNotebooks.some((notebook) => notebook._id === selectedNotebookId)
+    ) {
+      setSelectedNotebookId(null);
+    }
+  }, [localNotebooks, selectedNotebookId]);
 
   useEffect(() => {
     return () => {
@@ -123,8 +167,10 @@ export function useNotebookManager() {
         );
         setSaveError(null);
       } catch (error) {
-        setSaveError(
-          getMutationErrorMessage(error, 'Unable to save notebook changes.'),
+        handleNotebookMutationError(
+          error,
+          id,
+          'Unable to save notebook changes.',
         );
       } finally {
         delete notebookPendingUpdatesRef.current[id];
@@ -213,19 +259,10 @@ export function useNotebookManager() {
     try {
       await deleteNotebookMutation.mutateAsync(id);
 
-      setLocalNotebooks((current) =>
-        current.filter((notebook) => notebook._id !== id),
-      );
-
-      if (selectedNotebookId === id) {
-        setSelectedNotebookId(null);
-      }
-
+      removeNotebookFromState(id);
       setSaveError(null);
     } catch (error) {
-      setSaveError(
-        getMutationErrorMessage(error, 'Unable to delete notebook.'),
-      );
+      handleNotebookMutationError(error, id, 'Unable to delete notebook.');
     }
   };
 

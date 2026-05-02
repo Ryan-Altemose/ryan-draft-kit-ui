@@ -1,12 +1,18 @@
-import { backendClient } from '@/shared/utils/api-client';
+import { localApiClient } from '@/shared/utils/api-client';
 import type {
   CreateLeagueInput,
   CreateLeagueResponse,
   DraftPick,
+  DraftStateJson,
   League,
   LeagueTeam,
   TakenPlayer,
 } from '../types/leagues.types';
+import { buildDraftStateJsonFromLeagueSave } from './draftStateJson';
+
+type UpsertLeagueOptions = {
+  endpoint?: '/api/leagues' | '/api/draft-save/leagues';
+};
 
 // const DEFAULT_BATTING_CATEGORIES = ['R', 'HR', 'RBI', 'SB', 'AVG'] as const;
 // const DEFAULT_PITCHING_CATEGORIES = ['W', 'SV', 'K', 'ERA', 'WHIP'] as const;
@@ -60,6 +66,7 @@ function buildLeagueTeams(
 export async function upsertLeague(
   input: CreateLeagueInput,
   existingLeague?: League,
+  options?: UpsertLeagueOptions,
 ): Promise<CreateLeagueResponse> {
   if (existingLeague && !existingLeague.externalId) {
     throw new Error(
@@ -78,23 +85,58 @@ export async function upsertLeague(
     takenPlayers,
     input.teamsData ?? existingLeague?.teams,
   );
+  const draftStateJson: DraftStateJson = input.draftStateJson
+    ? input.draftStateJson
+    : buildDraftStateJsonFromLeagueSave({
+        _id: existingLeague?._id,
+        externalId,
+        name: input.name,
+        draftType: input.draftType,
+        totalBudget: input.totalBudget,
+        battingCategories: input.battingCategories,
+        pitchingCategories: input.pitchingCategories,
+        rosterSlots: input.rosterSlots,
+        minorLeagueSlotsPerTeam:
+          input.minorLeagueSlotsPerTeam ??
+          existingLeague?.minorLeagueSlotsPerTeam,
+        taken_players: takenPlayers,
+        draft_picks: draftPicks,
+        teams,
+        draftStateJson: existingLeague?.draftStateJson as
+          | DraftStateJson
+          | undefined,
+      });
 
-  return backendClient.post<CreateLeagueResponse>('/api/leagues', {
-    externalId,
-    name: input.name,
-    description: `${input.teams} teams`,
-    format: existingLeague?.format ?? 'roto',
-    draftType: input.draftType,
-    battingCategories: input.battingCategories,
-    pitchingCategories: input.pitchingCategories,
-    rosterSlots: input.rosterSlots,
-    totalBudget: input.totalBudget,
-    taken_players: takenPlayers,
-    draft_picks: draftPicks,
-    teams,
-    isDefault: existingLeague?.isDefault ?? false,
-    categoryWeights: existingLeague?.categoryWeights,
-    minorLeagueSlotsPerTeam:
-      input.minorLeagueSlotsPerTeam ?? existingLeague?.minorLeagueSlotsPerTeam,
-  });
+  const response = await localApiClient.post<CreateLeagueResponse>(
+    options?.endpoint ?? '/api/leagues',
+    {
+      externalId,
+      name: input.name,
+      description: `${input.teams} teams`,
+      format: existingLeague?.format ?? 'roto',
+      draftType: input.draftType,
+      battingCategories: input.battingCategories,
+      pitchingCategories: input.pitchingCategories,
+      rosterSlots: input.rosterSlots,
+      totalBudget: input.totalBudget,
+      taken_players: takenPlayers,
+      draft_picks: draftPicks,
+      teams,
+      draftStateJson,
+      isDefault: existingLeague?.isDefault ?? false,
+      categoryWeights: existingLeague?.categoryWeights,
+      minorLeagueSlotsPerTeam:
+        input.minorLeagueSlotsPerTeam ??
+        existingLeague?.minorLeagueSlotsPerTeam,
+    },
+  );
+
+  if (!response.data.draftStateJson) {
+    response.data = {
+      ...response.data,
+      draftStateJson,
+    };
+  }
+
+  return response;
 }

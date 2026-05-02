@@ -9,6 +9,11 @@ export const QUERY_KEYS = {
   RANKINGS: 'rankings',
   DRAFT: 'draft',
   TEAM: 'team',
+  LEAGUES: 'leagues',
+  LEAGUE: 'league',
+  NOTEBOOKS: 'notebooks',
+  NOTEBOOK: 'notebook',
+  CURRENT_USER_PROFILE: 'current-user-profile',
 } as const;
 
 // Pagination
@@ -32,6 +37,9 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER_PREFERENCES: 'user_preferences',
   DRAFT_STATE: 'draft_state',
+  EXTERNAL_USER_ID: 'draftkit.externalUserId',
+  USER_ID: 'draftkit.userId',
+  USER_NAME: 'draftkit.userName',
 } as const;
 
 // Routes
@@ -48,5 +56,7 @@ export const ERROR_MESSAGES = {
   GENERIC: 'Something went wrong. Please try again.',
   NETWORK: 'Network error. Please check your connection.',
   NOT_FOUND: 'Resource not found.',
-  UNAUTHORIZED: 'Please log in to continue.',
+  UNAUTHORIZED: 'User session expired. Reloading user session.',
+  FORBIDDEN: 'Access denied.',
+  USER_BOOTSTRAP: 'Unable to initialize user session.',
 } as const;

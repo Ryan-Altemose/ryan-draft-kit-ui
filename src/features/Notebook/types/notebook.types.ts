@@ -27,6 +27,7 @@ export type PlayersResponse = {
 export type NotebookKind = 'custom' | 'player';
 
 export type Notebook = BaseEntity & {
+  userId?: string;
   kind: NotebookKind;
   name: string;
   content: string;
