@@ -187,14 +187,14 @@ describe('DraftBoard', () => {
 
     expect(onPickEntered).toHaveBeenCalledWith(
       [1, 'team-1', 'team-2', 'player-adley', 30],
-      ['player-adley', 'team-2', 'C-0', 30, [1, 'team-1', 'team-2']],
+      ['player-adley', 'team-2', 'C-0', 30],
     );
   });
 
   it('uses existing draft picks length to determine the next pick number', async () => {
     const onPickEntered = vi.fn();
     const takenPlayers: TakenPlayer[] = [
-      ['player-freddie', 'team-2', '1B-0', 40, [1, 'team-1', 'team-2']],
+      ['player-freddie', 'team-2', '1B-0', 40],
     ];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-freddie', 40],
@@ -231,9 +231,7 @@ describe('DraftBoard', () => {
 
   it('Undo button is enabled and calls onUndo when picks exist', async () => {
     const onUndo = vi.fn();
-    const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-2', 'C-0', 30, [1, 'team-1', 'team-2']],
-    ];
+    const takenPlayers: TakenPlayer[] = [['player-adley', 'team-2', 'C-0', 30]];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],
     ];
@@ -248,9 +246,7 @@ describe('DraftBoard', () => {
   });
 
   it('renders a pre-existing draft pick row with correct pick number, teams, player, and salary', async () => {
-    const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-2', 'C-0', 30, [1, 'team-1', 'team-2']],
-    ];
+    const takenPlayers: TakenPlayer[] = [['player-adley', 'team-2', 'C-0', 30]];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],
     ];
@@ -269,8 +265,8 @@ describe('DraftBoard', () => {
 
   it('renders all pre-existing pick rows when multiple picks are stored', async () => {
     const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-2', 'C-0', 30, [1, 'team-1', 'team-2']],
-      ['player-freddie', 'team-1', '1B-0', 45, [2, 'team-2', 'team-1']],
+      ['player-adley', 'team-2', 'C-0', 30],
+      ['player-freddie', 'team-1', '1B-0', 45],
     ];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],
@@ -292,9 +288,7 @@ describe('DraftBoard', () => {
   });
 
   it('shows draft picks from draftPicks prop even when takenPlayers have no pick metadata', async () => {
-    const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-2', 'C-0', 30], // 4-tuple — no pick metadata
-    ];
+    const takenPlayers: TakenPlayer[] = [['player-adley', 'team-2', 'C-0', 30]];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],
     ];
@@ -311,9 +305,7 @@ describe('DraftBoard', () => {
 
   it('shows original draft pick data on the board even after the player has been traded to a different team', async () => {
     // Adley was originally won by team-2 but has since been traded to team-1
-    const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-1', 'C-0', 30, [1, 'team-1', 'team-2']],
-    ];
+    const takenPlayers: TakenPlayer[] = [['player-adley', 'team-1', 'C-0', 30]];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],
     ];
@@ -328,8 +320,8 @@ describe('DraftBoard', () => {
 
   it('removes the last pick row when draftPicks prop shrinks after undo', async () => {
     const takenPlayers: TakenPlayer[] = [
-      ['player-adley', 'team-2', 'C-0', 30, [1, 'team-1', 'team-2']],
-      ['player-freddie', 'team-1', '1B-0', 45, [2, 'team-2', 'team-1']],
+      ['player-adley', 'team-2', 'C-0', 30],
+      ['player-freddie', 'team-1', '1B-0', 45],
     ];
     const draftPicks: DraftPick[] = [
       [1, 'team-1', 'team-2', 'player-adley', 30],

@@ -25,10 +25,10 @@ export default function DraftPage() {
     const picks = selectedLeague.draft_picks ?? [];
     if (picks.length === 0) return;
 
-    const lastPickNumber = picks[picks.length - 1][0];
+    const [lastPickNumber, , , lastPlayerId] = picks[picks.length - 1];
     const newDraftPicks = picks.filter(([n]) => n !== lastPickNumber);
     const newTakenPlayers = (selectedLeague.taken_players ?? []).filter(
-      (entry) => !(entry.length === 5 && entry[4][0] === lastPickNumber),
+      ([pid]) => pid !== lastPlayerId,
     );
 
     setSelectedLeague({

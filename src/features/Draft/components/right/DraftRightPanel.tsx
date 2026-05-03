@@ -129,22 +129,7 @@ export default function DraftRightPanel({
       for (const row of rows) {
         if (!row.playerId) continue;
 
-        // Search by playerId alone so cross-team transfers still inherit pick data
-        const existing = existingTakenPlayers.find(
-          ([pid]) => pid === row.playerId,
-        );
-
-        if (existing && existing.length === 5) {
-          newTakenPlayers.push([
-            row.playerId,
-            teamId,
-            row.rowId,
-            row.price,
-            existing[4],
-          ]);
-        } else {
-          newTakenPlayers.push([row.playerId, teamId, row.rowId, row.price]);
-        }
+        newTakenPlayers.push([row.playerId, teamId, row.rowId, row.price]);
       }
     }
 

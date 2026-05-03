@@ -138,7 +138,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     const handledSlots = new Set<string>();
 
     currentTakenPlayers.forEach((takenPlayer) => {
-      const [existingPlayerId, takenPlayerTeamId, positionSlot] = takenPlayer;
+      const [, takenPlayerTeamId, positionSlot] = takenPlayer;
       if (takenPlayerTeamId !== teamId) {
         updatedTakenPlayers.push(takenPlayer);
         return;
@@ -152,21 +152,12 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
 
       handledSlots.add(positionSlot);
       if (matchingRow.playerId) {
-        const draftPickMeta = takenPlayer.length === 5 ? takenPlayer[4] : null;
-        const shouldKeepDraftPickMeta =
-          draftPickMeta && matchingRow.playerId === existingPlayerId;
-
-        updatedTakenPlayers.push(
-          shouldKeepDraftPickMeta
-            ? [
-                matchingRow.playerId,
-                teamId,
-                positionSlot,
-                matchingRow.price,
-                draftPickMeta,
-              ]
-            : [matchingRow.playerId, teamId, positionSlot, matchingRow.price],
-        );
+        updatedTakenPlayers.push([
+          matchingRow.playerId,
+          teamId,
+          positionSlot,
+          matchingRow.price,
+        ]);
       }
     });
 
