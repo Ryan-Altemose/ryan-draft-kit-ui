@@ -1,121 +1,162 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Code,
-  Heading,
-  Spinner,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
-import { localApiClient } from '@/shared/utils/api-client';
+import { Box, Button, Code, Heading, Stack, Text } from '@chakra-ui/react';
+import { buildLeagueDraftRosterJson } from '@/features/Draft/utils/buildLeagueDraftRosterJson';
+import type { League } from '@/features/Leagues/types/leagues.types';
+import { externalApiClient, localApiClient } from '@/shared/utils/api-client';
+import type { Player } from '@/shared/hooks/usePlayers';
 
 const backendExample = `{
   "_id": "<mongo-league-id>",
   "externalId": "custom-aa-1714512345678",
   "name": "aa",
-  "draftStateJson": {
-    "league": {
-      "leagueId": "<mongo-league-id>",
-      "externalId": "custom-aa-1714512345678",
-      "name": "aa"
-    }
-  }
+  "draft_picks": [
+    [1, "team-1", "team-1", "<player-id>", 22]
+  ],
+  "taken_players": [
+    ["<player-id>", "team-1", "C-0", 22]
+  ],
+  "teams": [
+    ["team-1", "Team 1", 238]
+  ]
 }`;
 
-type LeagueWithDraftState = {
-  _id: string;
-  externalId: string;
-  name: string;
-  draftStateJson?: unknown;
-};
-
-type LeagueDebugRecord = LeagueWithDraftState & {
-  listHasDraftStateJson: boolean;
-  detailHasDraftStateJson: boolean;
-  detailRequestStatus: 'success' | 'error';
-  detailErrorMessage?: string;
-  listPreview: unknown;
-  detailPreview: unknown;
+type MongoLeagueData = {
+  loadedAt: string;
+  count: number;
+  listResponse: unknown;
+  documents: League[];
 };
 
 type LeaguesResponse = {
   success: boolean;
-  data: LeagueWithDraftState[];
+  data: League[];
 };
 
 type LeagueResponse = {
   success: boolean;
-  data: LeagueWithDraftState;
+  data: League;
+};
+
+type PlayersResponse = {
+  data?: Player[];
+  pagination?: {
+    totalPages?: number;
+  };
 };
 
 export default function TestPage() {
   const [showBackendLocation, setShowBackendLocation] = useState(false);
-  const [savedJsons, setSavedJsons] = useState<LeagueDebugRecord[]>([]);
-  const [isLoadingJsons, setIsLoadingJsons] = useState(false);
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
+  const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
+  const [mongoDataError, setMongoDataError] = useState<string | null>(null);
+  const [rosterJson, setRosterJson] = useState<unknown>(null);
+  const [isLoadingRosterJson, setIsLoadingRosterJson] = useState(false);
+  const [rosterJsonError, setRosterJsonError] = useState<string | null>(null);
 
-  async function handleLoadSavedJsons() {
-    try {
-      setIsLoadingJsons(true);
-      setJsonError(null);
+  async function loadBackendLeagueDocuments() {
+    const response = await localApiClient.get<LeaguesResponse>(
+      '/api/draft-save/leagues',
+      {
+        params: { limit: 100, _ts: Date.now() },
+        cache: 'no-store',
+      },
+    );
 
-      const response = await localApiClient.get<LeaguesResponse>(
-        '/api/draft-save/leagues',
-        {
-          params: { limit: 100, _ts: Date.now() },
+    const leagues = response.data ?? [];
+    const documents = await Promise.all(
+      leagues.map(async (league) => {
+        try {
+          const detail = await localApiClient.get<LeagueResponse>(
+            `/api/draft-save/leagues/${league._id}`,
+            {
+              params: { _ts: Date.now() },
+              cache: 'no-store',
+            },
+          );
+
+          return detail.data ?? league;
+        } catch {
+          return league;
+        }
+      }),
+    );
+
+    return { response, documents };
+  }
+
+  async function loadAllPlayers() {
+    const firstPage = await externalApiClient.get<PlayersResponse>(
+      '/api/players',
+      {
+        params: { limit: 100, page: 1, _ts: Date.now() },
+        cache: 'no-store',
+      },
+    );
+
+    const totalPages = firstPage.pagination?.totalPages ?? 1;
+    const pageRequests: Promise<PlayersResponse>[] = [];
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      pageRequests.push(
+        externalApiClient.get<PlayersResponse>('/api/players', {
+          params: { limit: 100, page, _ts: Date.now() },
           cache: 'no-store',
-        },
-      );
-
-      const leagues = response.data ?? [];
-      const detailedLeagues = await Promise.all(
-        leagues.map(async (league) => {
-          try {
-            const detail = await localApiClient.get<LeagueResponse>(
-              `/api/draft-save/leagues/${league._id}`,
-              {
-                params: { _ts: Date.now() },
-                cache: 'no-store',
-              },
-            );
-
-            const detailLeague = detail.data ?? league;
-
-            return {
-              ...detailLeague,
-              listHasDraftStateJson: Boolean(league.draftStateJson),
-              detailHasDraftStateJson: Boolean(detailLeague.draftStateJson),
-              detailRequestStatus: 'success' as const,
-              listPreview: league,
-              detailPreview: detailLeague,
-            };
-          } catch (error) {
-            return {
-              ...league,
-              listHasDraftStateJson: Boolean(league.draftStateJson),
-              detailHasDraftStateJson: false,
-              detailRequestStatus: 'error' as const,
-              detailErrorMessage:
-                error instanceof Error ? error.message : 'Detail fetch failed.',
-              listPreview: league,
-              detailPreview: null,
-            };
-          }
         }),
       );
+    }
 
-      setSavedJsons(detailedLeagues);
+    const remainingPages = await Promise.all(pageRequests);
+    return [
+      ...(firstPage.data ?? []),
+      ...remainingPages.flatMap((page) => page.data ?? []),
+    ];
+  }
+
+  async function handleLoadAllMongoData() {
+    try {
+      setIsLoadingMongoData(true);
+      setMongoDataError(null);
+
+      const { response, documents } = await loadBackendLeagueDocuments();
+
+      setMongoData({
+        loadedAt: new Date().toISOString(),
+        count: documents.length,
+        listResponse: response,
+        documents,
+      });
     } catch (error) {
-      setJsonError(
+      setMongoDataError(
         error instanceof Error
           ? error.message
-          : 'Failed to load saved draft state JSONs.',
+          : 'Failed to load MongoDB league data.',
       );
     } finally {
-      setIsLoadingJsons(false);
+      setIsLoadingMongoData(false);
+    }
+  }
+
+  async function handleBuildRosterJson() {
+    try {
+      setIsLoadingRosterJson(true);
+      setRosterJsonError(null);
+
+      const [{ documents }, players] = await Promise.all([
+        loadBackendLeagueDocuments(),
+        loadAllPlayers(),
+      ]);
+
+      setRosterJson(buildLeagueDraftRosterJson(documents, players));
+    } catch (error) {
+      setRosterJsonError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to build league roster JSON.',
+      );
+    } finally {
+      setIsLoadingRosterJson(false);
     }
   }
 
@@ -147,8 +188,8 @@ export default function TestPage() {
             bg="gray.50"
           >
             <Text>
-              The draft-state JSON is saved to the backend by the Draft Kit UI
-              `POST /api/draft-save/leagues` request.
+              Draft state is saved to the backend by the Draft Kit UI{' '}
+              <Code>POST /api/draft-save/leagues</Code> request.
             </Text>
             <Text>
               Frontend proxy route:{' '}
@@ -165,8 +206,8 @@ export default function TestPage() {
               </Code>
             </Text>
             <Text>
-              Saved collection/document field:{' '}
-              <Code>League.draftStateJson</Code>
+              Saved collection/document fields: <Code>League.draft_picks</Code>,{' '}
+              <Code>League.taken_players</Code>, and <Code>League.teams</Code>
             </Text>
             <Text>Example document shape:</Text>
             <Code whiteSpace="pre" display="block" p={4}>
@@ -177,73 +218,52 @@ export default function TestPage() {
 
         <Button
           alignSelf="flex-start"
-          variant="outline"
-          onClick={handleLoadSavedJsons}
-          isLoading={isLoadingJsons}
+          colorScheme="teal"
+          onClick={handleLoadAllMongoData}
+          isLoading={isLoadingMongoData}
         >
-          Load All Saved Draft JSONs
+          Show All Mongo League Data
         </Button>
 
-        {isLoadingJsons ? <Spinner size="sm" /> : null}
+        {mongoDataError ? <Text color="red.500">{mongoDataError}</Text> : null}
 
-        {jsonError ? <Text color="red.500">{jsonError}</Text> : null}
-
-        {savedJsons.length > 0 ? (
-          <Stack spacing={4}>
-            {savedJsons.map((league) => (
-              <Box key={league._id} borderWidth="1px" borderRadius="md" p={4}>
-                <Text fontWeight="semibold">
-                  {league.name} ({league.externalId})
-                </Text>
-                <Stack spacing={1} mt={3}>
-                  <Text fontSize="sm">
-                    List endpoint has `draftStateJson`:{' '}
-                    {league.listHasDraftStateJson ? 'yes' : 'no'}
-                  </Text>
-                  <Text fontSize="sm">
-                    Detail endpoint has `draftStateJson`:{' '}
-                    {league.detailHasDraftStateJson ? 'yes' : 'no'}
-                  </Text>
-                  <Text fontSize="sm">
-                    Detail request status: {league.detailRequestStatus}
-                  </Text>
-                  {league.detailErrorMessage ? (
-                    <Text fontSize="sm" color="red.500">
-                      Detail error: {league.detailErrorMessage}
-                    </Text>
-                  ) : null}
-                </Stack>
-                {league.draftStateJson ? (
-                  <Code whiteSpace="pre" display="block" p={4} mt={3}>
-                    {JSON.stringify(league.draftStateJson, null, 2)}
-                  </Code>
-                ) : (
-                  <Text mt={3} color="orange.500" fontSize="sm">
-                    No saved draftStateJson on this league document.
-                  </Text>
-                )}
-                <Text mt={4} fontSize="sm" fontWeight="semibold">
-                  List payload preview
-                </Text>
-                <Code whiteSpace="pre" display="block" p={4} mt={2}>
-                  {JSON.stringify(league.listPreview, null, 2)}
-                </Code>
-                <Text mt={4} fontSize="sm" fontWeight="semibold">
-                  Detail payload preview
-                </Text>
-                <Code whiteSpace="pre" display="block" p={4} mt={2}>
-                  {JSON.stringify(league.detailPreview, null, 2)}
-                </Code>
-              </Box>
-            ))}
-          </Stack>
+        {mongoData ? (
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Text fontWeight="semibold">
+              Mongo league documents loaded: {mongoData.count}
+            </Text>
+            <Text mt={1} color="gray.500" fontSize="sm">
+              Loaded at {mongoData.loadedAt}
+            </Text>
+            <Code whiteSpace="pre" display="block" p={4} mt={3}>
+              {JSON.stringify(mongoData, null, 2)}
+            </Code>
+          </Box>
         ) : null}
 
-        {!isLoadingJsons && !jsonError && savedJsons.length === 0 ? (
-          <Text color="gray.500" fontSize="sm">
-            No saved draft-state JSON documents have been loaded yet, or none
-            exist in the backend.
-          </Text>
+        <Button
+          alignSelf="flex-start"
+          colorScheme="green"
+          onClick={handleBuildRosterJson}
+          isLoading={isLoadingRosterJson}
+        >
+          Build Clean Team Roster JSON
+        </Button>
+
+        {rosterJsonError ? (
+          <Text color="red.500">{rosterJsonError}</Text>
+        ) : null}
+
+        {rosterJson ? (
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Text fontWeight="semibold">Clean league roster JSON</Text>
+            <Text mt={1} color="gray.500" fontSize="sm">
+              Grouped by league, then by team, using saved backend draft data.
+            </Text>
+            <Code whiteSpace="pre" display="block" p={4} mt={3}>
+              {JSON.stringify(rosterJson, null, 2)}
+            </Code>
+          </Box>
         ) : null}
       </Stack>
     </Box>

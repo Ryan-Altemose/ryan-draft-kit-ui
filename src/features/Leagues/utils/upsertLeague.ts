@@ -3,12 +3,10 @@ import type {
   CreateLeagueInput,
   CreateLeagueResponse,
   DraftPick,
-  DraftStateJson,
   League,
   LeagueTeam,
   TakenPlayer,
 } from '../types/leagues.types';
-import { buildDraftStateJsonFromLeagueSave } from './draftStateJson';
 
 type UpsertLeagueOptions = {
   endpoint?: '/api/leagues' | '/api/draft-save/leagues';
@@ -85,29 +83,8 @@ export async function upsertLeague(
     takenPlayers,
     input.teamsData ?? existingLeague?.teams,
   );
-  const draftStateJson: DraftStateJson = input.draftStateJson
-    ? input.draftStateJson
-    : buildDraftStateJsonFromLeagueSave({
-        _id: existingLeague?._id,
-        externalId,
-        name: input.name,
-        draftType: input.draftType,
-        totalBudget: input.totalBudget,
-        battingCategories: input.battingCategories,
-        pitchingCategories: input.pitchingCategories,
-        rosterSlots: input.rosterSlots,
-        minorLeagueSlotsPerTeam:
-          input.minorLeagueSlotsPerTeam ??
-          existingLeague?.minorLeagueSlotsPerTeam,
-        taken_players: takenPlayers,
-        draft_picks: draftPicks,
-        teams,
-        draftStateJson: existingLeague?.draftStateJson as
-          | DraftStateJson
-          | undefined,
-      });
 
-  const response = await localApiClient.post<CreateLeagueResponse>(
+  return localApiClient.post<CreateLeagueResponse>(
     options?.endpoint ?? '/api/leagues',
     {
       externalId,
@@ -122,7 +99,6 @@ export async function upsertLeague(
       taken_players: takenPlayers,
       draft_picks: draftPicks,
       teams,
-      draftStateJson,
       isDefault: existingLeague?.isDefault ?? false,
       categoryWeights: existingLeague?.categoryWeights,
       minorLeagueSlotsPerTeam:
@@ -130,13 +106,4 @@ export async function upsertLeague(
         existingLeague?.minorLeagueSlotsPerTeam,
     },
   );
-
-  if (!response.data.draftStateJson) {
-    response.data = {
-      ...response.data,
-      draftStateJson,
-    };
-  }
-
-  return response;
 }
