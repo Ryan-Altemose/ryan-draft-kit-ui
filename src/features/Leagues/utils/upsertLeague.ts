@@ -104,6 +104,9 @@ export async function upsertLeague(
       minorLeagueSlotsPerTeam:
         input.minorLeagueSlotsPerTeam ??
         existingLeague?.minorLeagueSlotsPerTeam,
+      taxiSquadPlayersPerTeam:
+        input.taxiSquadPlayersPerTeam ??
+        existingLeague?.taxiSquadPlayersPerTeam,
     },
   );
 }

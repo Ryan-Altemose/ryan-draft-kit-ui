@@ -32,7 +32,6 @@ type LeagueTeamTableProps = {
   takenPlayers?: TakenPlayer[];
   allTakenPlayers?: TakenPlayer[];
   startingBudget: number;
-  minorLeagueSlots?: number;
   onSaveChanges?: (payload: {
     teamName: string;
     rows: Array<{
@@ -65,9 +64,8 @@ type TeamTableRow = {
 function buildTeamRows(
   rosterSlots: RosterSlots,
   takenPlayers: TakenPlayer[],
-  minorLeagueSlots = 0,
 ): TeamTableRow[] {
-  const regularRows = ROSTER_POSITIONS.flatMap((position) =>
+  return ROSTER_POSITIONS.flatMap((position) =>
     Array.from({ length: rosterSlots[position] ?? 0 }, (_, slotIndex) => {
       const rowId = `${position}-${slotIndex}`;
       const player = takenPlayers.find(
@@ -83,23 +81,6 @@ function buildTeamRows(
       };
     }),
   );
-
-  const milbRows = Array.from({ length: minorLeagueSlots }, (_, slotIndex) => {
-    const rowId = `MiLB-${slotIndex}`;
-    const player = takenPlayers.find(
-      ([, , positionSlot]) => positionSlot === rowId,
-    );
-    return {
-      rowId,
-      position: 'MiLB',
-      playerId: player?.[0] ?? '',
-      search: '',
-      team: '',
-      price: String(player?.[3] ?? 0),
-    };
-  });
-
-  return [...regularRows, ...milbRows];
 }
 
 function parsePrice(value: string): number {
@@ -128,7 +109,6 @@ export default function LeagueTeamTable({
   takenPlayers = [],
   allTakenPlayers,
   startingBudget,
-  minorLeagueSlots = 0,
   onSaveChanges,
   onDirtyChange,
   onRowsChange,
@@ -141,8 +121,8 @@ export default function LeagueTeamTable({
   const toast = useToast();
   const [teamId, teamName] = team;
   const propRows = useMemo(
-    () => buildTeamRows(rosterSlots, takenPlayers, minorLeagueSlots),
-    [rosterSlots, takenPlayers, minorLeagueSlots],
+    () => buildTeamRows(rosterSlots, takenPlayers),
+    [rosterSlots, takenPlayers],
   );
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
@@ -152,25 +132,40 @@ export default function LeagueTeamTable({
 
   useEffect(() => {
     setLocalTeamName(teamName);
-    setLocalRows(
-      players.length > 0
-        ? propRows.map((row) => {
-            if (!row.playerId || row.search) return row;
-
-            const matchingPlayer = players.find(
-              (player) => player._id === row.playerId,
-            );
-            return matchingPlayer
-              ? {
-                  ...row,
-                  search: formatPlayerDisplay(matchingPlayer),
-                  team: matchingPlayer.team,
-                }
-              : row;
-          })
-        : propRows,
+    const takenIds = new Set(
+      (allTakenPlayers ?? takenPlayers).map(([id]) => id),
     );
-  }, [propRows, teamName, players]);
+    setLocalRows((currentRows) =>
+      propRows.map((propRow, index) => {
+        const localRow = currentRows[index];
+        // Local pick was claimed by another team — clear it
+        if (
+          !draftMode &&
+          localRow?.playerId &&
+          localRow.playerId !== propRow.playerId &&
+          takenIds.has(localRow.playerId)
+        ) {
+          return { ...propRow, search: '', team: '', price: '0' };
+        }
+        // Preserve other unsaved local changes
+        if (localRow?.playerId && localRow.playerId !== propRow.playerId) {
+          return localRow;
+        }
+        // Sync display info for saved data
+        if (!propRow.playerId || players.length === 0) {
+          return propRow;
+        }
+        const matchingPlayer = players.find((p) => p._id === propRow.playerId);
+        return matchingPlayer
+          ? {
+              ...propRow,
+              search: formatPlayerDisplay(matchingPlayer),
+              team: matchingPlayer.team,
+            }
+          : propRow;
+      }),
+    );
+  }, [propRows, teamName, players, allTakenPlayers, takenPlayers, draftMode]);
 
   useEffect(() => {
     if (players.length === 0) return;
@@ -468,12 +463,7 @@ export default function LeagueTeamTable({
                         width="50px"
                         minWidth="50px"
                         marginLeft="auto"
-                        isDisabled={
-                          isSaving ||
-                          row.position === 'MiLB' ||
-                          readOnly ||
-                          draftMode
-                        }
+                        isDisabled={isSaving || readOnly || draftMode}
                       />
                     </Td>
                   </Tr>

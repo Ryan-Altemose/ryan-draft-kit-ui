@@ -169,7 +169,6 @@ export default function DraftRightPanel({
                 allTakenPlayers={takenPlayers}
                 takenPlayers={takenPlayersByTeam[teamId] ?? []}
                 startingBudget={league.totalBudget ?? 0}
-                minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
                 onDirtyChange={handleDirtyChange}
                 onRowsChange={handleRowsChange}
                 onCrossTeamTransfer={handleCrossTeamTransfer}
