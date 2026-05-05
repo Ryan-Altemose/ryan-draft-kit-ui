@@ -46,6 +46,7 @@ type DraftBoardProps = {
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
   onFinishDraft?: (name: string) => void | Promise<void>;
+  readOnly?: boolean;
 };
 
 const COLUMNS = [
@@ -66,6 +67,7 @@ export default function DraftBoard({
   onPickEntered,
   onUndo,
   onFinishDraft,
+  readOnly = false,
 }: DraftBoardProps) {
   const { players, isLoading } = usePlayers();
   const toast = useToast();
@@ -251,144 +253,150 @@ export default function DraftBoard({
               );
             },
           )}
-          <Tr>
-            <Td />
-            <Td>
-              <Select
-                size="sm"
-                placeholder="Select team"
-                value={nominatingTeamId}
-                onChange={(e) => setNominatingTeamId(e.target.value)}
-              >
-                {teams.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </Td>
-            <Td>
-              <PlayerSearchInput
-                players={players}
-                unavailablePlayerIds={takenPlayerIds}
-                value={playerSearch}
-                onChange={(searchText, pid) => {
-                  setPlayerSearch(searchText);
-                  setPlayerId(pid);
-                }}
-                isDisabled={isLoading}
-                placeholder={
-                  isLoading ? 'Loading players...' : 'Search player...'
-                }
-                listId="draft-board-player"
-              />
-            </Td>
-            <Td>
-              <Select
-                size="sm"
-                placeholder="Select team"
-                value={winningTeamId}
-                onChange={(e) => setWinningTeamId(e.target.value)}
-              >
-                {teams.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </Td>
-            <Td>
-              <Input
-                size="sm"
-                type="number"
-                min={0}
-                placeholder="$"
-                width="60px"
-                value={salary}
-                onChange={(e) => setSalary(e.target.value)}
-              />
-            </Td>
-          </Tr>
+          {!readOnly ? (
+            <Tr>
+              <Td />
+              <Td>
+                <Select
+                  size="sm"
+                  placeholder="Select team"
+                  value={nominatingTeamId}
+                  onChange={(e) => setNominatingTeamId(e.target.value)}
+                >
+                  {teams.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              </Td>
+              <Td>
+                <PlayerSearchInput
+                  players={players}
+                  unavailablePlayerIds={takenPlayerIds}
+                  value={playerSearch}
+                  onChange={(searchText, pid) => {
+                    setPlayerSearch(searchText);
+                    setPlayerId(pid);
+                  }}
+                  isDisabled={isLoading}
+                  placeholder={
+                    isLoading ? 'Loading players...' : 'Search player...'
+                  }
+                  listId="draft-board-player"
+                />
+              </Td>
+              <Td>
+                <Select
+                  size="sm"
+                  placeholder="Select team"
+                  value={winningTeamId}
+                  onChange={(e) => setWinningTeamId(e.target.value)}
+                >
+                  {teams.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              </Td>
+              <Td>
+                <Input
+                  size="sm"
+                  type="number"
+                  min={0}
+                  placeholder="$"
+                  width="60px"
+                  value={salary}
+                  onChange={(e) => setSalary(e.target.value)}
+                />
+              </Td>
+            </Tr>
+          ) : null}
         </Tbody>
-        <Tfoot>
-          <Tr>
-            <Td colSpan={COLUMNS.length} borderTopWidth="2px" py={2}>
-              <Flex align="center" justify="space-between" w="100%" gap={2}>
-                <Flex gap={2}>
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    onClick={handleEnterPick}
-                  >
-                    Enter Pick
-                  </Button>
+        {!readOnly ? (
+          <Tfoot>
+            <Tr>
+              <Td colSpan={COLUMNS.length} borderTopWidth="2px" py={2}>
+                <Flex align="center" justify="space-between" w="100%" gap={2}>
+                  <Flex gap={2}>
+                    <Button
+                      size="sm"
+                      colorScheme="blue"
+                      onClick={handleEnterPick}
+                    >
+                      Enter Pick
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      isDisabled={displayedDraftPicks.length === 0}
+                      onClick={onUndo}
+                    >
+                      Undo
+                    </Button>
+                  </Flex>
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={finishDraftDialog.onOpen}
                     isDisabled={displayedDraftPicks.length === 0}
-                    onClick={onUndo}
                   >
-                    Undo
+                    Finish Draft
                   </Button>
                 </Flex>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={finishDraftDialog.onOpen}
-                  isDisabled={displayedDraftPicks.length === 0}
-                >
-                  Finish Draft
-                </Button>
-              </Flex>
-            </Td>
-          </Tr>
-        </Tfoot>
+              </Td>
+            </Tr>
+          </Tfoot>
+        ) : null}
       </Table>
 
-      <AlertDialog
-        isOpen={finishDraftDialog.isOpen}
-        leastDestructiveRef={finishDraftCancelRef}
-        onClose={finishDraftDialog.onClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Finish Draft
-            </AlertDialogHeader>
+      {!readOnly ? (
+        <AlertDialog
+          isOpen={finishDraftDialog.isOpen}
+          leastDestructiveRef={finishDraftCancelRef}
+          onClose={finishDraftDialog.onClose}
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Finish Draft
+              </AlertDialogHeader>
 
-            <AlertDialogBody>
-              <Stack spacing={3}>
-                <Text fontSize="sm">
-                  This will finish the current draft. This action can’t be
-                  undone. To continue drafting later, you’ll need to start a new
-                  draft.
-                </Text>
-                <Input
-                  placeholder="Draft name (e.g. 2026 Season)"
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                />
-              </Stack>
-            </AlertDialogBody>
+              <AlertDialogBody>
+                <Stack spacing={3}>
+                  <Text fontSize="sm">
+                    This will finish the current draft. This action can’t be
+                    undone. To continue drafting later, you’ll need to start a
+                    new draft.
+                  </Text>
+                  <Input
+                    placeholder="Draft name (e.g. 2026 Season)"
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                  />
+                </Stack>
+              </AlertDialogBody>
 
-            <AlertDialogFooter>
-              <Button
-                ref={finishDraftCancelRef}
-                onClick={finishDraftDialog.onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                colorScheme="blue"
-                onClick={handleFinishDraftConfirm}
-                ml={3}
-              >
-                Confirm
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+              <AlertDialogFooter>
+                <Button
+                  ref={finishDraftCancelRef}
+                  onClick={finishDraftDialog.onClose}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  colorScheme="blue"
+                  onClick={handleFinishDraftConfirm}
+                  ml={3}
+                >
+                  Confirm
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      ) : null}
     </Box>
   );
 }

@@ -4,16 +4,21 @@ import { useEffect, useRef, useState } from 'react';
 import { Divider, Flex, Select, Spinner } from '@chakra-ui/react';
 import { useLeagues } from '@/features/Leagues/hooks/useLeagues';
 import { useLeague } from '@/features/Leagues/hooks/useLeague';
-import type { League } from '@/features/Leagues/types/leagues.types';
+import type {
+  League,
+  LeagueDraft,
+} from '@/features/Leagues/types/leagues.types';
 import LeagueInfo from './LeagueInfo';
 
 type Props = {
   onLeagueChange: (league: League | null) => void;
+  onDraftChange: (draft: LeagueDraft | null) => void;
   initialLeagueId?: string;
 };
 
 export default function DraftLeftPanel({
   onLeagueChange,
+  onDraftChange,
   initialLeagueId,
 }: Props) {
   const { data, isLoading } = useLeagues({
@@ -22,6 +27,7 @@ export default function DraftLeftPanel({
   });
   const leagues = data?.data ?? [];
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
+  const [selectedDraftName, setSelectedDraftName] = useState<string>('');
   const { data: leagueData } = useLeague(selectedLeagueId || undefined, {
     endpointBase: '/api/draft-save/leagues',
     queryKeyPrefix: 'draft-save-league',
@@ -48,9 +54,13 @@ export default function DraftLeftPanel({
   function handleLeagueChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const id = e.target.value;
     setSelectedLeagueId(id);
+    setSelectedDraftName('');
     lastEmittedLeagueId.current = null;
+    onDraftChange(null);
     if (!id) onLeagueChange(null);
   }
+
+  const drafts = leagueData?.data?.drafts ?? [];
 
   return (
     <Flex direction="column" gap={3} p={4}>
@@ -70,6 +80,29 @@ export default function DraftLeftPanel({
           ))}
         </Select>
       )}
+
+      <Select
+        placeholder="Previous drafts"
+        size="sm"
+        value={selectedDraftName}
+        onChange={(e) => {
+          const name = e.target.value;
+          setSelectedDraftName(name);
+          const draft =
+            name && drafts.length > 0
+              ? (drafts.find((d) => d.name === name) ?? null)
+              : null;
+          onDraftChange(draft);
+        }}
+        isDisabled={!selectedLeagueId || drafts.length === 0}
+      >
+        {drafts.map((draft) => (
+          <option key={draft.name} value={draft.name}>
+            {draft.name}
+          </option>
+        ))}
+      </Select>
+
       <Divider />
       <LeagueInfo league={leagueData?.data ?? null} />
     </Flex>

@@ -19,6 +19,7 @@ type DraftMiddlePanelProps = {
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
   onFinishDraft?: (name: string) => void | Promise<void>;
+  readOnly?: boolean;
 };
 
 export default function DraftMiddlePanel({
@@ -31,6 +32,7 @@ export default function DraftMiddlePanel({
   onPickEntered,
   onUndo,
   onFinishDraft,
+  readOnly = false,
 }: DraftMiddlePanelProps) {
   return (
     <Flex direction="column" h="100%">
@@ -50,6 +52,7 @@ export default function DraftMiddlePanel({
           onPickEntered={onPickEntered}
           onUndo={onUndo}
           onFinishDraft={onFinishDraft}
+          readOnly={readOnly}
         />
       </Box>
       <Flex flex="1" direction="column" gap={3} p={4}>

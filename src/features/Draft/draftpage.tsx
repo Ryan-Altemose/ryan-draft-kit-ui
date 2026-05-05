@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import type {
   DraftPick,
   League,
+  LeagueDraft,
   LeagueResponse,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
@@ -20,10 +21,12 @@ export default function DraftPage() {
   const searchParams = useSearchParams();
   const initialLeagueId = searchParams.get('leagueId') ?? undefined;
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
+  const [selectedDraft, setSelectedDraft] = useState<LeagueDraft | null>(null);
   const upsertLeagueMutation = useUpsertLeague();
 
   function handleLeagueChange(league: League | null) {
     setSelectedLeague(league);
+    setSelectedDraft(null);
   }
 
   function saveDraftLeague(league: League) {
@@ -106,6 +109,7 @@ export default function DraftPage() {
       >
         <DraftLeftPanel
           onLeagueChange={handleLeagueChange}
+          onDraftChange={setSelectedDraft}
           initialLeagueId={initialLeagueId}
         />
       </Box>
@@ -119,13 +123,16 @@ export default function DraftPage() {
         <DraftMiddlePanel
           teams={selectedLeague?.teams ?? []}
           takenPlayers={selectedLeague?.taken_players ?? []}
-          draftPicks={selectedLeague?.draft_picks ?? []}
+          draftPicks={
+            selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
+          }
           startingBudget={selectedLeague?.totalBudget ?? 0}
           rosterSlots={selectedLeague?.rosterSlots}
           minorLeagueSlots={selectedLeague?.minorLeagueSlotsPerTeam ?? 0}
           onPickEntered={handlePickEntered}
           onUndo={handleUndo}
           onFinishDraft={handleFinishDraft}
+          readOnly={Boolean(selectedDraft)}
         />
       </Box>
       <Box flex={1} minW={0} overflow="hidden">
