@@ -5,6 +5,7 @@ import { Box, Flex } from '@chakra-ui/react';
 import type {
   DraftPick,
   League,
+  LeagueResponse,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import { useUpsertLeague } from '@/features/Leagues/hooks/useUpsertLeague';
@@ -81,7 +82,7 @@ export default function DraftPage() {
   async function handleFinishDraft(name: string) {
     if (!selectedLeague) return;
 
-    const response = await apiClient.post(
+    const response = await apiClient.post<LeagueResponse>(
       `/api/leagues/${selectedLeague._id}/finish-draft`,
       { name },
     );
