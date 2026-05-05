@@ -149,6 +149,12 @@ export default function LeagueTeamTable({
         }
         // Preserve other unsaved local changes
         if (localRow?.playerId && localRow.playerId !== propRow.playerId) {
+          // In draft mode, only preserve if the player still exists in the league.
+          // Without this, an undo would leave the old player visible in the table
+          // because localRow hasn't been cleared yet.
+          if (draftMode && !takenIds.has(localRow.playerId)) {
+            return { ...propRow, search: '', team: '', price: '0' };
+          }
           return localRow;
         }
         // Sync display info for saved data
