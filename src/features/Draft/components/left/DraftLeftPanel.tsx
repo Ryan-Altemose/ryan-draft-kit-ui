@@ -9,9 +9,13 @@ import LeagueInfo from './LeagueInfo';
 
 type Props = {
   onLeagueChange: (league: League | null) => void;
+  initialLeagueId?: string;
 };
 
-export default function DraftLeftPanel({ onLeagueChange }: Props) {
+export default function DraftLeftPanel({
+  onLeagueChange,
+  initialLeagueId,
+}: Props) {
   const { data, isLoading } = useLeagues({
     endpoint: '/api/draft-save/leagues',
     queryKey: ['draft-save-leagues'],
@@ -23,6 +27,12 @@ export default function DraftLeftPanel({ onLeagueChange }: Props) {
     queryKeyPrefix: 'draft-save-league',
   });
   const lastEmittedLeagueId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!initialLeagueId) return;
+    setSelectedLeagueId(initialLeagueId);
+    lastEmittedLeagueId.current = null;
+  }, [initialLeagueId]);
 
   useEffect(() => {
     const league = leagueData?.data;

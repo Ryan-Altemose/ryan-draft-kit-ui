@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Box, Flex } from '@chakra-ui/react';
+import { useSearchParams } from 'next/navigation';
 import type {
   DraftPick,
   League,
@@ -16,6 +17,8 @@ import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
 
 export default function DraftPage() {
+  const searchParams = useSearchParams();
+  const initialLeagueId = searchParams.get('leagueId') ?? undefined;
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const upsertLeagueMutation = useUpsertLeague();
 
@@ -101,7 +104,10 @@ export default function DraftPage() {
         borderColor="gray.200"
         overflowY="auto"
       >
-        <DraftLeftPanel onLeagueChange={handleLeagueChange} />
+        <DraftLeftPanel
+          onLeagueChange={handleLeagueChange}
+          initialLeagueId={initialLeagueId}
+        />
       </Box>
       <Box
         flexBasis="50%"

@@ -225,6 +225,13 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
             Edit
           </Button>
           <Button
+            as={Link}
+            href={`/draft?leagueId=${encodeURIComponent(league._id)}`}
+            variant="outline"
+          >
+            Draft
+          </Button>
+          <Button
             onClick={deleteConfirm.onOpen}
             colorScheme="red"
             variant="outline"
