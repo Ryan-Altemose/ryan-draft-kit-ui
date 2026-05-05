@@ -70,6 +70,7 @@ export default function DraftLeftPanel({
         <Select
           placeholder="Select a league"
           size="sm"
+          aria-label="League select"
           value={selectedLeagueId}
           onChange={handleLeagueChange}
         >
@@ -84,6 +85,7 @@ export default function DraftLeftPanel({
       <Select
         placeholder="Previous drafts"
         size="sm"
+        aria-label="Draft select"
         value={selectedDraftName}
         onChange={(e) => {
           const name = e.target.value;

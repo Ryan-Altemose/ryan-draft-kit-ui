@@ -77,7 +77,7 @@ import { useLeague } from '@/features/Leagues/hooks/useLeague';
 function renderPanel() {
   render(
     <ChakraProvider>
-      <DraftLeftPanel onLeagueChange={vi.fn()} />
+      <DraftLeftPanel onLeagueChange={vi.fn()} onDraftChange={vi.fn()} />
     </ChakraProvider>,
   );
 }
@@ -111,7 +111,7 @@ describe('DraftLeftPanel', () => {
   it('renders the league dropdown with all leagues', () => {
     renderPanel();
 
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const select = screen.getByLabelText('League select') as HTMLSelectElement;
     expect(select).toBeTruthy();
     expect(screen.getByText('Alpha League')).toBeTruthy();
     expect(screen.getByText('Beta League')).toBeTruthy();
@@ -131,13 +131,13 @@ describe('DraftLeftPanel', () => {
 
     renderPanel();
 
-    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByLabelText('League select')).toBeNull();
   });
 
   it('displays league details after selecting a league', () => {
     renderPanel();
 
-    fireEvent.change(screen.getByRole('combobox'), {
+    fireEvent.change(screen.getByLabelText('League select'), {
       target: { value: 'league-1' },
     });
 
@@ -152,7 +152,7 @@ describe('DraftLeftPanel', () => {
   it('displays hitting and pitching categories for the selected league', () => {
     renderPanel();
 
-    fireEvent.change(screen.getByRole('combobox'), {
+    fireEvent.change(screen.getByLabelText('League select'), {
       target: { value: 'league-1' },
     });
 
@@ -167,12 +167,12 @@ describe('DraftLeftPanel', () => {
   it('updates league details when a different league is selected', () => {
     renderPanel();
 
-    fireEvent.change(screen.getByRole('combobox'), {
+    fireEvent.change(screen.getByLabelText('League select'), {
       target: { value: 'league-1' },
     });
     expect(screen.getByText('$260')).toBeTruthy();
 
-    fireEvent.change(screen.getByRole('combobox'), {
+    fireEvent.change(screen.getByLabelText('League select'), {
       target: { value: 'league-2' },
     });
     // Name appears in both the dropdown option and the info panel
@@ -184,7 +184,7 @@ describe('DraftLeftPanel', () => {
   it('returns to empty state when placeholder option is selected', () => {
     renderPanel();
 
-    fireEvent.change(screen.getByRole('combobox'), {
+    fireEvent.change(screen.getByLabelText('League select'), {
       target: { value: 'league-1' },
     });
     // Info panel shows the league name (in addition to the dropdown option)
@@ -192,7 +192,9 @@ describe('DraftLeftPanel', () => {
       2,
     );
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('League select'), {
+      target: { value: '' },
+    });
     expect(screen.getByText(/select a league to view details/i)).toBeTruthy();
   });
 });
