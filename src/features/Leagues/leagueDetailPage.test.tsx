@@ -9,8 +9,8 @@ import {
 } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
-import { ERROR_MESSAGES } from '@/shared/constants';
-import { ApiError } from '@/shared/utils/api-client';
+import { ERROR_MESSAGES } from '../../shared/constants';
+import { ApiError } from '../../shared/utils/api-client';
 import LeagueDetailPage from './leagueDetailPage';
 import type { League, LeagueTeam } from './types/leagues.types';
 
@@ -160,6 +160,10 @@ describe('LeagueDetailPage', () => {
       _id: 'league-123',
       externalId: 'custom-league-123',
       name: 'My League',
+      format: 'roto',
+      battingCategories: ['R', 'HR', 'RBI', 'SB', 'AVG'],
+      pitchingCategories: ['W', 'SV', 'K', 'ERA', 'WHIP'],
+      isDefault: false,
       teams: [
         ['team-1', 'Alpha', 240],
         ['team-2', 'Beta', 215],
@@ -258,6 +262,10 @@ describe('LeagueDetailPage', () => {
       externalId: 'custom-league-456',
       name: 'Fallback League',
       description: '3 teams',
+      format: 'roto',
+      battingCategories: ['R', 'HR', 'RBI', 'SB', 'AVG'],
+      pitchingCategories: ['W', 'SV', 'K', 'ERA', 'WHIP'],
+      isDefault: false,
       totalBudget: 260,
       draftType: 'auction',
       rosterSlots: {
@@ -323,6 +331,10 @@ describe('LeagueDetailPage', () => {
       _id: 'league-999',
       externalId: 'custom-league-999',
       name: 'Empty Team League',
+      format: 'roto',
+      battingCategories: ['R', 'HR', 'RBI', 'SB', 'AVG'],
+      pitchingCategories: ['W', 'SV', 'K', 'ERA', 'WHIP'],
+      isDefault: false,
       teams: [['team-1', 'Alpha', 260]],
       taken_players: [],
       totalBudget: 260,
@@ -361,6 +373,10 @@ describe('LeagueDetailPage', () => {
       _id: 'league-777',
       externalId: 'custom-league-777',
       name: 'Shifted League',
+      format: 'roto',
+      battingCategories: ['R', 'HR', 'RBI', 'SB', 'AVG'],
+      pitchingCategories: ['W', 'SV', 'K', 'ERA', 'WHIP'],
+      isDefault: false,
       teams: [['team-1', 'Alpha', 203]],
       taken_players: [
         ['Catcher Player', 'team-1', 'C-0', 100],
