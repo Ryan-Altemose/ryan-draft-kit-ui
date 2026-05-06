@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORAGE_KEYS } from '@/shared/constants';
+import { STORAGE_KEYS } from '../../shared/constants';
 import { bootstrapCurrentUser } from './user-session';
 
 describe('user-session bootstrap', () => {
