@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogOverlay,
   Box,
+  ButtonGroup,
   Heading,
   Spinner,
   Stack,
@@ -29,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { ERROR_MESSAGES } from '@/shared/constants';
 import { isApiError } from '@/shared/utils/api-client';
 import LeagueTeamTable from './components/LeagueTeamTable';
+import SimpleTeamTable from './components/SimpleTeamTable';
 import { useLeague } from './hooks/useLeague';
 import { useDeleteLeague } from './hooks/useDeleteLeague';
 import { useUpsertLeague } from './hooks/useUpsertLeague';
@@ -63,6 +65,9 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   const [editedTakenPlayers, setEditedTakenPlayers] = useState<TakenPlayer[]>(
     [],
   );
+  const [rosterView, setRosterView] = useState<
+    'main' | 'minorLeague' | 'taxiSquad'
+  >('main');
   const league = data?.data;
   const isForbidden = isApiError(error) && error.status === 403;
   const isNotFound = isApiError(error) && error.status === 404;
@@ -162,8 +167,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     });
 
     rows.forEach((row) => {
-      if (handledSlots.has(row.rowId) || row.price <= 0 || !row.playerId)
-        return;
+      if (handledSlots.has(row.rowId) || !row.playerId) return;
       updatedTakenPlayers.push([row.playerId, teamId, row.rowId, row.price]);
     });
 
@@ -197,6 +201,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           },
           totalBudget: currentLeague.totalBudget ?? 0,
           minorLeagueSlotsPerTeam: currentLeague.minorLeagueSlotsPerTeam,
+          taxiSquadPlayersPerTeam: currentLeague.taxiSquadPlayersPerTeam,
           battingCategories: currentLeague.battingCategories,
           pitchingCategories: currentLeague.pitchingCategories,
           takenPlayers: nextTakenPlayers,
@@ -218,6 +223,13 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           </Button>
           <Button onClick={editModal.onOpen} variant="outline">
             Edit
+          </Button>
+          <Button
+            as={Link}
+            href={`/draft?leagueId=${encodeURIComponent(league._id)}`}
+            variant="outline"
+          >
+            Draft
           </Button>
           <Button
             onClick={deleteConfirm.onOpen}
@@ -267,10 +279,38 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           </Table>
         </TableContainer>
 
+        <Box display="flex" justifyContent="center">
+          <ButtonGroup isAttached variant="outline" size="sm">
+            <Button
+              onClick={() => setRosterView('main')}
+              colorScheme={rosterView === 'main' ? 'blue' : undefined}
+              variant={rosterView === 'main' ? 'solid' : 'outline'}
+            >
+              Main Roster
+            </Button>
+            <Button
+              onClick={() => setRosterView('minorLeague')}
+              colorScheme={rosterView === 'minorLeague' ? 'blue' : undefined}
+              variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
+            >
+              Minor League Roster
+            </Button>
+            <Button
+              onClick={() => setRosterView('taxiSquad')}
+              colorScheme={rosterView === 'taxiSquad' ? 'blue' : undefined}
+              variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
+            >
+              Taxi Squad
+            </Button>
+          </ButtonGroup>
+        </Box>
+
         {displayTeams.length ? (
           <Box>
             <Heading size="md" mb={2}>
-              Teams
+              {rosterView === 'main' && 'Main Rosters'}
+              {rosterView === 'minorLeague' && 'Minor League Rosters'}
+              {rosterView === 'taxiSquad' && 'Taxi Squads'}
             </Heading>
             <SimpleGrid
               columns={{ base: 1, xl: 3 }}
@@ -283,6 +323,54 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                   ([, takenPlayerTeamId]) => takenPlayerTeamId === teamId,
                 );
 
+                if (rosterView === 'minorLeague') {
+                  return (
+                    <SimpleTeamTable
+                      key={teamId}
+                      team={team}
+                      mode="minorLeague"
+                      slotCount={league.minorLeagueSlotsPerTeam ?? 0}
+                      startingBudget={league.totalBudget ?? 0}
+                      takenPlayers={takenPlayersForTeam}
+                      allTakenPlayers={editedTakenPlayers}
+                      isSaving={upsertLeagueMutation.isPending}
+                      onSaveChanges={({ rows }) => {
+                        const nextTakenPlayers = updateTeamTakenPlayers(
+                          editedTakenPlayers,
+                          teamId,
+                          rows,
+                        );
+                        setEditedTakenPlayers(nextTakenPlayers);
+                        void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                      }}
+                    />
+                  );
+                }
+
+                if (rosterView === 'taxiSquad') {
+                  return (
+                    <SimpleTeamTable
+                      key={teamId}
+                      team={team}
+                      mode="taxiSquad"
+                      slotCount={league.taxiSquadPlayersPerTeam ?? 0}
+                      startingBudget={league.totalBudget ?? 0}
+                      takenPlayers={takenPlayersForTeam}
+                      allTakenPlayers={editedTakenPlayers}
+                      isSaving={upsertLeagueMutation.isPending}
+                      onSaveChanges={({ rows }) => {
+                        const nextTakenPlayers = updateTeamTakenPlayers(
+                          editedTakenPlayers,
+                          teamId,
+                          rows,
+                        );
+                        setEditedTakenPlayers(nextTakenPlayers);
+                        void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                      }}
+                    />
+                  );
+                }
+
                 return (
                   <LeagueTeamTable
                     key={teamId}
@@ -291,7 +379,6 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     allTakenPlayers={editedTakenPlayers}
                     takenPlayers={takenPlayersForTeam}
                     startingBudget={league.totalBudget ?? 0}
-                    minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
                     isSaving={upsertLeagueMutation.isPending}
                     onSaveChanges={({ teamName, rows }) => {
                       const nextTeams = displayTeams.map((currentTeam) =>

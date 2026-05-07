@@ -8,6 +8,10 @@ import type {
   TakenPlayer,
 } from '../types/leagues.types';
 
+type UpsertLeagueOptions = {
+  endpoint?: '/api/leagues' | '/api/draft-save/leagues';
+};
+
 // const DEFAULT_BATTING_CATEGORIES = ['R', 'HR', 'RBI', 'SB', 'AVG'] as const;
 // const DEFAULT_PITCHING_CATEGORIES = ['W', 'SV', 'K', 'ERA', 'WHIP'] as const;
 
@@ -60,6 +64,7 @@ function buildLeagueTeams(
 export async function upsertLeague(
   input: CreateLeagueInput,
   existingLeague?: League,
+  options?: UpsertLeagueOptions,
 ): Promise<CreateLeagueResponse> {
   if (existingLeague && !existingLeague.externalId) {
     throw new Error(
@@ -79,22 +84,29 @@ export async function upsertLeague(
     input.teamsData ?? existingLeague?.teams,
   );
 
-  return localApiClient.post<CreateLeagueResponse>('/api/leagues', {
-    externalId,
-    name: input.name,
-    description: `${input.teams} teams`,
-    format: existingLeague?.format ?? 'roto',
-    draftType: input.draftType,
-    battingCategories: input.battingCategories,
-    pitchingCategories: input.pitchingCategories,
-    rosterSlots: input.rosterSlots,
-    totalBudget: input.totalBudget,
-    taken_players: takenPlayers,
-    draft_picks: draftPicks,
-    teams,
-    isDefault: existingLeague?.isDefault ?? false,
-    categoryWeights: existingLeague?.categoryWeights,
-    minorLeagueSlotsPerTeam:
-      input.minorLeagueSlotsPerTeam ?? existingLeague?.minorLeagueSlotsPerTeam,
-  });
+  return localApiClient.post<CreateLeagueResponse>(
+    options?.endpoint ?? '/api/leagues',
+    {
+      externalId,
+      name: input.name,
+      description: `${input.teams} teams`,
+      format: existingLeague?.format ?? 'roto',
+      draftType: input.draftType,
+      battingCategories: input.battingCategories,
+      pitchingCategories: input.pitchingCategories,
+      rosterSlots: input.rosterSlots,
+      totalBudget: input.totalBudget,
+      taken_players: takenPlayers,
+      draft_picks: draftPicks,
+      teams,
+      isDefault: existingLeague?.isDefault ?? false,
+      categoryWeights: existingLeague?.categoryWeights,
+      minorLeagueSlotsPerTeam:
+        input.minorLeagueSlotsPerTeam ??
+        existingLeague?.minorLeagueSlotsPerTeam,
+      taxiSquadPlayersPerTeam:
+        input.taxiSquadPlayersPerTeam ??
+        existingLeague?.taxiSquadPlayersPerTeam,
+    },
+  );
 }

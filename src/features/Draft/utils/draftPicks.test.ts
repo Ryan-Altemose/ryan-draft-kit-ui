@@ -8,47 +8,47 @@ import {
   ensureLeagueHasDraftPicks,
 } from './draftPicks';
 
+const BASE_LEAGUE = {
+  _id: 'league-1',
+  externalId: 'ext-1',
+  name: 'League',
+  format: 'roto',
+  draftType: 'auction',
+  battingCategories: ['R'],
+  pitchingCategories: ['K'],
+  rosterSlots: {
+    C: 1,
+    '1B': 1,
+    '2B': 1,
+    '3B': 1,
+    SS: 1,
+    CI: 0,
+    MI: 0,
+    OF: 3,
+    SP: 5,
+    RP: 2,
+    UTIL: 0,
+    BENCH: 0,
+  },
+  totalBudget: 260,
+  teams: [['team-1', 'Team 1', 260]],
+  isDefault: false,
+} as const;
+
 describe('draftPicks utils', () => {
-  it('derives draft picks from taken_players with DRAFT slot', () => {
+  it('deriveDraftPicksFromTakenPlayers always returns an empty array', () => {
     const takenPlayers: TakenPlayer[] = [
-      ['player-1', 'team-1', 'DRAFT', 10],
-      ['player-2', 'team-2', 'C-0', 25],
-      ['player-3', 'team-2', 'DRAFT', 15],
+      ['player-1', 'team-1', 'C-0', 10],
+      ['player-2', 'team-2', '1B-0', 25],
     ];
-
-    expect(deriveDraftPicksFromTakenPlayers(takenPlayers)).toEqual([
-      [1, 'team-1', 'team-1', 'player-1', 10],
-      [2, 'team-2', 'team-2', 'player-3', 15],
-    ]);
+    expect(deriveDraftPicksFromTakenPlayers(takenPlayers)).toEqual([]);
   });
 
-  it('fills league.draft_picks when missing but draft entries exist', () => {
+  it('ensureLeagueHasDraftPicks preserves existing draft_picks', () => {
     const league = {
-      _id: 'league-1',
-      externalId: 'ext-1',
-      name: 'League',
-      format: 'roto',
-      draftType: 'auction',
-      battingCategories: ['R'],
-      pitchingCategories: ['K'],
-      rosterSlots: {
-        C: 1,
-        '1B': 1,
-        '2B': 1,
-        '3B': 1,
-        SS: 1,
-        CI: 0,
-        MI: 0,
-        OF: 3,
-        SP: 5,
-        RP: 2,
-        UTIL: 0,
-        BENCH: 0,
-      },
-      totalBudget: 260,
-      taken_players: [['player-1', 'team-1', 'DRAFT', 10]],
-      teams: [['team-1', 'Team 1', 250]],
-      isDefault: false,
+      ...BASE_LEAGUE,
+      taken_players: [['player-1', 'team-1', 'C-0', 10]],
+      draft_picks: [[1, 'team-1', 'team-1', 'player-1', 10]],
     } satisfies League;
 
     const ensured = ensureLeagueHasDraftPicks(league);
@@ -57,39 +57,13 @@ describe('draftPicks utils', () => {
     ]);
   });
 
-  it('does not overwrite existing league.draft_picks', () => {
+  it('ensureLeagueHasDraftPicks initializes draft_picks to an empty array when absent', () => {
     const league = {
-      _id: 'league-1',
-      externalId: 'ext-1',
-      name: 'League',
-      format: 'roto',
-      draftType: 'auction',
-      battingCategories: ['R'],
-      pitchingCategories: ['K'],
-      rosterSlots: {
-        C: 1,
-        '1B': 1,
-        '2B': 1,
-        '3B': 1,
-        SS: 1,
-        CI: 0,
-        MI: 0,
-        OF: 3,
-        SP: 5,
-        RP: 2,
-        UTIL: 0,
-        BENCH: 0,
-      },
-      totalBudget: 260,
-      taken_players: [['player-1', 'team-1', 'DRAFT', 10]],
-      draft_picks: [[99, 'team-x', 'team-y', 'player-z', 1]],
-      teams: [['team-1', 'Team 1', 250]],
-      isDefault: false,
+      ...BASE_LEAGUE,
+      taken_players: [['player-1', 'team-1', 'C-0', 10]],
     } satisfies League;
 
     const ensured = ensureLeagueHasDraftPicks(league);
-    expect(ensured.draft_picks).toEqual([
-      [99, 'team-x', 'team-y', 'player-z', 1],
-    ]);
+    expect(ensured.draft_picks).toEqual([]);
   });
 });

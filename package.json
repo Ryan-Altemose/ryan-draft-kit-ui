@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --configLoader native",
+    "test:watch": "vitest --configLoader native",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "prepare": "husky || true"
@@ -32,6 +32,8 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

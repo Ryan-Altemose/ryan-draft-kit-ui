@@ -4,7 +4,10 @@ import { Input } from '@chakra-ui/react';
 import type { Player } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 
-function isPlayerAllowedForPosition(player: Player, position: string): boolean {
+export function isPlayerAllowedForPosition(
+  player: Player,
+  position: string,
+): boolean {
   if (position === 'MiLB') return !player.mlbDebutDate;
   if (position === 'BENCH') return true;
   if (position === 'UTIL') return player.playerType === 'hitter';

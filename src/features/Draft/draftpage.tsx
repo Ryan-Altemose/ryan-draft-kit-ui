@@ -2,58 +2,110 @@
 
 import { useState } from 'react';
 import { Box, Flex } from '@chakra-ui/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import type {
   DraftPick,
   League,
+  LeagueDraft,
+  LeagueResponse,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import { useUpsertLeague } from '@/features/Leagues/hooks/useUpsertLeague';
+import { apiClient } from '@/shared/utils/api-client';
+import { toDraftLeagueInput } from './utils/draftState';
 import DraftLeftPanel from './components/left/DraftLeftPanel';
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
-import {
-  applyDraftPick,
-  initializeDraftState,
-  toDraftLeagueInput,
-  undoLastDraftPick,
-} from './utils/draftState';
 
 export default function DraftPage() {
+  const searchParams = useSearchParams();
+  const initialLeagueId = searchParams.get('leagueId') ?? undefined;
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
+  const [selectedDraft, setSelectedDraft] = useState<LeagueDraft | null>(null);
   const upsertLeagueMutation = useUpsertLeague();
+  const queryClient = useQueryClient();
 
   function handleLeagueChange(league: League | null) {
-    if (!league) {
-      setSelectedLeague(null);
-      return;
-    }
+    setSelectedLeague(league);
+    setSelectedDraft(null);
+  }
 
-    setSelectedLeague(initializeDraftState(league));
+  function saveDraftLeague(league: League) {
+    setSelectedLeague(league);
+
+    void upsertLeagueMutation.mutateAsync({
+      input: toDraftLeagueInput(league),
+      existingLeague: league,
+      endpoint: '/api/draft-save/leagues',
+    });
   }
 
   function handleUndo() {
     if (!selectedLeague) return;
-    const nextLeague = undoLastDraftPick(selectedLeague);
-    if (nextLeague === selectedLeague) return;
+    const picks = selectedLeague.draft_picks ?? [];
+    if (picks.length === 0) return;
 
-    setSelectedLeague(nextLeague);
+    const [lastPickNumber, , , lastPlayerId] = picks[picks.length - 1];
+    const newDraftPicks = picks.filter(([n]) => n !== lastPickNumber);
+    const newTakenPlayers = (selectedLeague.taken_players ?? []).filter(
+      ([pid]) => pid !== lastPlayerId,
+    );
 
-    void upsertLeagueMutation.mutateAsync({
-      input: toDraftLeagueInput(nextLeague),
-      existingLeague: nextLeague,
+    saveDraftLeague({
+      ...selectedLeague,
+      taken_players: newTakenPlayers,
+      draft_picks: newDraftPicks,
+    });
+  }
+
+  function handleSaveRosters(updatedTakenPlayers: TakenPlayer[]) {
+    if (!selectedLeague) return;
+
+    const draftPicks = selectedLeague.draft_picks ?? [];
+
+    saveDraftLeague({
+      ...selectedLeague,
+      taken_players: updatedTakenPlayers,
+      draft_picks: draftPicks,
     });
   }
 
   function handlePickEntered(pick: DraftPick, takenEntry: TakenPlayer) {
     if (!selectedLeague) return;
-    const nextLeague = applyDraftPick(selectedLeague, pick, takenEntry);
 
-    setSelectedLeague(nextLeague);
+    const newTakenPlayers = [
+      ...(selectedLeague.taken_players ?? []),
+      takenEntry,
+    ];
+    const newDraftPicks = [...(selectedLeague.draft_picks ?? []), pick];
 
-    void upsertLeagueMutation.mutateAsync({
-      input: toDraftLeagueInput(nextLeague),
-      existingLeague: nextLeague,
+    saveDraftLeague({
+      ...selectedLeague,
+      taken_players: newTakenPlayers,
+      draft_picks: newDraftPicks,
     });
+  }
+
+  async function handleFinishDraft(name: string) {
+    if (!selectedLeague) return;
+
+    const response = await apiClient.post<LeagueResponse>(
+      `/api/leagues/${selectedLeague._id}/finish-draft`,
+      { name },
+    );
+
+    if (response?.success && response.data) {
+      const updated = response.data;
+      setSelectedLeague(updated);
+      queryClient.setQueryData(['draft-save-league', updated._id], {
+        success: true,
+        data: updated,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
+      void queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      void queryClient.invalidateQueries({ queryKey: ['league'] });
+    }
   }
 
   return (
@@ -65,7 +117,11 @@ export default function DraftPage() {
         borderColor="gray.200"
         overflowY="auto"
       >
-        <DraftLeftPanel onLeagueChange={handleLeagueChange} />
+        <DraftLeftPanel
+          onLeagueChange={handleLeagueChange}
+          onDraftChange={setSelectedDraft}
+          initialLeagueId={initialLeagueId}
+        />
       </Box>
       <Box
         flexBasis="50%"
@@ -77,14 +133,24 @@ export default function DraftPage() {
         <DraftMiddlePanel
           teams={selectedLeague?.teams ?? []}
           takenPlayers={selectedLeague?.taken_players ?? []}
-          draftPicks={selectedLeague?.draft_picks ?? []}
+          draftPicks={
+            selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
+          }
           startingBudget={selectedLeague?.totalBudget ?? 0}
+          rosterSlots={selectedLeague?.rosterSlots}
+          minorLeagueSlots={selectedLeague?.minorLeagueSlotsPerTeam ?? 0}
           onPickEntered={handlePickEntered}
           onUndo={handleUndo}
+          onFinishDraft={handleFinishDraft}
+          readOnly={Boolean(selectedDraft)}
         />
       </Box>
-      <Box flex={1} minH={0} overflowY="auto">
-        <DraftRightPanel league={selectedLeague} />
+      <Box flex={1} minW={0} overflow="hidden">
+        <DraftRightPanel
+          league={selectedLeague}
+          onSaveRosters={handleSaveRosters}
+          isSavingRosters={upsertLeagueMutation.isPending}
+        />
       </Box>
     </Flex>
   );

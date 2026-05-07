@@ -32,7 +32,6 @@ type LeagueTeamTableProps = {
   takenPlayers?: TakenPlayer[];
   allTakenPlayers?: TakenPlayer[];
   startingBudget: number;
-  minorLeagueSlots?: number;
   onSaveChanges?: (payload: {
     teamName: string;
     rows: Array<{
@@ -41,8 +40,16 @@ type LeagueTeamTableProps = {
       price: number;
     }>;
   }) => void;
+  onDirtyChange?: (teamId: string, isDirty: boolean) => void;
+  onRowsChange?: (
+    teamId: string,
+    rows: Array<{ rowId: string; playerId: string; price: number }>,
+  ) => void;
+  onCrossTeamTransfer?: (playerId: string, destTeamId: string) => void;
+  forcedEmptyPlayerIds?: Set<string>;
   isSaving?: boolean;
   readOnly?: boolean;
+  draftMode?: boolean;
 };
 
 type TeamTableRow = {
@@ -57,9 +64,8 @@ type TeamTableRow = {
 function buildTeamRows(
   rosterSlots: RosterSlots,
   takenPlayers: TakenPlayer[],
-  minorLeagueSlots = 0,
 ): TeamTableRow[] {
-  const regularRows = ROSTER_POSITIONS.flatMap((position) =>
+  return ROSTER_POSITIONS.flatMap((position) =>
     Array.from({ length: rosterSlots[position] ?? 0 }, (_, slotIndex) => {
       const rowId = `${position}-${slotIndex}`;
       const player = takenPlayers.find(
@@ -75,23 +81,6 @@ function buildTeamRows(
       };
     }),
   );
-
-  const milbRows = Array.from({ length: minorLeagueSlots }, (_, slotIndex) => {
-    const rowId = `MiLB-${slotIndex}`;
-    const player = takenPlayers.find(
-      ([, , positionSlot]) => positionSlot === rowId,
-    );
-    return {
-      rowId,
-      position: 'MiLB',
-      playerId: player?.[0] ?? '',
-      search: '',
-      team: '',
-      price: String(player?.[3] ?? 0),
-    };
-  });
-
-  return [...regularRows, ...milbRows];
 }
 
 function parsePrice(value: string): number {
@@ -120,16 +109,20 @@ export default function LeagueTeamTable({
   takenPlayers = [],
   allTakenPlayers,
   startingBudget,
-  minorLeagueSlots = 0,
   onSaveChanges,
+  onDirtyChange,
+  onRowsChange,
+  onCrossTeamTransfer,
+  forcedEmptyPlayerIds,
   isSaving = false,
   readOnly = false,
+  draftMode = false,
 }: LeagueTeamTableProps) {
   const toast = useToast();
-  const [, teamName] = team;
+  const [teamId, teamName] = team;
   const propRows = useMemo(
-    () => buildTeamRows(rosterSlots, takenPlayers, minorLeagueSlots),
-    [rosterSlots, takenPlayers, minorLeagueSlots],
+    () => buildTeamRows(rosterSlots, takenPlayers),
+    [rosterSlots, takenPlayers],
   );
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
@@ -139,25 +132,46 @@ export default function LeagueTeamTable({
 
   useEffect(() => {
     setLocalTeamName(teamName);
-    setLocalRows(
-      players.length > 0
-        ? propRows.map((row) => {
-            if (!row.playerId || row.search) return row;
-
-            const matchingPlayer = players.find(
-              (player) => player._id === row.playerId,
-            );
-            return matchingPlayer
-              ? {
-                  ...row,
-                  search: formatPlayerDisplay(matchingPlayer),
-                  team: matchingPlayer.team,
-                }
-              : row;
-          })
-        : propRows,
+    const takenIds = new Set(
+      (allTakenPlayers ?? takenPlayers).map(([id]) => id),
     );
-  }, [propRows, teamName, players]);
+    setLocalRows((currentRows) =>
+      propRows.map((propRow, index) => {
+        const localRow = currentRows[index];
+        // Local pick was claimed by another team — clear it
+        if (
+          !draftMode &&
+          localRow?.playerId &&
+          localRow.playerId !== propRow.playerId &&
+          takenIds.has(localRow.playerId)
+        ) {
+          return { ...propRow, search: '', team: '', price: '0' };
+        }
+        // Preserve other unsaved local changes
+        if (localRow?.playerId && localRow.playerId !== propRow.playerId) {
+          // If the player no longer exists anywhere in the league, the local row
+          // is stale (e.g. from initializing off stale cache before a refetch
+          // brought in fresh data after an undo). Sync from prop instead.
+          if (!takenIds.has(localRow.playerId)) {
+            return { ...propRow, search: '', team: '', price: '0' };
+          }
+          return localRow;
+        }
+        // Sync display info for saved data
+        if (!propRow.playerId || players.length === 0) {
+          return propRow;
+        }
+        const matchingPlayer = players.find((p) => p._id === propRow.playerId);
+        return matchingPlayer
+          ? {
+              ...propRow,
+              search: formatPlayerDisplay(matchingPlayer),
+              team: matchingPlayer.team,
+            }
+          : propRow;
+      }),
+    );
+  }, [propRows, teamName, players, allTakenPlayers, takenPlayers, draftMode]);
 
   useEffect(() => {
     if (players.length === 0) return;
@@ -195,8 +209,14 @@ export default function LeagueTeamTable({
     [takenPlayersForAvailability],
   );
 
+  // In draft mode, show all drafted players across the league (to support trades)
+  const availablePlayers = draftMode
+    ? players.filter((p) => leagueTakenPlayerIds.has(p._id))
+    : players;
+
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
   function getUnavailablePlayerIds(currentRowIndex: number): Set<string> {
+    if (draftMode) return new Set();
     const ids = new Set(leagueTakenPlayerIds);
     rows.forEach((row, index) => {
       if (index !== currentRowIndex && row.playerId) {
@@ -213,6 +233,32 @@ export default function LeagueTeamTable({
         row.price !== propRows[index]?.price ||
         row.playerId !== propRows[index]?.playerId,
     );
+
+  useEffect(() => {
+    onDirtyChange?.(teamId, isDirty);
+  }, [teamId, isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    onRowsChange?.(
+      teamId,
+      localRows.map((row) => ({
+        rowId: row.rowId,
+        playerId: row.playerId,
+        price: parsePrice(row.price),
+      })),
+    );
+  }, [teamId, localRows, onRowsChange]);
+
+  useEffect(() => {
+    if (!forcedEmptyPlayerIds || forcedEmptyPlayerIds.size === 0) return;
+    setLocalRows((prev) =>
+      prev.map((row) =>
+        row.playerId && forcedEmptyPlayerIds.has(row.playerId)
+          ? { ...row, playerId: '', search: '', team: '', price: '0' }
+          : row,
+      ),
+    );
+  }, [forcedEmptyPlayerIds]);
 
   function handleLocalPriceChange(rowIndex: number, value: string) {
     if (value !== '' && !/^\d+$/.test(value)) return;
@@ -239,6 +285,42 @@ export default function LeagueTeamTable({
     playerId: string,
     team: string,
   ) {
+    if (draftMode && playerId) {
+      const isCrossTeamTransfer = !localRows.some(
+        (r) => r.playerId === playerId,
+      );
+
+      if (isCrossTeamTransfer) {
+        onCrossTeamTransfer?.(playerId, teamId);
+      }
+
+      setLocalRows((prev) => {
+        const sourceIndex = prev.findIndex((r) => r.playerId === playerId);
+        let salary: string;
+        if (sourceIndex >= 0) {
+          salary = prev[sourceIndex].price;
+        } else {
+          const existingEntry = allTakenPlayers?.find(
+            ([pid]) => pid === playerId,
+          );
+          salary = existingEntry ? String(existingEntry[3]) : '0';
+        }
+        return prev.map((row, index) => {
+          if (index === rowIndex)
+            return {
+              ...row,
+              search: searchText,
+              playerId,
+              team,
+              price: salary,
+            };
+          if (index === sourceIndex)
+            return { ...row, playerId: '', search: '', team: '', price: '0' };
+          return row;
+        });
+      });
+      return;
+    }
     setLocalRows((prev) =>
       prev.map((row, index) =>
         index !== rowIndex
@@ -346,7 +428,7 @@ export default function LeagueTeamTable({
                     <Td>{row.position}</Td>
                     <Td>
                       <PlayerSearchInput
-                        players={players}
+                        players={availablePlayers}
                         unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
                         position={row.position}
                         value={row.search}
@@ -358,7 +440,12 @@ export default function LeagueTeamTable({
                             team,
                           )
                         }
-                        isDisabled={isSaving || isLoadingPlayers || readOnly}
+                        isDisabled={
+                          isSaving ||
+                          isLoadingPlayers ||
+                          readOnly ||
+                          (draftMode && !!row.playerId)
+                        }
                         placeholder={
                           isLoadingPlayers
                             ? 'Loading players...'
@@ -382,9 +469,7 @@ export default function LeagueTeamTable({
                         width="50px"
                         minWidth="50px"
                         marginLeft="auto"
-                        isDisabled={
-                          isSaving || row.position === 'MiLB' || readOnly
-                        }
+                        isDisabled={isSaving || readOnly || draftMode}
                       />
                     </Td>
                   </Tr>
@@ -393,7 +478,7 @@ export default function LeagueTeamTable({
             </Table>
           </TableContainer>
 
-          {!readOnly && (
+          {!readOnly && !draftMode && (
             <Flex px={4} py={3} borderTopWidth="1px" bg="gray.50" gap={2}>
               {onSaveChanges ? (
                 <Button

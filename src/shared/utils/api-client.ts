@@ -11,7 +11,7 @@ interface RequestOptions extends RequestInit {
 type UnauthorizedHandler = (() => void) | null;
 
 const PROTECTED_USER_SCOPED_ROUTE =
-  /^\/api\/(?:leagues(?:\/|$)|notebooks(?:\/|$)|users\/me(?:\/|$))/;
+  /^\/api\/(?:(?:draft-save\/)?leagues(?:\/|$)|notebooks(?:\/|$)|users\/me(?:\/|$))/;
 
 let backendUnauthorizedHandler: UnauthorizedHandler = null;
 

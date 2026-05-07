@@ -1,14 +1,152 @@
 'use client';
 
-import { Box, Stack, Text } from '@chakra-ui/react';
-import type { League } from '@/features/Leagues/types/leagues.types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
+import type {
+  League,
+  TakenPlayer,
+} from '@/features/Leagues/types/leagues.types';
 import LeagueTeamTable from '@/features/Leagues/components/LeagueTeamTable';
+
+type TeamRow = { rowId: string; playerId: string; price: number };
 
 type Props = {
   league: League | null;
+  onSaveRosters: (updatedTakenPlayers: TakenPlayer[]) => void;
+  isSavingRosters?: boolean;
 };
 
-export default function DraftRightPanel({ league }: Props) {
+export default function DraftRightPanel({
+  league,
+  onSaveRosters,
+  isSavingRosters = false,
+}: Props) {
+  const [dirtyTeamIds, setDirtyTeamIds] = useState<Set<string>>(new Set());
+  const [currentRowsByTeam, setCurrentRowsByTeam] = useState<
+    Record<string, TeamRow[]>
+  >({});
+  const [forcedEmptyPlayersByTeam, setForcedEmptyPlayersByTeam] = useState<
+    Record<string, Set<string>>
+  >({});
+
+  // Stable ref so handleCrossTeamTransfer can read latest rows without being
+  // in its dependency array (avoids recreating on every row change)
+  const currentRowsByTeamRef = useRef(currentRowsByTeam);
+  useEffect(() => {
+    currentRowsByTeamRef.current = currentRowsByTeam;
+  });
+
+  // Reset transfer state whenever the persisted league data changes
+  useEffect(() => {
+    setForcedEmptyPlayersByTeam({});
+  }, [league]);
+
+  const handleDirtyChange = useCallback((teamId: string, isDirty: boolean) => {
+    setDirtyTeamIds((prev) => {
+      const next = new Set(prev);
+      if (isDirty) next.add(teamId);
+      else next.delete(teamId);
+      return next;
+    });
+  }, []);
+
+  const handleRowsChange = useCallback((teamId: string, rows: TeamRow[]) => {
+    setCurrentRowsByTeam((prev) => {
+      const existing = prev[teamId];
+      if (
+        existing &&
+        existing.length === rows.length &&
+        existing.every(
+          (r, i) =>
+            r.rowId === rows[i].rowId &&
+            r.playerId === rows[i].playerId &&
+            r.price === rows[i].price,
+        )
+      ) {
+        return prev;
+      }
+      return { ...prev, [teamId]: rows };
+    });
+  }, []);
+
+  const handleCrossTeamTransfer = useCallback(
+    (playerId: string, destTeamId: string) => {
+      let sourceTeamId: string | null = null;
+      for (const [tid, rows] of Object.entries(currentRowsByTeamRef.current)) {
+        if (rows.some((r) => r.playerId === playerId)) {
+          sourceTeamId = tid;
+          break;
+        }
+      }
+
+      if (!sourceTeamId || sourceTeamId === destTeamId) return;
+
+      setForcedEmptyPlayersByTeam((prev) => {
+        const sourceSet = new Set(prev[sourceTeamId!] ?? []);
+        sourceSet.add(playerId);
+        const destSet = new Set(prev[destTeamId] ?? []);
+        destSet.delete(playerId);
+        return { ...prev, [sourceTeamId!]: sourceSet, [destTeamId]: destSet };
+      });
+
+      setDirtyTeamIds((prev) => {
+        const next = new Set(prev);
+        next.add(sourceTeamId!);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const teams = league?.teams ?? [];
+  const takenPlayers = league?.taken_players ?? [];
+
+  const takenPlayersByTeam = useMemo(() => {
+    const map: Record<string, TakenPlayer[]> = {};
+    for (const [teamId] of teams) {
+      map[teamId] = takenPlayers.filter(([, tid]) => tid === teamId);
+    }
+    return map;
+  }, [teams, takenPlayers]);
+
+  function handleSave() {
+    if (!league) return;
+
+    const existingTakenPlayers = league.taken_players ?? [];
+    const newTakenPlayers: TakenPlayer[] = [];
+
+    for (const [teamId] of league.teams ?? []) {
+      const rows = currentRowsByTeam[teamId];
+
+      if (!rows) {
+        // Table not yet initialized — preserve original entries for this team
+        existingTakenPlayers
+          .filter(([, tid]) => tid === teamId)
+          .forEach((entry) => newTakenPlayers.push(entry));
+        continue;
+      }
+
+      for (const row of rows) {
+        if (!row.playerId) continue;
+
+        newTakenPlayers.push([row.playerId, teamId, row.rowId, row.price]);
+      }
+    }
+
+    // Preserve unslotted entries (e.g. positionSlot='DRAFT') not captured in any table row.
+    // Deduplicate by playerId so cross-team transfers don't re-add the old entry.
+    const processedPlayerIds = new Set(newTakenPlayers.map(([pid]) => pid));
+    for (const entry of existingTakenPlayers) {
+      if (!processedPlayerIds.has(entry[0])) {
+        newTakenPlayers.push(entry);
+      }
+    }
+
+    onSaveRosters(newTakenPlayers);
+  }
+
+  const hasDirtyChanges = dirtyTeamIds.size > 0;
+
   if (!league) {
     return (
       <Box p={4} color="gray.400" fontSize="sm">
@@ -17,33 +155,54 @@ export default function DraftRightPanel({ league }: Props) {
     );
   }
 
-  const teams = league.teams ?? [];
-  const takenPlayers = league.taken_players ?? [];
-
   return (
-    <Stack spacing={4} p={4}>
-      {teams.map((team) => {
-        const [teamId] = team;
-        return (
-          <LeagueTeamTable
-            key={teamId}
-            team={team}
-            rosterSlots={league.rosterSlots}
-            allTakenPlayers={takenPlayers}
-            takenPlayers={takenPlayers.filter(
-              ([, takenByTeamId]) => takenByTeamId === teamId,
-            )}
-            startingBudget={league.totalBudget ?? 0}
-            minorLeagueSlots={league.minorLeagueSlotsPerTeam ?? 0}
-            readOnly
-          />
-        );
-      })}
-      {teams.length === 0 && (
-        <Text color="gray.400" fontSize="sm">
-          No teams found in this league.
-        </Text>
-      )}
-    </Stack>
+    <Flex direction="column" h="100%">
+      <Box flex="9" overflowY="auto">
+        <Stack spacing={4} p={4}>
+          {teams.map((team) => {
+            const [teamId] = team;
+            return (
+              <LeagueTeamTable
+                key={teamId}
+                team={team}
+                rosterSlots={league.rosterSlots}
+                allTakenPlayers={takenPlayers}
+                takenPlayers={takenPlayersByTeam[teamId] ?? []}
+                startingBudget={league.totalBudget ?? 0}
+                onDirtyChange={handleDirtyChange}
+                onRowsChange={handleRowsChange}
+                onCrossTeamTransfer={handleCrossTeamTransfer}
+                forcedEmptyPlayerIds={forcedEmptyPlayersByTeam[teamId]}
+                isSaving={isSavingRosters}
+                draftMode
+              />
+            );
+          })}
+          {teams.length === 0 && (
+            <Text color="gray.400" fontSize="sm">
+              No teams found in this league.
+            </Text>
+          )}
+        </Stack>
+      </Box>
+
+      <Flex
+        flex="1"
+        borderTopWidth="1px"
+        borderColor="gray.200"
+        p={4}
+        align="center"
+      >
+        <Button
+          size="sm"
+          colorScheme="blue"
+          onClick={handleSave}
+          isDisabled={!hasDirtyChanges || isSavingRosters}
+          isLoading={isSavingRosters}
+        >
+          Save Changes
+        </Button>
+      </Flex>
+    </Flex>
   );
 }

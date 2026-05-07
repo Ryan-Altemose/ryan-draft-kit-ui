@@ -4,6 +4,7 @@ import { Box, Flex, Input, Text } from '@chakra-ui/react';
 import type {
   DraftPick,
   LeagueTeam,
+  RosterSlots,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import DraftBoard from './DraftBoard';
@@ -13,8 +14,12 @@ type DraftMiddlePanelProps = {
   takenPlayers?: TakenPlayer[];
   draftPicks?: DraftPick[];
   startingBudget?: number;
+  rosterSlots?: RosterSlots;
+  minorLeagueSlots?: number;
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
+  onFinishDraft?: (name: string) => void | Promise<void>;
+  readOnly?: boolean;
 };
 
 export default function DraftMiddlePanel({
@@ -22,8 +27,12 @@ export default function DraftMiddlePanel({
   takenPlayers,
   draftPicks,
   startingBudget,
+  rosterSlots,
+  minorLeagueSlots,
   onPickEntered,
   onUndo,
+  onFinishDraft,
+  readOnly = false,
 }: DraftMiddlePanelProps) {
   return (
     <Flex direction="column" h="100%">
@@ -38,8 +47,12 @@ export default function DraftMiddlePanel({
           takenPlayers={takenPlayers}
           draftPicks={draftPicks}
           startingBudget={startingBudget}
+          rosterSlots={rosterSlots}
+          minorLeagueSlots={minorLeagueSlots}
           onPickEntered={onPickEntered}
           onUndo={onUndo}
+          onFinishDraft={onFinishDraft}
+          readOnly={readOnly}
         />
       </Box>
       <Flex flex="1" direction="column" gap={3} p={4}>

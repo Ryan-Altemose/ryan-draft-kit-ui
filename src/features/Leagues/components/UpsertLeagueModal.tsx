@@ -61,6 +61,7 @@ export default function UpsertLeagueModal({
     teams: string;
     totalBudget: string;
     minorLeagueSlotsPerTeam: string;
+    taxiSquadPlayersPerTeam: string;
     draftType: 'auction';
     rosterSlots: Record<keyof RosterSlots, string>;
     battingCategories: string[];
@@ -79,6 +80,9 @@ export default function UpsertLeagueModal({
       totalBudget: String(initialLeague?.totalBudget ?? 260),
       minorLeagueSlotsPerTeam: String(
         initialLeague?.minorLeagueSlotsPerTeam ?? 0,
+      ),
+      taxiSquadPlayersPerTeam: String(
+        initialLeague?.taxiSquadPlayersPerTeam ?? 0,
       ),
       draftType: 'auction',
       rosterSlots: ROSTER_POSITIONS.reduce(
@@ -110,6 +114,10 @@ export default function UpsertLeagueModal({
       form.minorLeagueSlotsPerTeam,
       10,
     );
+    const parsedTaxiSquadPlayers = Number.parseInt(
+      form.taxiSquadPlayersPerTeam,
+      10,
+    );
 
     return (
       form.leagueName.trim().length > 0 &&
@@ -119,6 +127,8 @@ export default function UpsertLeagueModal({
       parsedTotalBudget >= 0 &&
       !Number.isNaN(parsedMinorLeagueSlots) &&
       parsedMinorLeagueSlots >= 0 &&
+      !Number.isNaN(parsedTaxiSquadPlayers) &&
+      parsedTaxiSquadPlayers >= 0 &&
       form.battingCategories.length > 0 &&
       form.pitchingCategories.length > 0
     );
@@ -127,6 +137,7 @@ export default function UpsertLeagueModal({
     form.teams,
     form.totalBudget,
     form.minorLeagueSlotsPerTeam,
+    form.taxiSquadPlayersPerTeam,
     form.battingCategories,
     form.pitchingCategories,
   ]);
@@ -174,10 +185,15 @@ export default function UpsertLeagueModal({
       form.minorLeagueSlotsPerTeam,
       10,
     );
+    const parsedTaxiSquadPlayers = Number.parseInt(
+      form.taxiSquadPlayersPerTeam,
+      10,
+    );
     if (
       Number.isNaN(parsedTeams) ||
       Number.isNaN(parsedTotalBudget) ||
-      Number.isNaN(parsedMinorLeagueSlots)
+      Number.isNaN(parsedMinorLeagueSlots) ||
+      Number.isNaN(parsedTaxiSquadPlayers)
     )
       return;
 
@@ -195,6 +211,7 @@ export default function UpsertLeagueModal({
       rosterSlots,
       totalBudget: Math.max(0, parsedTotalBudget),
       minorLeagueSlotsPerTeam: Math.max(0, parsedMinorLeagueSlots),
+      taxiSquadPlayersPerTeam: Math.max(0, parsedTaxiSquadPlayers),
       battingCategories: form.battingCategories,
       pitchingCategories: form.pitchingCategories,
     };
@@ -294,6 +311,26 @@ export default function UpsertLeagueModal({
                   setForm((prev) => ({
                     ...prev,
                     minorLeagueSlotsPerTeam: next,
+                  }));
+                }}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel htmlFor="taxiSquadPlayersPerTeam">
+                Taxi Squad Players Per Team
+              </FormLabel>
+              <Input
+                id="taxiSquadPlayersPerTeam"
+                type="number"
+                min={0}
+                value={form.taxiSquadPlayersPerTeam}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next !== '' && !/^\d+$/.test(next)) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    taxiSquadPlayersPerTeam: next,
                   }));
                 }}
               />

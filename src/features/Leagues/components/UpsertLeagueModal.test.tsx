@@ -88,6 +88,10 @@ describe('UpsertLeagueModal', () => {
       target: { value: '300' },
     });
 
+    fireEvent.change(screen.getByLabelText(/taxi squad players per team/i), {
+      target: { value: '2' },
+    });
+
     const saveButton = screen.getByRole('button', {
       name: /save changes/i,
     }) as HTMLButtonElement;
@@ -102,5 +106,6 @@ describe('UpsertLeagueModal', () => {
     expect(args.input.teams).toBe(10);
     expect(args.input.draftType).toBe('auction');
     expect(args.input.totalBudget).toBe(300);
+    expect(args.input.taxiSquadPlayersPerTeam).toBe(2);
   });
 });
