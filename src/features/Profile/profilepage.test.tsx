@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import ProfilePage from './profilepage';
 
 const reinitializeMock = vi.fn();
-const rotateAccountMock = vi.fn();
+const signOutUserMock = vi.fn();
 const refetchMock = vi.fn();
 const mockUseUserSession = vi.fn();
 const mockUseCurrentUserProfile = vi.fn();
@@ -23,17 +23,25 @@ describe('ProfilePage', () => {
     mockUseUserSession.mockReturnValue({
       currentUser: {
         userId: 'user-123',
-        externalId: 'external-123',
+        provider: 'google',
+        providerSubject: 'google-subject-123',
         name: 'Draft Kit User',
+        email: 'user@example.com',
+        image: 'https://example.com/avatar.png',
       },
+      errorMessage: null,
       reinitialize: reinitializeMock,
-      rotateAccount: rotateAccountMock,
+      signOutUser: signOutUserMock,
     });
     mockUseCurrentUserProfile.mockReturnValue({
       data: {
         data: {
           _id: 'user-123',
           name: 'Draft Kit User',
+          email: 'user@example.com',
+          authProvider: 'google',
+          providerSubject: 'google-subject-123',
+          avatarUrl: 'https://example.com/avatar.png',
           externalId: 'external-123',
           createdAt: '2026-05-01T00:00:00.000Z',
           updatedAt: '2026-05-02T00:00:00.000Z',
@@ -57,13 +65,15 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Session')).toBeTruthy();
     expect(screen.getByText('Backend User')).toBeTruthy();
     expect(screen.getAllByText('user-123')).toHaveLength(2);
-    expect(screen.getAllByText('external-123')).toHaveLength(2);
+    expect(screen.getAllByText('google')).toHaveLength(2);
+    expect(screen.getAllByText('google-subject-123')).toHaveLength(2);
     expect(screen.getAllByText('Draft Kit User')).toHaveLength(2);
+    expect(screen.getAllByText('user@example.com')).toHaveLength(2);
     expect(screen.getByText('2026-05-01T00:00:00.000Z')).toBeTruthy();
     expect(screen.getByText('2026-05-02T00:00:00.000Z')).toBeTruthy();
   });
 
-  it('wires the refresh, reinitialize, and rotate actions', () => {
+  it('wires the refresh, reinitialize, and sign out actions', () => {
     render(
       <ChakraProvider>
         <ProfilePage />
@@ -74,11 +84,11 @@ describe('ProfilePage', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Reinitialize Session' }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate Account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign Out' }));
 
     expect(refetchMock).toHaveBeenCalledTimes(1);
     expect(reinitializeMock).toHaveBeenCalledTimes(1);
-    expect(rotateAccountMock).toHaveBeenCalledTimes(1);
+    expect(signOutUserMock).toHaveBeenCalledTimes(1);
   });
 
   it('shows a backend profile error', () => {

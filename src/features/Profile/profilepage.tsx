@@ -34,14 +34,19 @@ function ProfileField({
 }
 
 export default function ProfilePage() {
-  const { currentUser, reinitialize, rotateAccount } = useUserSession();
+  const {
+    currentUser,
+    errorMessage: sessionError,
+    reinitialize,
+    signOutUser,
+  } = useUserSession();
   const userProfileQuery = useCurrentUserProfile(currentUser?.userId);
   const profile = userProfileQuery.data?.data;
   const errorMessage = userProfileQuery.error
     ? isApiError(userProfileQuery.error)
       ? userProfileQuery.error.message
       : 'Unable to load backend user profile.'
-    : null;
+    : sessionError;
 
   return (
     <Box p={8}>
@@ -68,10 +73,10 @@ export default function ProfilePage() {
             <Button
               colorScheme="orange"
               onClick={() => {
-                void rotateAccount();
+                void signOutUser();
               }}
             >
-              Rotate Account
+              Sign Out
             </Button>
           </HStack>
         </HStack>
@@ -80,8 +85,13 @@ export default function ProfilePage() {
           <Stack spacing={4}>
             <Heading size="md">Session</Heading>
             <ProfileField label="User ID" value={currentUser?.userId} />
-            <ProfileField label="External ID" value={currentUser?.externalId} />
+            <ProfileField label="Provider" value={currentUser?.provider} />
+            <ProfileField
+              label="Provider Subject"
+              value={currentUser?.providerSubject}
+            />
             <ProfileField label="Name" value={currentUser?.name} />
+            <ProfileField label="Email" value={currentUser?.email} />
           </Stack>
         </Box>
 
@@ -94,6 +104,16 @@ export default function ProfilePage() {
               <>
                 <ProfileField label="_id" value={profile._id} />
                 <ProfileField label="name" value={profile.name} />
+                <ProfileField label="email" value={profile.email} />
+                <ProfileField
+                  label="authProvider"
+                  value={profile.authProvider}
+                />
+                <ProfileField
+                  label="providerSubject"
+                  value={profile.providerSubject}
+                />
+                <ProfileField label="avatarUrl" value={profile.avatarUrl} />
                 <ProfileField label="externalId" value={profile.externalId} />
                 <Divider />
                 <ProfileField label="createdAt" value={profile.createdAt} />

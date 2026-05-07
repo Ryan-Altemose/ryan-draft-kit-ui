@@ -1,5 +1,8 @@
-import { proxyBackendRequest } from '@/shared/server/backend-proxy';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  return proxyBackendRequest(request, '/api/users');
+export async function POST() {
+  return NextResponse.json(
+    { success: false, message: 'Not found' },
+    { status: 404 },
+  );
 }

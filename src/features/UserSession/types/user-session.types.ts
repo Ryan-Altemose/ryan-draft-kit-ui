@@ -1,7 +1,14 @@
 export type CurrentUser = {
   userId: string;
-  externalId: string;
+  provider: 'google';
+  providerSubject: string;
   name: string;
+  email: string;
+  image?: string | null;
 };
 
-export type UserSessionStatus = 'initializing' | 'ready' | 'error';
+export type UserSessionStatus =
+  | 'initializing'
+  | 'ready'
+  | 'error'
+  | 'unauthenticated';

@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORAGE_KEYS } from '../constants';
 import {
   ApiError,
   backendClient,
@@ -12,7 +11,6 @@ describe('api-client', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
-    localStorage.clear();
     vi.stubGlobal('fetch', fetchMock);
     setBackendUnauthorizedHandler(null);
   });
@@ -22,8 +20,7 @@ describe('api-client', () => {
     setBackendUnauthorizedHandler(null);
   });
 
-  it('attaches X-User-Id to league requests', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-123'));
+  it('does not attach X-User-Id to league requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ success: true, data: [] }),
@@ -32,14 +29,12 @@ describe('api-client', () => {
     await localApiClient.get('/api/leagues');
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.headers).toMatchObject({
-      'Content-Type': 'application/json',
-      'X-User-Id': 'user-123',
+    expect(request.headers).not.toMatchObject({
+      'X-User-Id': expect.anything(),
     });
   });
 
-  it('attaches X-User-Id to notebook requests', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-456'));
+  it('does not attach X-User-Id to notebook requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ success: true, data: [] }),
@@ -48,30 +43,12 @@ describe('api-client', () => {
     await localApiClient.get('/api/notebooks');
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.headers).toMatchObject({
-      'X-User-Id': 'user-456',
+    expect(request.headers).not.toMatchObject({
+      'X-User-Id': expect.anything(),
     });
   });
 
-  it('attaches X-User-Id to draft-save league requests', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-654'));
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: [] }),
-    });
-
-    await localApiClient.post('/api/draft-save/leagues', {
-      name: 'League',
-    });
-
-    const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.headers).toMatchObject({
-      'X-User-Id': 'user-654',
-    });
-  });
-
-  it('attaches X-User-Id to users/me requests', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-789'));
+  it('does not attach X-User-Id to users/me requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ success: true, data: {} }),
@@ -80,31 +57,26 @@ describe('api-client', () => {
     await localApiClient.get('/api/users/me');
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.headers).toMatchObject({
-      'X-User-Id': 'user-789',
+    expect(request.headers).not.toMatchObject({
+      'X-User-Id': expect.anything(),
     });
   });
 
-  it('does not attach X-User-Id when creating a user', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-999'));
+  it('does not attach X-User-Id to session requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ success: true, data: {} }),
     });
 
-    await localApiClient.post('/api/users', {
-      name: 'Draft Kit User',
-      externalId: 'external-123',
-    });
+    await localApiClient.get('/api/session');
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(request.headers).not.toMatchObject({
-      'X-User-Id': 'user-999',
+      'X-User-Id': expect.anything(),
     });
   });
 
-  it('clears the stored user id and invokes the unauthorized handler on 401', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-111'));
+  it('invokes the unauthorized handler on 401', async () => {
     const unauthorizedHandler = vi.fn();
     setBackendUnauthorizedHandler(unauthorizedHandler);
 
@@ -113,19 +85,17 @@ describe('api-client', () => {
       status: 401,
       statusText: 'Unauthorized',
       headers: new Headers({ 'content-type': 'application/json' }),
-      json: vi.fn().mockResolvedValue({ message: 'Missing X-User-Id header' }),
+      json: vi.fn().mockResolvedValue({ message: 'Authentication required' }),
     });
 
     await expect(localApiClient.get('/api/notebooks')).rejects.toBeInstanceOf(
       ApiError,
     );
 
-    expect(localStorage.getItem(STORAGE_KEYS.USER_ID)).toBeNull();
     expect(unauthorizedHandler).toHaveBeenCalledTimes(1);
   });
 
-  it('attaches X-User-Id to direct backend league requests', async () => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, JSON.stringify('user-222'));
+  it('does not attach X-User-Id to direct backend league requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ success: true, data: [] }),
@@ -134,8 +104,8 @@ describe('api-client', () => {
     await backendClient.get('/api/leagues');
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(request.headers).toMatchObject({
-      'X-User-Id': 'user-222',
+    expect(request.headers).not.toMatchObject({
+      'X-User-Id': expect.anything(),
     });
   });
 });
