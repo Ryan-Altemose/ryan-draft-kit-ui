@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthSession } from '@/auth';
 
 function getBackendUrl(): string {
   const backendUrl =
@@ -13,7 +14,19 @@ function getBackendUrl(): string {
   return backendUrl.replace(/\/+$/, '');
 }
 
-function buildHeaders(request: Request): HeadersInit {
+function getBackendInternalAuthSecret(): string {
+  const secret = process.env.BACKEND_INTERNAL_AUTH_SECRET;
+
+  if (!secret) {
+    throw new Error(
+      'BACKEND_INTERNAL_AUTH_SECRET is required for protected routes',
+    );
+  }
+
+  return secret;
+}
+
+function buildHeaders(request: Request, backendUserId?: string): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
@@ -28,9 +41,9 @@ function buildHeaders(request: Request): HeadersInit {
     headers['x-api-key'] = apiKey;
   }
 
-  const userId = request.headers.get('x-user-id');
-  if (userId) {
-    headers['X-User-Id'] = userId;
+  if (backendUserId) {
+    headers['X-Internal-User-Id'] = backendUserId;
+    headers['X-Internal-Auth-Secret'] = getBackendInternalAuthSecret();
   }
 
   return headers;
@@ -39,15 +52,30 @@ function buildHeaders(request: Request): HeadersInit {
 export async function proxyBackendRequest(
   request: Request,
   endpoint: string,
+  requiresAuth: boolean = true,
 ): Promise<NextResponse> {
   try {
+    let backendUserId: string | undefined;
+
+    if (requiresAuth) {
+      const session = await getAuthSession();
+      backendUserId = session?.user?.backendUserId;
+
+      if (!backendUserId) {
+        return NextResponse.json(
+          { success: false, message: 'Authentication required' },
+          { status: 401 },
+        );
+      }
+    }
+
     const backendUrl = new URL(`${getBackendUrl()}${endpoint}`);
     const incomingUrl = new URL(request.url);
     backendUrl.search = incomingUrl.search;
 
     const response = await fetch(backendUrl.toString(), {
       method: request.method,
-      headers: buildHeaders(request),
+      headers: buildHeaders(request, backendUserId),
       body:
         request.method === 'GET' ||
         request.method === 'DELETE' ||

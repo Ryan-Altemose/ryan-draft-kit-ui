@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Box, Button, Spinner, Text, VStack } from '@chakra-ui/react';
+import { signIn, signOut } from 'next-auth/react';
 import { queryClient } from '@/lib/react-query';
 import { ERROR_MESSAGES, QUERY_KEYS } from '@/shared/constants';
 import { bootstrapCurrentUser } from './user-session';
@@ -19,17 +19,14 @@ import type {
   UserSessionStatus,
 } from './types/user-session.types';
 import { setBackendUnauthorizedHandler } from '@/shared/utils/api-client';
-import {
-  clearStoredBackendUserId,
-  clearStoredCurrentUser,
-  getStoredCurrentUser,
-} from './user-session-storage';
 
 type UserSessionContextValue = {
   currentUser: CurrentUser | null;
   status: UserSessionStatus;
+  errorMessage: string | null;
   reinitialize: () => Promise<void>;
-  rotateAccount: () => Promise<void>;
+  signInWithGoogle: (callbackUrl?: string) => Promise<void>;
+  signOutUser: () => Promise<void>;
 };
 
 const UserSessionContext = createContext<UserSessionContextValue | null>(null);
@@ -43,13 +40,10 @@ function clearUserOwnedQueries(): void {
 }
 
 export function UserSessionProvider({ children }: { children: ReactNode }) {
-  const initialUser = getStoredCurrentUser();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(
-    initialUser,
-  );
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [status, setStatus] = useState<UserSessionStatus>('initializing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const currentUserIdRef = useRef<string | null>(initialUser?.userId ?? null);
+  const currentUserIdRef = useRef<string | null>(null);
   const bootstrapPromiseRef = useRef<Promise<void> | null>(null);
 
   const initialize = useCallback(async () => {
@@ -64,13 +58,13 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
 
     const bootstrapPromise = bootstrapCurrentUser()
       .then((user) => {
-        if (previousUserId && previousUserId !== user.userId) {
+        if (previousUserId && previousUserId !== user?.userId) {
           clearUserOwnedQueries();
         }
 
-        currentUserIdRef.current = user.userId;
+        currentUserIdRef.current = user?.userId ?? null;
         setCurrentUser(user);
-        setStatus('ready');
+        setStatus(user ? 'ready' : 'unauthenticated');
       })
       .catch((error: unknown) => {
         const message =
@@ -97,10 +91,11 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setBackendUnauthorizedHandler(() => {
-      clearStoredBackendUserId();
       currentUserIdRef.current = null;
       clearUserOwnedQueries();
-      void initialize();
+      setCurrentUser(null);
+      setStatus('unauthenticated');
+      void signOut({ callbackUrl: '/login' });
     });
 
     return () => {
@@ -108,56 +103,36 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
     };
   }, [initialize]);
 
-  const rotateAccount = useCallback(async () => {
-    clearStoredCurrentUser();
+  const signOutUser = useCallback(async () => {
     currentUserIdRef.current = null;
     clearUserOwnedQueries();
     setCurrentUser(null);
-    await initialize();
-  }, [initialize]);
+    setStatus('unauthenticated');
+    await signOut({ callbackUrl: '/' });
+  }, []);
+
+  const signInWithGoogle = useCallback(async (callbackUrl?: string) => {
+    await signIn('google', { callbackUrl: callbackUrl ?? '/' });
+  }, []);
 
   const value = useMemo<UserSessionContextValue>(
     () => ({
       currentUser,
       status,
+      errorMessage,
       reinitialize: initialize,
-      rotateAccount,
+      signInWithGoogle,
+      signOutUser,
     }),
-    [currentUser, initialize, rotateAccount, status],
+    [
+      currentUser,
+      errorMessage,
+      initialize,
+      signInWithGoogle,
+      signOutUser,
+      status,
+    ],
   );
-
-  if (status === 'initializing') {
-    return (
-      <Box
-        minH="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <VStack spacing={4}>
-          <Spinner />
-          <Text>Initializing user session.</Text>
-        </VStack>
-      </Box>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <Box
-        minH="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        p={8}
-      >
-        <VStack spacing={4} maxW="md" textAlign="center">
-          <Text>{errorMessage ?? ERROR_MESSAGES.USER_BOOTSTRAP}</Text>
-          <Button onClick={() => void initialize()}>Retry</Button>
-        </VStack>
-      </Box>
-    );
-  }
 
   return (
     <UserSessionContext.Provider value={value}>

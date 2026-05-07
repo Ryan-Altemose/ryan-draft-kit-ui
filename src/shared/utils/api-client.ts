@@ -1,8 +1,4 @@
 import { ERROR_MESSAGES } from '@/shared/constants';
-import {
-  clearStoredBackendUserId,
-  getStoredUserId,
-} from '@/features/UserSession/user-session-storage';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -44,42 +40,19 @@ export function setBackendUnauthorizedHandler(
 class ApiClient {
   private baseURL: string;
   private apiKey?: string;
-  private injectUserHeader: boolean;
 
-  constructor(
-    baseURL: string,
-    apiKey?: string,
-    injectUserHeader: boolean = false,
-  ) {
+  constructor(baseURL: string, apiKey?: string) {
     this.baseURL = baseURL;
     this.apiKey = apiKey;
-    this.injectUserHeader = injectUserHeader;
   }
 
-  private shouldAttachUserHeader(endpoint: string): boolean {
-    return this.injectUserHeader && PROTECTED_USER_SCOPED_ROUTE.test(endpoint);
-  }
-
-  private getHeaders(
-    endpoint: string,
-    customHeaders?: HeadersInit,
-  ): Record<string, string> {
+  private getHeaders(customHeaders?: HeadersInit): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     if (this.apiKey) {
       headers['x-api-key'] = this.apiKey;
-    }
-
-    if (this.shouldAttachUserHeader(endpoint)) {
-      const userId = getStoredUserId();
-
-      if (!userId) {
-        throw new ApiError(ERROR_MESSAGES.UNAUTHORIZED, 401);
-      }
-
-      headers['X-User-Id'] = userId;
     }
 
     if (customHeaders) {
@@ -131,8 +104,7 @@ class ApiClient {
         ? payload.message
         : response.statusText || ERROR_MESSAGES.GENERIC;
 
-    if (response.status === 401 && this.shouldAttachUserHeader(endpoint)) {
-      clearStoredBackendUserId();
+    if (response.status === 401 && PROTECTED_USER_SCOPED_ROUTE.test(endpoint)) {
       backendUnauthorizedHandler?.();
     }
 
@@ -167,7 +139,7 @@ class ApiClient {
     const url = this.buildURL(endpoint, options?.params);
     const response = await fetch(url, {
       method: 'GET',
-      headers: this.getHeaders(endpoint, options?.headers),
+      headers: this.getHeaders(options?.headers),
       ...options,
     });
 
@@ -186,7 +158,7 @@ class ApiClient {
     const url = this.buildURL(endpoint, options?.params);
     const response = await fetch(url, {
       method: 'POST',
-      headers: this.getHeaders(endpoint, options?.headers),
+      headers: this.getHeaders(options?.headers),
       body: data ? JSON.stringify(data) : undefined,
       ...options,
     });
@@ -206,7 +178,7 @@ class ApiClient {
     const url = this.buildURL(endpoint, options?.params);
     const response = await fetch(url, {
       method: 'PUT',
-      headers: this.getHeaders(endpoint, options?.headers),
+      headers: this.getHeaders(options?.headers),
       body: data ? JSON.stringify(data) : undefined,
       ...options,
     });
@@ -222,7 +194,7 @@ class ApiClient {
     const url = this.buildURL(endpoint, options?.params);
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: this.getHeaders(endpoint, options?.headers),
+      headers: this.getHeaders(options?.headers),
       ...options,
     });
 
@@ -234,7 +206,7 @@ class ApiClient {
   }
 }
 
-export const backendClient = new ApiClient(BACKEND_URL, API_KEY, true);
+export const backendClient = new ApiClient(BACKEND_URL, API_KEY);
 export const externalApiClient = new ApiClient(API_URL, API_KEY);
-export const localApiClient = new ApiClient('', API_KEY, true);
+export const localApiClient = new ApiClient('', API_KEY);
 export const apiClient = backendClient;

@@ -8,10 +8,10 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext) {
   const { leagueId } = await context.params;
-  return proxyBackendRequest(request, `/api/leagues/${leagueId}`);
+  return proxyBackendRequest(request, `/api/leagues/${leagueId}`, true);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
   const { leagueId } = await context.params;
-  return proxyBackendRequest(request, `/api/leagues/${leagueId}`);
+  return proxyBackendRequest(request, `/api/leagues/${leagueId}`, true);
 }
