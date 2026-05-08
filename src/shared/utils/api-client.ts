@@ -104,7 +104,17 @@ class ApiClient {
         ? payload.message
         : response.statusText || ERROR_MESSAGES.GENERIC;
 
-    if (response.status === 401 && PROTECTED_USER_SCOPED_ROUTE.test(endpoint)) {
+    const isAuthenticationRequired =
+      typeof payload === 'object' &&
+      payload !== null &&
+      'message' in payload &&
+      payload.message === 'Authentication required';
+
+    if (
+      response.status === 401 &&
+      isAuthenticationRequired &&
+      PROTECTED_USER_SCOPED_ROUTE.test(endpoint)
+    ) {
       backendUnauthorizedHandler?.();
     }
 

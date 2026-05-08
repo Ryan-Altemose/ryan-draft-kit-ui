@@ -95,6 +95,25 @@ describe('api-client', () => {
     expect(unauthorizedHandler).toHaveBeenCalledTimes(1);
   });
 
+  it('does not invoke the unauthorized handler on non-authentication 401s', async () => {
+    const unauthorizedHandler = vi.fn();
+    setBackendUnauthorizedHandler(unauthorizedHandler);
+
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: vi.fn().mockResolvedValue({ message: 'League access denied' }),
+    });
+
+    await expect(localApiClient.get('/api/leagues')).rejects.toBeInstanceOf(
+      ApiError,
+    );
+
+    expect(unauthorizedHandler).not.toHaveBeenCalled();
+  });
+
   it('does not attach X-User-Id to direct backend league requests', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

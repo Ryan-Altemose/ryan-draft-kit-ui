@@ -125,13 +125,23 @@ export async function proxyDraftSaveBackendRequest(
   endpoint: string,
 ): Promise<NextResponse> {
   try {
+    const session = await getAuthSession();
+    const backendUserId = session?.user?.backendUserId;
+
+    if (!backendUserId) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 },
+      );
+    }
+
     const backendUrl = new URL(`${getDraftSaveBackendUrl()}${endpoint}`);
     const incomingUrl = new URL(request.url);
     backendUrl.search = incomingUrl.search;
 
     const response = await fetch(backendUrl.toString(), {
       method: request.method,
-      headers: buildHeaders(request),
+      headers: buildHeaders(request, backendUserId),
       body:
         request.method === 'GET' ||
         request.method === 'DELETE' ||
