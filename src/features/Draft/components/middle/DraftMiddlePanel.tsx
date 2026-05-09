@@ -16,6 +16,7 @@ type DraftMiddlePanelProps = {
   startingBudget?: number;
   rosterSlots?: RosterSlots;
   minorLeagueSlots?: number;
+  leagueType?: 'MLB' | 'AL' | 'NL';
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
   onFinishDraft?: (name: string) => void | Promise<void>;
@@ -29,6 +30,7 @@ export default function DraftMiddlePanel({
   startingBudget,
   rosterSlots,
   minorLeagueSlots,
+  leagueType,
   onPickEntered,
   onUndo,
   onFinishDraft,
@@ -49,6 +51,7 @@ export default function DraftMiddlePanel({
           startingBudget={startingBudget}
           rosterSlots={rosterSlots}
           minorLeagueSlots={minorLeagueSlots}
+          leagueType={leagueType}
           onPickEntered={onPickEntered}
           onUndo={onUndo}
           onFinishDraft={onFinishDraft}

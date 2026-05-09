@@ -7,6 +7,7 @@ export type Player = {
   positions: string[];
   playerType: 'hitter' | 'pitcher';
   team: string;
+  league?: string;
   mlbDebutDate?: string;
 };
 

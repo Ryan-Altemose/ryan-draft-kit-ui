@@ -32,6 +32,7 @@ type LeagueTeamTableProps = {
   takenPlayers?: TakenPlayer[];
   allTakenPlayers?: TakenPlayer[];
   startingBudget: number;
+  leagueType?: 'MLB' | 'AL' | 'NL';
   onSaveChanges?: (payload: {
     teamName: string;
     rows: Array<{
@@ -109,6 +110,7 @@ export default function LeagueTeamTable({
   takenPlayers = [],
   allTakenPlayers,
   startingBudget,
+  leagueType,
   onSaveChanges,
   onDirtyChange,
   onRowsChange,
@@ -431,6 +433,7 @@ export default function LeagueTeamTable({
                         players={availablePlayers}
                         unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
                         position={row.position}
+                        leagueType={leagueType}
                         value={row.search}
                         onChange={(searchText, playerId, team) =>
                           handlePlayerSearchChange(

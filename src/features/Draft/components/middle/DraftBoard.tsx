@@ -43,6 +43,7 @@ type DraftBoardProps = {
   startingBudget?: number;
   rosterSlots?: RosterSlots;
   minorLeagueSlots?: number;
+  leagueType?: 'MLB' | 'AL' | 'NL';
   onPickEntered?: (pick: DraftPick, takenEntry: TakenPlayer) => void;
   onUndo?: () => void;
   onFinishDraft?: (name: string) => void | Promise<void>;
@@ -64,6 +65,7 @@ export default function DraftBoard({
   startingBudget = 0,
   rosterSlots,
   minorLeagueSlots = 0,
+  leagueType,
   onPickEntered,
   onUndo,
   onFinishDraft,
@@ -274,6 +276,7 @@ export default function DraftBoard({
                 <PlayerSearchInput
                   players={players}
                   unavailablePlayerIds={takenPlayerIds}
+                  leagueType={leagueType}
                   value={playerSearch}
                   onChange={(searchText, pid) => {
                     setPlayerSearch(searchText);

@@ -24,6 +24,7 @@ type SimpleTeamTableProps = {
   mode: 'minorLeague' | 'taxiSquad';
   slotCount: number;
   startingBudget: number;
+  leagueType?: 'MLB' | 'AL' | 'NL';
   takenPlayers?: TakenPlayer[];
   allTakenPlayers?: TakenPlayer[];
   onSaveChanges?: (payload: {
@@ -67,6 +68,7 @@ export default function SimpleTeamTable({
   mode,
   slotCount,
   startingBudget,
+  leagueType,
   takenPlayers = [],
   allTakenPlayers,
   onSaveChanges,
@@ -227,6 +229,7 @@ export default function SimpleTeamTable({
                       <PlayerSearchInput
                         players={eligiblePlayers}
                         unavailablePlayerIds={getUnavailableIds(rowIndex)}
+                        leagueType={leagueType}
                         value={row.search}
                         onChange={(searchText, playerId, playerTeam) =>
                           handlePlayerChange(

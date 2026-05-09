@@ -331,6 +331,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       mode="minorLeague"
                       slotCount={league.minorLeagueSlotsPerTeam ?? 0}
                       startingBudget={league.totalBudget ?? 0}
+                      leagueType={league.leagueType}
                       takenPlayers={takenPlayersForTeam}
                       allTakenPlayers={editedTakenPlayers}
                       isSaving={upsertLeagueMutation.isPending}
@@ -355,6 +356,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       mode="taxiSquad"
                       slotCount={league.taxiSquadPlayersPerTeam ?? 0}
                       startingBudget={league.totalBudget ?? 0}
+                      leagueType={league.leagueType}
                       takenPlayers={takenPlayersForTeam}
                       allTakenPlayers={editedTakenPlayers}
                       isSaving={upsertLeagueMutation.isPending}
@@ -379,6 +381,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     allTakenPlayers={editedTakenPlayers}
                     takenPlayers={takenPlayersForTeam}
                     startingBudget={league.totalBudget ?? 0}
+                    leagueType={league.leagueType}
                     isSaving={upsertLeagueMutation.isPending}
                     onSaveChanges={({ teamName, rows }) => {
                       const nextTeams = displayTeams.map((currentTeam) =>

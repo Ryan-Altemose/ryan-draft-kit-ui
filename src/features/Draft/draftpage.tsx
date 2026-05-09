@@ -139,6 +139,7 @@ export default function DraftPage() {
           startingBudget={selectedLeague?.totalBudget ?? 0}
           rosterSlots={selectedLeague?.rosterSlots}
           minorLeagueSlots={selectedLeague?.minorLeagueSlotsPerTeam ?? 0}
+          leagueType={selectedLeague?.leagueType}
           onPickEntered={handlePickEntered}
           onUndo={handleUndo}
           onFinishDraft={handleFinishDraft}
