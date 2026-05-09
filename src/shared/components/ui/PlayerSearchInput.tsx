@@ -11,6 +11,7 @@ export function isPlayerAllowedForPosition(
   if (position === 'MiLB') return !player.mlbDebutDate;
   if (position === 'BENCH') return true;
   if (position === 'UTIL') return player.playerType === 'hitter';
+  if (position === 'P') return player.playerType === 'pitcher';
   if (position === 'CI')
     return player.positions.includes('1B') || player.positions.includes('3B');
   if (position === 'MI')

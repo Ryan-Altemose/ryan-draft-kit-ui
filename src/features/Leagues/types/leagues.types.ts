@@ -12,6 +12,7 @@ export const RosterSlotsSchema = z.object({
   SP: z.number().int().min(0).default(5),
   RP: z.number().int().min(0).default(2),
   UTIL: z.number().int().min(0).default(0),
+  P: z.number().int().min(0).default(0),
   BENCH: z.number().int().min(0).default(0),
 });
 

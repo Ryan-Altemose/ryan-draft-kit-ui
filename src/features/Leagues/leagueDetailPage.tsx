@@ -194,6 +194,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
             OF: 3,
             SP: 5,
             RP: 2,
+            P: 0,
             UTIL: 0,
             BENCH: 0,
           },

@@ -12,6 +12,7 @@ export const DEFAULT_ROSTER_SLOTS: RosterSlots = {
   SP: 2,
   RP: 2,
   UTIL: 0,
+  P: 0,
   BENCH: 0,
 };
 
@@ -26,6 +27,7 @@ export const ROSTER_POSITIONS: (keyof RosterSlots)[] = [
   'OF',
   'SP',
   'RP',
+  'P',
   'UTIL',
   'BENCH',
 ];
