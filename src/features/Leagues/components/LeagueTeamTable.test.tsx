@@ -45,6 +45,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-adley',
             name: 'Adley Rutschman',
             team: 'BAL',
+            league: 'AL',
             positions: ['C'],
             playerType: 'hitter',
           },
@@ -52,6 +53,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-freddie',
             name: 'Freddie Freeman',
             team: 'LAD',
+            league: 'NL',
             positions: ['1B'],
             playerType: 'hitter',
           },
@@ -59,6 +61,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-julio',
             name: 'Julio Rodriguez',
             team: 'SEA',
+            league: 'AL',
             positions: ['OF'],
             playerType: 'hitter',
           },
@@ -66,6 +69,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-william',
             name: 'William Contreras',
             team: 'MIL',
+            league: 'NL',
             positions: ['C'],
             playerType: 'hitter',
           },
@@ -73,6 +77,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-a',
             name: 'Player A',
             team: 'BOS',
+            league: 'AL',
             positions: ['C'],
             playerType: 'hitter',
           },
@@ -80,6 +85,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-b',
             name: 'Player B',
             team: 'NYY',
+            league: 'AL',
             positions: ['1B'],
             playerType: 'hitter',
           },
@@ -87,6 +93,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-catcher',
             name: 'Catcher Player',
             team: 'ATL',
+            league: 'NL',
             positions: ['C'],
             playerType: 'hitter',
           },
@@ -94,6 +101,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-firstbase',
             name: 'First Base Player',
             team: 'TEX',
+            league: 'AL',
             positions: ['1B'],
             playerType: 'hitter',
           },
@@ -101,6 +109,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-outfielder',
             name: 'Outfielder',
             team: 'CIN',
+            league: 'NL',
             positions: ['OF'],
             playerType: 'hitter',
           },
@@ -108,6 +117,7 @@ describe('LeagueTeamTable', () => {
             _id: 'player-sp',
             name: 'Mock Player SP',
             team: 'BOS',
+            league: 'AL',
             positions: ['SP'],
             playerType: 'pitcher',
           },
@@ -735,5 +745,183 @@ describe('LeagueTeamTable', () => {
     ).map((option) => option.value);
     expect(thirdOptions).toContain('Adley Rutschman');
     expect(thirdOptions).toContain('Mock Player SP');
+  });
+
+  it('shows all players when leagueType is MLB', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          leagueType="MLB"
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+        />
+      </ChakraProvider>,
+    );
+
+    const options = Array.from(
+      document.querySelectorAll('datalist option'),
+    ).map((o) => o.value);
+
+    // Both AL and NL catchers should appear
+    expect(options).toContain('Adley Rutschman'); // AL
+    expect(options).toContain('William Contreras'); // NL
+    expect(options).toContain('Player A'); // AL
+    expect(options).toContain('Catcher Player'); // NL
+  });
+
+  it('shows only NL players when leagueType is NL', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          leagueType="NL"
+          rosterSlots={{
+            C: 1,
+            '1B': 1,
+            OF: 1,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+        />
+      </ChakraProvider>,
+    );
+
+    // C slot (datalists[0]): NL catchers only
+    const cOptions = Array.from(
+      document.querySelectorAll('datalist')[0].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(cOptions).toContain('William Contreras'); // NL
+    expect(cOptions).toContain('Catcher Player'); // NL
+    expect(cOptions).not.toContain('Adley Rutschman'); // AL
+    expect(cOptions).not.toContain('Player A'); // AL
+
+    // 1B slot (datalists[1]): NL first basemen only
+    const firstBaseOptions = Array.from(
+      document.querySelectorAll('datalist')[1].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(firstBaseOptions).toContain('Freddie Freeman'); // NL
+    expect(firstBaseOptions).not.toContain('First Base Player'); // AL
+    expect(firstBaseOptions).not.toContain('Player B'); // AL
+
+    // OF slot (datalists[2]): NL outfielders only
+    const ofOptions = Array.from(
+      document.querySelectorAll('datalist')[2].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(ofOptions).toContain('Outfielder'); // NL
+    expect(ofOptions).not.toContain('Julio Rodriguez'); // AL
+  });
+
+  it('shows only AL players when leagueType is AL', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          leagueType="AL"
+          rosterSlots={{
+            C: 1,
+            '1B': 1,
+            OF: 1,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+        />
+      </ChakraProvider>,
+    );
+
+    // C slot: AL catchers only
+    const cOptions = Array.from(
+      document.querySelectorAll('datalist')[0].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(cOptions).toContain('Adley Rutschman'); // AL
+    expect(cOptions).toContain('Player A'); // AL
+    expect(cOptions).not.toContain('William Contreras'); // NL
+    expect(cOptions).not.toContain('Catcher Player'); // NL
+
+    // 1B slot: AL first basemen only
+    const firstBaseOptions = Array.from(
+      document.querySelectorAll('datalist')[1].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(firstBaseOptions).toContain('First Base Player'); // AL
+    expect(firstBaseOptions).toContain('Player B'); // AL
+    expect(firstBaseOptions).not.toContain('Freddie Freeman'); // NL
+
+    // OF slot: AL outfielders only
+    const ofOptions = Array.from(
+      document.querySelectorAll('datalist')[2].querySelectorAll('option'),
+    ).map((o) => o.value);
+    expect(ofOptions).toContain('Julio Rodriguez'); // AL
+    expect(ofOptions).not.toContain('Outfielder'); // NL
+  });
+
+  it('shows all players when leagueType is omitted', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+        />
+      </ChakraProvider>,
+    );
+
+    const options = Array.from(
+      document.querySelectorAll('datalist option'),
+    ).map((o) => o.value);
+
+    expect(options).toContain('Adley Rutschman'); // AL
+    expect(options).toContain('William Contreras'); // NL
+    expect(options).toContain('Player A'); // AL
+    expect(options).toContain('Catcher Player'); // NL
   });
 });

@@ -55,7 +55,7 @@ export function formatDecimal(value: number, decimals = 2): string {
 export function formatPlayerDisplay(player: { name: string }): string {
   const words = player.name.trim().split(' ').filter(Boolean);
   if (words.length < 2) return player.name;
-  return `${words[0][0]}. ${words[words.length - 1]}`;
+  return `${words[0][0]}. ${words.slice(1).join(' ')}`;
 }
 
 // String Formatting
