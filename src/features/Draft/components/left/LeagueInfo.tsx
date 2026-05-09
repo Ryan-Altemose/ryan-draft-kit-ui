@@ -61,19 +61,27 @@ export default function LeagueInfo({ league }: Props) {
 
       <Divider />
 
-      <Flex gap={6}>
+      <Flex direction="column" gap={3}>
         <Box>
           <SectionLabel>Teams</SectionLabel>
           <Text fontWeight="semibold" fontSize="md" mt={1}>
             {league.teams?.length ?? '—'}
           </Text>
         </Box>
-        <Box>
-          <SectionLabel>Starting Budget</SectionLabel>
-          <Text fontWeight="semibold" fontSize="md" mt={1}>
-            {league.totalBudget != null ? `$${league.totalBudget}` : '—'}
-          </Text>
-        </Box>
+        <Flex gap={6}>
+          <Box>
+            <SectionLabel>League</SectionLabel>
+            <Text fontWeight="semibold" fontSize="md" mt={1}>
+              {league.leagueType ?? 'MLB'}
+            </Text>
+          </Box>
+          <Box>
+            <SectionLabel>Budget</SectionLabel>
+            <Text fontWeight="semibold" fontSize="md" mt={1}>
+              {league.totalBudget != null ? `$${league.totalBudget}` : '—'}
+            </Text>
+          </Box>
+        </Flex>
       </Flex>
 
       <Divider />

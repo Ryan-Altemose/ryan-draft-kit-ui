@@ -9,21 +9,19 @@ import {
   AlertDialogHeader,
   AlertDialogOverlay,
   Box,
+  Button,
   ButtonGroup,
+  Divider,
+  Flex,
   Heading,
+  SimpleGrid,
   Spinner,
   Stack,
+  Tag,
   Text,
-  Table,
-  Tbody,
-  Tr,
-  Td,
-  Th,
-  Thead,
-  TableContainer,
-  Button,
-  SimpleGrid,
   useDisclosure,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -242,42 +240,99 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
 
         <Heading>{league.name}</Heading>
 
-        <TableContainer borderWidth="1px" borderRadius="md">
-          <Table size="sm" w="auto">
-            <Thead>
-              <Tr>
-                <Th>Field</Th>
-                <Th>Value</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Tr>
-                <Td>Teams</Td>
-                <Td>{teamCount ?? '-'}</Td>
-              </Tr>
-              <Tr>
-                <Td>Draft Type</Td>
-                <Td>{league.draftType ?? '-'}</Td>
-              </Tr>
-              <Tr>
-                <Td>Starting Budget</Td>
-                <Td>
-                  {typeof league.totalBudget === 'number'
-                    ? `$${league.totalBudget}`
-                    : '-'}
-                </Td>
-              </Tr>
-              <Tr>
-                <Td>Batting Categories</Td>
-                <Td>{league.battingCategories?.join(', ') ?? '-'}</Td>
-              </Tr>
-              <Tr>
-                <Td>Pitching Categories</Td>
-                <Td>{league.pitchingCategories?.join(', ') ?? '-'}</Td>
-              </Tr>
-            </Tbody>
-          </Table>
-        </TableContainer>
+        <Box borderWidth="1px" borderRadius="md" p={4}>
+          <Flex gap={8} mb={4}>
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Teams
+              </Text>
+              <Text fontWeight="semibold" fontSize="md" mt={1}>
+                {teamCount ?? '—'}
+              </Text>
+            </Box>
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                League
+              </Text>
+              <Text fontWeight="semibold" fontSize="md" mt={1}>
+                {league.leagueType ?? 'MLB'}
+              </Text>
+            </Box>
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Budget
+              </Text>
+              <Text fontWeight="semibold" fontSize="md" mt={1}>
+                {typeof league.totalBudget === 'number'
+                  ? `$${league.totalBudget}`
+                  : '—'}
+              </Text>
+            </Box>
+          </Flex>
+
+          <Divider mb={4} />
+
+          <Flex direction="column" gap={3}>
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Hitting Categories
+              </Text>
+              <Wrap mt={2} spacing={1}>
+                {league.battingCategories?.map((cat) => (
+                  <WrapItem key={`bat-${cat}`}>
+                    <Tag size="sm" colorScheme="green" variant="subtle">
+                      {cat}
+                    </Tag>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            </Box>
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Pitching Categories
+              </Text>
+              <Wrap mt={2} spacing={1}>
+                {league.pitchingCategories?.map((cat) => (
+                  <WrapItem key={`pit-${cat}`}>
+                    <Tag size="sm" colorScheme="blue" variant="subtle">
+                      {cat}
+                    </Tag>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            </Box>
+          </Flex>
+        </Box>
 
         <Box display="flex" justifyContent="center">
           <ButtonGroup isAttached variant="outline" size="sm">
