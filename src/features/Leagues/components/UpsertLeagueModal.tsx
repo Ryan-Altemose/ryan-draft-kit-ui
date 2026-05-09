@@ -89,7 +89,7 @@ export default function UpsertLeagueModal({
         initialLeague?.taxiSquadPlayersPerTeam ?? 0,
       ),
       draftType: 'auction',
-      leagueType: 'MLB',
+      leagueType: initialLeague?.leagueType ?? 'MLB',
       rosterSlots: ROSTER_POSITIONS.reduce(
         (acc, position) => {
           const value =
@@ -213,6 +213,7 @@ export default function UpsertLeagueModal({
       name: form.leagueName.trim(),
       teams: Math.max(2, parsedTeams),
       draftType: form.draftType,
+      leagueType: form.leagueType,
       rosterSlots,
       totalBudget: Math.max(0, parsedTotalBudget),
       minorLeagueSlotsPerTeam: Math.max(0, parsedMinorLeagueSlots),

@@ -92,6 +92,7 @@ export async function upsertLeague(
       description: `${input.teams} teams`,
       format: existingLeague?.format ?? 'roto',
       draftType: input.draftType,
+      leagueType: input.leagueType ?? existingLeague?.leagueType ?? 'MLB',
       battingCategories: input.battingCategories,
       pitchingCategories: input.pitchingCategories,
       rosterSlots: input.rosterSlots,
