@@ -8,6 +8,7 @@ import {
   FormLabel,
   Grid,
   GridItem,
+  HStack,
   Input,
   Modal,
   ModalBody,
@@ -16,6 +17,8 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Radio,
+  RadioGroup,
   Select,
   Text,
   VStack,
@@ -63,6 +66,7 @@ export default function UpsertLeagueModal({
     minorLeagueSlotsPerTeam: string;
     taxiSquadPlayersPerTeam: string;
     draftType: 'auction';
+    leagueType: 'MLB' | 'AL' | 'NL';
     rosterSlots: Record<keyof RosterSlots, string>;
     battingCategories: string[];
     pitchingCategories: string[];
@@ -85,6 +89,7 @@ export default function UpsertLeagueModal({
         initialLeague?.taxiSquadPlayersPerTeam ?? 0,
       ),
       draftType: 'auction',
+      leagueType: 'MLB',
       rosterSlots: ROSTER_POSITIONS.reduce(
         (acc, position) => {
           const value =
@@ -279,6 +284,25 @@ export default function UpsertLeagueModal({
               >
                 <option value="auction">Auction</option>
               </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel>League</FormLabel>
+              <RadioGroup
+                value={form.leagueType}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    leagueType: val as 'MLB' | 'AL' | 'NL',
+                  }))
+                }
+              >
+                <HStack spacing={6}>
+                  <Radio value="MLB">MLB</Radio>
+                  <Radio value="AL">AL</Radio>
+                  <Radio value="NL">NL</Radio>
+                </HStack>
+              </RadioGroup>
             </FormControl>
 
             <FormControl isRequired>
