@@ -220,13 +220,19 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           <Button as={Link} href="/leagues" variant="ghost">
             Back
           </Button>
-          <Button onClick={editModal.onOpen} variant="outline">
+          <Button
+            onClick={editModal.onOpen}
+            colorScheme="blue"
+            variant="outline"
+          >
             Edit
           </Button>
           <Button
             as={Link}
             href={`/draft?leagueId=${encodeURIComponent(league._id)}`}
-            variant="outline"
+            bg="green.600"
+            color="white"
+            _hover={{ bg: 'green.700' }}
           >
             Draft
           </Button>
@@ -339,21 +345,21 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           <ButtonGroup isAttached variant="outline" size="sm">
             <Button
               onClick={() => setRosterView('main')}
-              colorScheme={rosterView === 'main' ? 'blue' : undefined}
+              colorScheme={rosterView === 'main' ? 'green' : undefined}
               variant={rosterView === 'main' ? 'solid' : 'outline'}
             >
               Main Roster
             </Button>
             <Button
               onClick={() => setRosterView('minorLeague')}
-              colorScheme={rosterView === 'minorLeague' ? 'blue' : undefined}
+              colorScheme={rosterView === 'minorLeague' ? 'green' : undefined}
               variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
             >
               Minor League Roster
             </Button>
             <Button
               onClick={() => setRosterView('taxiSquad')}
-              colorScheme={rosterView === 'taxiSquad' ? 'blue' : undefined}
+              colorScheme={rosterView === 'taxiSquad' ? 'green' : undefined}
               variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
             >
               Taxi Squad

@@ -486,7 +486,7 @@ export default function LeagueTeamTable({
               {onSaveChanges ? (
                 <Button
                   size="sm"
-                  colorScheme="blue"
+                  colorScheme="green"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSaveChanges();

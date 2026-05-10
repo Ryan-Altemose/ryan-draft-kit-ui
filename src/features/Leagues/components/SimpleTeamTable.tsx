@@ -259,7 +259,7 @@ export default function SimpleTeamTable({
             {onSaveChanges ? (
               <Button
                 size="sm"
-                colorScheme="blue"
+                colorScheme="green"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSave();

@@ -325,7 +325,7 @@ export default function DraftBoard({
                   <Flex gap={2}>
                     <Button
                       size="sm"
-                      colorScheme="blue"
+                      colorScheme="green"
                       onClick={handleEnterPick}
                     >
                       Enter Pick
@@ -389,7 +389,7 @@ export default function DraftBoard({
                   Cancel
                 </Button>
                 <Button
-                  colorScheme="blue"
+                  colorScheme="green"
                   onClick={handleFinishDraftConfirm}
                   ml={3}
                 >

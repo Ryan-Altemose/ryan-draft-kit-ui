@@ -196,7 +196,7 @@ export default function DraftRightPanel({
       >
         <Button
           size="sm"
-          colorScheme="blue"
+          colorScheme="green"
           onClick={handleSave}
           isDisabled={!hasDirtyChanges || isSavingRosters}
           isLoading={isSavingRosters}

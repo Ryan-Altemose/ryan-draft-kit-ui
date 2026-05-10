@@ -364,7 +364,7 @@ describe('LeagueTeamTable', () => {
       </ChakraProvider>,
     );
 
-    expect(screen.getByDisplayValue('F. Player')).toBeTruthy();
+    expect(screen.getByDisplayValue('F. Base Player')).toBeTruthy();
     expect(screen.getByDisplayValue('35')).toBeTruthy();
     expect(screen.getByDisplayValue('Outfielder')).toBeTruthy();
     expect(screen.getByDisplayValue('22')).toBeTruthy();

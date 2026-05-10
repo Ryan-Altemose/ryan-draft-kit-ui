@@ -449,7 +449,7 @@ export default function UpsertLeagueModal({
             Cancel
           </Button>
           <Button
-            colorScheme="blue"
+            colorScheme="green"
             onClick={handleSubmit}
             isDisabled={!canSubmit}
             isLoading={upsertLeagueMutation.isPending}
