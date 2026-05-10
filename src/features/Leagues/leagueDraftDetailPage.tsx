@@ -48,7 +48,7 @@ export default function LeagueDraftDetailPage({
         </Text>
 
         <Stack spacing={4}>
-          {teams.map((team) => {
+          {teams.map((team, index) => {
             const [teamId] = team;
             const takenPlayersForTeam = takenPlayers.filter(
               ([, tid]) => tid === teamId,
@@ -61,6 +61,7 @@ export default function LeagueDraftDetailPage({
                 allTakenPlayers={takenPlayers}
                 takenPlayers={takenPlayersForTeam}
                 startingBudget={startingBudget}
+                colorIndex={index}
                 readOnly
               />
             );

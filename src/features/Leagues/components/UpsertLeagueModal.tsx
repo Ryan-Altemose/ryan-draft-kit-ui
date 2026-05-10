@@ -128,6 +128,7 @@ export default function UpsertLeagueModal({
       form.leagueName.trim().length > 0 &&
       !Number.isNaN(parsedTeams) &&
       parsedTeams > 1 &&
+      parsedTeams <= 16 &&
       !Number.isNaN(parsedTotalBudget) &&
       parsedTotalBudget >= 0 &&
       !Number.isNaN(parsedMinorLeagueSlots) &&
@@ -262,6 +263,7 @@ export default function UpsertLeagueModal({
                 id="teams"
                 type="number"
                 min={2}
+                max={16}
                 value={form.teams}
                 onChange={(e) => {
                   const next = e.target.value;
@@ -269,6 +271,11 @@ export default function UpsertLeagueModal({
                   setForm((prev) => ({ ...prev, teams: next }));
                 }}
               />
+              {Number.parseInt(form.teams, 10) > 16 && (
+                <Text color="red.500" fontSize="sm" mt={1}>
+                  Maximum 16 teams allowed.
+                </Text>
+              )}
             </FormControl>
 
             <FormControl isRequired>

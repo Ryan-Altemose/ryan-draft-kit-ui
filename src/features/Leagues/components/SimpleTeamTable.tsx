@@ -18,6 +18,7 @@ import type { LeagueTeam, TakenPlayer } from '../types/leagues.types';
 import { usePlayers } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
+import { getTeamColor } from '../utils/teamColors';
 
 type SimpleTeamTableProps = {
   team: LeagueTeam;
@@ -33,6 +34,7 @@ type SimpleTeamTableProps = {
   }) => void;
   isSaving?: boolean;
   readOnly?: boolean;
+  colorIndex?: number;
 };
 
 type SimpleTableRow = {
@@ -75,6 +77,7 @@ export default function SimpleTeamTable({
   onSaveChanges,
   isSaving = false,
   readOnly = false,
+  colorIndex,
 }: SimpleTeamTableProps) {
   const [teamId, teamName] = team;
   const { players, isLoading: isLoadingPlayers } = usePlayers();
@@ -200,7 +203,7 @@ export default function SimpleTeamTable({
         gap={2}
         px={4}
         py={3}
-        bg="gray.50"
+        bg={colorIndex !== undefined ? getTeamColor(colorIndex) : 'gray.50'}
         borderBottomWidth={isCollapsed ? undefined : '1px'}
         onClick={() => setIsCollapsed((c) => !c)}
         cursor="pointer"

@@ -22,6 +22,7 @@ import type {
   TakenPlayer,
 } from '../types/leagues.types';
 import { DEFAULT_ROSTER_SLOTS, ROSTER_POSITIONS } from '../utils/leagueForm';
+import { getTeamColor } from '../utils/teamColors';
 import { usePlayers } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
@@ -51,6 +52,7 @@ type LeagueTeamTableProps = {
   isSaving?: boolean;
   readOnly?: boolean;
   draftMode?: boolean;
+  colorIndex?: number;
 };
 
 type TeamTableRow = {
@@ -119,6 +121,7 @@ export default function LeagueTeamTable({
   isSaving = false,
   readOnly = false,
   draftMode = false,
+  colorIndex,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [teamId, teamName] = team;
@@ -390,7 +393,7 @@ export default function LeagueTeamTable({
         gap={2}
         px={4}
         py={3}
-        bg="gray.50"
+        bg={colorIndex !== undefined ? getTeamColor(colorIndex) : 'gray.50'}
         borderBottomWidth={isCollapsed ? undefined : '1px'}
         onClick={() => setIsCollapsed((c) => !c)}
         cursor="pointer"

@@ -379,7 +379,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
               spacing={4}
               alignItems="start"
             >
-              {displayTeams.map((team) => {
+              {displayTeams.map((team, index) => {
                 const [teamId] = team;
                 const takenPlayersForTeam = editedTakenPlayers.filter(
                   ([, takenPlayerTeamId]) => takenPlayerTeamId === teamId,
@@ -397,6 +397,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       takenPlayers={takenPlayersForTeam}
                       allTakenPlayers={editedTakenPlayers}
                       isSaving={upsertLeagueMutation.isPending}
+                      colorIndex={index}
                       onSaveChanges={({ rows }) => {
                         const nextTakenPlayers = updateTeamTakenPlayers(
                           editedTakenPlayers,
@@ -422,6 +423,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       takenPlayers={takenPlayersForTeam}
                       allTakenPlayers={editedTakenPlayers}
                       isSaving={upsertLeagueMutation.isPending}
+                      colorIndex={index}
                       onSaveChanges={({ rows }) => {
                         const nextTakenPlayers = updateTeamTakenPlayers(
                           editedTakenPlayers,
@@ -445,6 +447,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                     startingBudget={league.totalBudget ?? 0}
                     leagueType={league.leagueType}
                     isSaving={upsertLeagueMutation.isPending}
+                    colorIndex={index}
                     onSaveChanges={({ teamName, rows }) => {
                       const nextTeams = displayTeams.map((currentTeam) =>
                         currentTeam[0] === teamId

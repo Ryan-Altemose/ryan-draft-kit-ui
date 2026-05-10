@@ -196,7 +196,7 @@ export default function DraftRightPanel({
       <Box flex="1" overflowY="auto">
         <Stack spacing={4} p={4}>
           {rosterView === 'main' &&
-            teams.map((team) => {
+            teams.map((team, index) => {
               const [teamId] = team;
               return (
                 <LeagueTeamTable
@@ -212,13 +212,14 @@ export default function DraftRightPanel({
                   onCrossTeamTransfer={handleCrossTeamTransfer}
                   forcedEmptyPlayerIds={forcedEmptyPlayersByTeam[teamId]}
                   isSaving={isSavingRosters}
+                  colorIndex={index}
                   draftMode
                 />
               );
             })}
 
           {(rosterView === 'minorLeague' || rosterView === 'taxiSquad') &&
-            teams.map((team) => {
+            teams.map((team, index) => {
               const [teamId] = team;
               return (
                 <SimpleTeamTable
@@ -234,6 +235,7 @@ export default function DraftRightPanel({
                   leagueType={league.leagueType}
                   takenPlayers={takenPlayersByTeam[teamId] ?? []}
                   allTakenPlayers={takenPlayers}
+                  colorIndex={index}
                   readOnly
                 />
               );
