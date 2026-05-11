@@ -297,4 +297,63 @@ describe('UpsertLeagueModal', () => {
       20,
     ]);
   });
+
+  it('shows a confirmation dialog when reducing taxi squad slot count orphans a drafted player', async () => {
+    renderModal(
+      makeLeague({
+        taxiSquadPlayersPerTeam: 2,
+        taken_players: [['player-taxi', 'team-1', 'TAXI-1', 15]],
+      }),
+    );
+
+    // Reduce taxi squad from 2 → 1; player at TAXI-1 becomes orphaned
+    fireEvent.change(screen.getByLabelText(/taxi squad players per team/i), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toBeTruthy();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('calls mutateAsync with orphaned taxi squad player removed when confirmed', async () => {
+    mutateAsyncMock.mockResolvedValue({});
+
+    renderModal(
+      makeLeague({
+        taxiSquadPlayersPerTeam: 2,
+        taken_players: [
+          ['player-keep', 'team-1', 'TAXI-0', 10],
+          ['player-drop', 'team-1', 'TAXI-1', 15],
+        ],
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(/taxi squad players per team/i), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: /save & remove/i }),
+    );
+
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledTimes(1));
+
+    const { input } = mutateAsyncMock.mock.calls[0][0];
+    expect(input.takenPlayers).toContainEqual([
+      'player-keep',
+      'team-1',
+      'TAXI-0',
+      10,
+    ]);
+    expect(input.takenPlayers).not.toContainEqual([
+      'player-drop',
+      'team-1',
+      'TAXI-1',
+      15,
+    ]);
+  });
 });

@@ -47,7 +47,11 @@ import {
   ROSTER_POSITIONS,
 } from '../utils/leagueForm';
 
-const KNOWN_SLOT_POSITIONS = new Set<string>([...ROSTER_POSITIONS, 'MiLB']);
+const KNOWN_SLOT_POSITIONS = new Set<string>([
+  ...ROSTER_POSITIONS,
+  'MiLB',
+  'TAXI',
+]);
 
 function isKnownSlotFormat(slot: string): boolean {
   const lastDash = slot.lastIndexOf('-');
@@ -62,6 +66,7 @@ function computeOrphanedTakenPlayers(
   newTeamCount: number,
   newRosterSlots: RosterSlots,
   newMinorLeagueSlots: number,
+  newTaxiSquadSlots: number,
 ): { orphanedCount: number; filteredTakenPlayers: TakenPlayer[] } {
   const takenPlayers = existingLeague.taken_players ?? [];
   if (takenPlayers.length === 0)
@@ -77,6 +82,7 @@ function computeOrphanedTakenPlayers(
     for (let i = 0; i < count; i++) validSlots.add(`${position}-${i}`);
   }
   for (let i = 0; i < newMinorLeagueSlots; i++) validSlots.add(`MiLB-${i}`);
+  for (let i = 0; i < newTaxiSquadSlots; i++) validSlots.add(`TAXI-${i}`);
 
   const filteredTakenPlayers = takenPlayers.filter(
     ([, teamId, positionSlot]) => {
@@ -303,6 +309,7 @@ export default function UpsertLeagueModal({
           parsedTeams,
           rosterSlots,
           parsedMinorLeagueSlots,
+          parsedTaxiSquadPlayers,
         );
       if (orphanedCount > 0) {
         setConfirmState({ payload, filteredTakenPlayers, orphanedCount });
