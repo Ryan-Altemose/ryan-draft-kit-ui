@@ -20,23 +20,57 @@ import {
 } from '@chakra-ui/react';
 import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
 
-// Stats where a lower value is the better outcome
-const BATTING_LOWER_IS_BETTER = new Set(['K']);
-const PITCHING_LOWER_IS_BETTER = new Set(['ERA', 'WHIP', 'H', 'BB', 'HR', 'L']);
+export const BATTING_LOWER_IS_BETTER = new Set(['K']);
+export const PITCHING_LOWER_IS_BETTER = new Set([
+  'ERA',
+  'WHIP',
+  'H',
+  'BB',
+  'HR',
+  'L',
+]);
 
-function getStatColors(
+export function isLowerBetter(
+  stat: string,
+  category: 'Batting' | 'Pitching',
+): boolean {
+  return category === 'Batting'
+    ? BATTING_LOWER_IS_BETTER.has(stat)
+    : PITCHING_LOWER_IS_BETTER.has(stat);
+}
+
+export function getOrdinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
+// Temporary stand-in — replace with real projected totals when available
+export function getFakeProjection(
+  teamIndex: number,
+  statIndex: number,
+): number {
+  return ((teamIndex * 7 + statIndex * 13) % 20) + 1;
+}
+
+export function getRank(
+  value: number,
+  allValues: number[],
+  lowerIsBetter: boolean,
+): number {
+  return (
+    allValues.filter((v) => (lowerIsBetter ? v < value : v > value)).length + 1
+  );
+}
+
+export function getStatColors(
   left: number,
   right: number,
   stat: string,
   category: 'Batting' | 'Pitching',
 ): { leftColor: string; rightColor: string } {
-  const lowerIsBetter =
-    category === 'Batting'
-      ? BATTING_LOWER_IS_BETTER.has(stat)
-      : PITCHING_LOWER_IS_BETTER.has(stat);
-
+  const lowerIsBetter = isLowerBetter(stat, category);
   if (left === right) return { leftColor: 'blue.500', rightColor: 'blue.500' };
-
   const leftWins = lowerIsBetter ? left < right : left > right;
   return {
     leftColor: leftWins ? 'green.500' : 'red.500',
@@ -66,6 +100,9 @@ export default function CompareModal({
   const activeCategories =
     category === 'Batting' ? battingCategories : pitchingCategories;
   const tagColor = category === 'Batting' ? 'green' : 'blue';
+
+  const leftTeamIndex = teams.findIndex(([id]) => id === leftTeam);
+  const rightTeamIndex = teams.findIndex(([id]) => id === rightTeam);
 
   const teamOptions = teams.map(([id, name]) => (
     <option key={id} value={id}>
@@ -120,15 +157,35 @@ export default function CompareModal({
           <Divider mb={4} />
 
           <Grid templateColumns="1fr auto 1fr">
-            {activeCategories.map((stat, i) => {
-              const leftVal = i % 3 === 0 ? 10 : i % 3 === 1 ? 5 : 5;
-              const rightVal = i % 3 === 0 ? 5 : i % 3 === 1 ? 10 : 5;
-              const { leftColor, rightColor } = getStatColors(
-                leftVal,
-                rightVal,
-                stat,
-                category,
+            {activeCategories.map((stat, statIndex) => {
+              const lowerIsBetter = isLowerBetter(stat, category);
+              const allValues = teams.map((_, ti) =>
+                getFakeProjection(ti, statIndex),
               );
+
+              const leftVal =
+                leftTeamIndex >= 0
+                  ? getFakeProjection(leftTeamIndex, statIndex)
+                  : null;
+              const rightVal =
+                rightTeamIndex >= 0
+                  ? getFakeProjection(rightTeamIndex, statIndex)
+                  : null;
+
+              const leftRank =
+                leftVal !== null
+                  ? getRank(leftVal, allValues, lowerIsBetter)
+                  : null;
+              const rightRank =
+                rightVal !== null
+                  ? getRank(rightVal, allValues, lowerIsBetter)
+                  : null;
+
+              const { leftColor, rightColor } =
+                leftVal !== null && rightVal !== null
+                  ? getStatColors(leftVal, rightVal, stat, category)
+                  : { leftColor: 'inherit', rightColor: 'inherit' };
+
               return (
                 <Box key={stat} display="contents">
                   <GridItem
@@ -138,7 +195,16 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    <Text color={leftColor}>{leftVal}</Text>
+                    {leftVal !== null ? (
+                      <>
+                        <Text color={leftColor}>{leftVal}</Text>
+                        <Text fontSize="xs" color="gray.500">
+                          {getOrdinal(leftRank!)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text color="gray.400">—</Text>
+                    )}
                   </GridItem>
                   <GridItem
                     py={2}
@@ -158,7 +224,16 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    <Text color={rightColor}>{rightVal}</Text>
+                    {rightVal !== null ? (
+                      <>
+                        <Text color={rightColor}>{rightVal}</Text>
+                        <Text fontSize="xs" color="gray.500">
+                          {getOrdinal(rightRank!)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text color="gray.400">—</Text>
+                    )}
                   </GridItem>
                 </Box>
               );
