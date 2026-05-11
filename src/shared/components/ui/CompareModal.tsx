@@ -15,9 +15,34 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Tag,
   Text,
 } from '@chakra-ui/react';
 import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
+
+// Stats where a lower value is the better outcome
+const BATTING_LOWER_IS_BETTER = new Set(['K']);
+const PITCHING_LOWER_IS_BETTER = new Set(['ERA', 'WHIP', 'H', 'BB', 'HR', 'L']);
+
+function getStatColors(
+  left: number,
+  right: number,
+  stat: string,
+  category: 'Batting' | 'Pitching',
+): { leftColor: string; rightColor: string } {
+  const lowerIsBetter =
+    category === 'Batting'
+      ? BATTING_LOWER_IS_BETTER.has(stat)
+      : PITCHING_LOWER_IS_BETTER.has(stat);
+
+  if (left === right) return { leftColor: 'blue.500', rightColor: 'blue.500' };
+
+  const leftWins = lowerIsBetter ? left < right : left > right;
+  return {
+    leftColor: leftWins ? 'green.500' : 'red.500',
+    rightColor: leftWins ? 'red.500' : 'green.500',
+  };
+}
 
 type CompareModalProps = {
   isOpen: boolean;
@@ -40,6 +65,7 @@ export default function CompareModal({
 
   const activeCategories =
     category === 'Batting' ? battingCategories : pitchingCategories;
+  const tagColor = category === 'Batting' ? 'green' : 'blue';
 
   const teamOptions = teams.map(([id, name]) => (
     <option key={id} value={id}>
@@ -94,37 +120,49 @@ export default function CompareModal({
           <Divider mb={4} />
 
           <Grid templateColumns="1fr auto 1fr">
-            {activeCategories.map((stat) => (
-              <Box key={stat} display="contents">
-                <GridItem
-                  py={2}
-                  px={4}
-                  textAlign="right"
-                  borderBottom="1px solid"
-                  borderColor="chakra-border-color"
-                >
-                  <Text>—</Text>
-                </GridItem>
-                <GridItem
-                  py={2}
-                  px={6}
-                  textAlign="center"
-                  borderBottom="1px solid"
-                  borderColor="chakra-border-color"
-                >
-                  <Text fontWeight="semibold">{stat}</Text>
-                </GridItem>
-                <GridItem
-                  py={2}
-                  px={4}
-                  textAlign="left"
-                  borderBottom="1px solid"
-                  borderColor="chakra-border-color"
-                >
-                  <Text>—</Text>
-                </GridItem>
-              </Box>
-            ))}
+            {activeCategories.map((stat, i) => {
+              const leftVal = i % 3 === 0 ? 10 : i % 3 === 1 ? 5 : 5;
+              const rightVal = i % 3 === 0 ? 5 : i % 3 === 1 ? 10 : 5;
+              const { leftColor, rightColor } = getStatColors(
+                leftVal,
+                rightVal,
+                stat,
+                category,
+              );
+              return (
+                <Box key={stat} display="contents">
+                  <GridItem
+                    py={2}
+                    px={4}
+                    textAlign="right"
+                    borderBottom="1px solid"
+                    borderColor="chakra-border-color"
+                  >
+                    <Text color={leftColor}>{leftVal}</Text>
+                  </GridItem>
+                  <GridItem
+                    py={2}
+                    px={6}
+                    textAlign="center"
+                    borderBottom="1px solid"
+                    borderColor="chakra-border-color"
+                  >
+                    <Tag size="sm" colorScheme={tagColor} variant="subtle">
+                      {stat}
+                    </Tag>
+                  </GridItem>
+                  <GridItem
+                    py={2}
+                    px={4}
+                    textAlign="left"
+                    borderBottom="1px solid"
+                    borderColor="chakra-border-color"
+                  >
+                    <Text color={rightColor}>{rightVal}</Text>
+                  </GridItem>
+                </Box>
+              );
+            })}
           </Grid>
         </ModalBody>
       </ModalContent>
