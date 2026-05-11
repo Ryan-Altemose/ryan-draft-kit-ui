@@ -214,9 +214,33 @@ export default function LeagueTeamTable({
     [takenPlayersForAvailability],
   );
 
-  // In draft mode, show all drafted players across the league (to support trades)
+  const playerSalaryMap = useMemo(
+    () =>
+      new Map(
+        (allTakenPlayers ?? takenPlayers).map(([pid, , , price]) => [
+          pid,
+          price,
+        ]),
+      ),
+    [allTakenPlayers, takenPlayers],
+  );
+
+  const teamPlayerIds = useMemo(
+    () => new Set(localRows.map((r) => r.playerId).filter(Boolean)),
+    [localRows],
+  );
+
+  // In draft mode, show all drafted players across the league (to support trades),
+  // but exclude cross-team players whose salary exceeds this team's remaining budget.
+  // Same-team players are always shown since rearranging them doesn't change total spend.
   const availablePlayers = draftMode
-    ? players.filter((p) => leagueTakenPlayerIds.has(p._id))
+    ? players
+        .filter((p) => leagueTakenPlayerIds.has(p._id))
+        .filter(
+          (p) =>
+            teamPlayerIds.has(p._id) ||
+            (playerSalaryMap.get(p._id) ?? 0) <= currentBudget,
+        )
     : players;
 
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
