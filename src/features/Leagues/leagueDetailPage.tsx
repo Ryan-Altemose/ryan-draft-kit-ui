@@ -33,6 +33,7 @@ import { useLeague } from './hooks/useLeague';
 import { useDeleteLeague } from './hooks/useDeleteLeague';
 import { useUpsertLeague } from './hooks/useUpsertLeague';
 import UpsertLeagueModal from './components/UpsertLeagueModal';
+import CompareModal from '@/shared/components/ui/CompareModal';
 import { parseTeamsFromDescription } from './utils/leagueForm';
 import type { LeagueTeam, TakenPlayer } from './types/leagues.types';
 
@@ -56,6 +57,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   const router = useRouter();
   const editModal = useDisclosure();
   const deleteConfirm = useDisclosure();
+  const compareModal = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const deleteLeagueMutation = useDeleteLeague();
   const upsertLeagueMutation = useUpsertLeague();
@@ -341,7 +343,19 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           </Flex>
         </Box>
 
-        <Box display="flex" justifyContent="center">
+        <Box display="flex" justifyContent="center" position="relative">
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="green"
+            position="absolute"
+            left={0}
+            top="50%"
+            transform="translateY(-50%)"
+            onClick={compareModal.onOpen}
+          >
+            Compare
+          </Button>
           <ButtonGroup isAttached variant="outline" size="sm">
             <Button
               onClick={() => setRosterView('main')}
@@ -480,6 +494,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
         isOpen={editModal.isOpen}
         onClose={editModal.onClose}
         initialLeague={league}
+      />
+
+      <CompareModal
+        isOpen={compareModal.isOpen}
+        onClose={compareModal.onClose}
+        teams={displayTeams}
+        battingCategories={currentLeague.battingCategories}
+        pitchingCategories={currentLeague.pitchingCategories}
       />
 
       <AlertDialog

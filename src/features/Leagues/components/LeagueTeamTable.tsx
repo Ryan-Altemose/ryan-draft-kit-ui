@@ -399,18 +399,23 @@ export default function LeagueTeamTable({
         cursor="pointer"
         userSelect="none"
       >
-        <Input
-          value={localTeamName}
-          onChange={(e) => setLocalTeamName(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          size="sm"
-          maxW="180px"
-          fontWeight="bold"
-          bg="white"
-          isDisabled={isSaving || readOnly}
-          isReadOnly={readOnly}
-        />
-        <Text fontWeight="semibold" color="gray.700">
+        {draftMode || readOnly ? (
+          <Text fontWeight="bold" fontSize="sm">
+            {localTeamName}
+          </Text>
+        ) : (
+          <Input
+            value={localTeamName}
+            onChange={(e) => setLocalTeamName(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            size="sm"
+            maxW="180px"
+            fontWeight="bold"
+            bg="white"
+            isDisabled={isSaving}
+          />
+        )}
+        <Text fontWeight="semibold" color="gray.700" fontSize="sm">
           Budget: ${currentBudget}
         </Text>
       </Flex>

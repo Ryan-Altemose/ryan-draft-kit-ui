@@ -1,13 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, ButtonGroup, Flex, Stack, Text } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  ButtonGroup,
+  Flex,
+  Stack,
+  Text,
+  useDisclosure,
+} from '@chakra-ui/react';
+import Link from 'next/link';
 import type {
   League,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import LeagueTeamTable from '@/features/Leagues/components/LeagueTeamTable';
 import SimpleTeamTable from '@/features/Leagues/components/SimpleTeamTable';
+import CompareModal from '@/shared/components/ui/CompareModal';
 
 type TeamRow = { rowId: string; playerId: string; price: number };
 
@@ -25,6 +35,7 @@ export default function DraftRightPanel({
   const [rosterView, setRosterView] = useState<
     'main' | 'minorLeague' | 'taxiSquad'
   >('main');
+  const compareModal = useDisclosure();
   const [dirtyTeamIds, setDirtyTeamIds] = useState<Set<string>>(new Set());
   const [currentRowsByTeam, setCurrentRowsByTeam] = useState<
     Record<string, TeamRow[]>
@@ -160,108 +171,142 @@ export default function DraftRightPanel({
   }
 
   return (
-    <Flex direction="column" h="100%">
-      <Box
-        p={3}
-        borderBottomWidth="1px"
-        borderColor="gray.200"
-        display="flex"
-        justifyContent="center"
-      >
-        <ButtonGroup isAttached variant="outline" size="sm">
-          <Button
-            onClick={() => setRosterView('main')}
-            colorScheme={rosterView === 'main' ? 'green' : undefined}
-            variant={rosterView === 'main' ? 'solid' : 'outline'}
-          >
-            Main Roster
-          </Button>
-          <Button
-            onClick={() => setRosterView('minorLeague')}
-            colorScheme={rosterView === 'minorLeague' ? 'green' : undefined}
-            variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
-          >
-            Minor League
-          </Button>
-          <Button
-            onClick={() => setRosterView('taxiSquad')}
-            colorScheme={rosterView === 'taxiSquad' ? 'green' : undefined}
-            variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
-          >
-            Taxi Squad
-          </Button>
-        </ButtonGroup>
-      </Box>
-
-      <Box flex="1" overflowY="auto">
-        <Stack spacing={4} p={4}>
-          {rosterView === 'main' &&
-            teams.map((team, index) => {
-              const [teamId] = team;
-              return (
-                <LeagueTeamTable
-                  key={teamId}
-                  team={team}
-                  rosterSlots={league.rosterSlots}
-                  allTakenPlayers={takenPlayers}
-                  takenPlayers={takenPlayersByTeam[teamId] ?? []}
-                  startingBudget={league.totalBudget ?? 0}
-                  leagueType={league.leagueType}
-                  onDirtyChange={handleDirtyChange}
-                  onRowsChange={handleRowsChange}
-                  onCrossTeamTransfer={handleCrossTeamTransfer}
-                  forcedEmptyPlayerIds={forcedEmptyPlayersByTeam[teamId]}
-                  isSaving={isSavingRosters}
-                  colorIndex={index}
-                  draftMode
-                />
-              );
-            })}
-
-          {(rosterView === 'minorLeague' || rosterView === 'taxiSquad') &&
-            teams.map((team, index) => {
-              const [teamId] = team;
-              return (
-                <SimpleTeamTable
-                  key={teamId}
-                  team={team}
-                  mode={rosterView}
-                  slotCount={
-                    rosterView === 'minorLeague'
-                      ? (league.minorLeagueSlotsPerTeam ?? 0)
-                      : (league.taxiSquadPlayersPerTeam ?? 0)
-                  }
-                  startingBudget={league.totalBudget ?? 0}
-                  leagueType={league.leagueType}
-                  takenPlayers={takenPlayersByTeam[teamId] ?? []}
-                  allTakenPlayers={takenPlayers}
-                  colorIndex={index}
-                  readOnly
-                />
-              );
-            })}
-
-          {teams.length === 0 && (
-            <Text color="gray.400" fontSize="sm">
-              No teams found in this league.
-            </Text>
-          )}
-        </Stack>
-      </Box>
-
-      <Flex borderTopWidth="1px" borderColor="gray.200" p={4} align="center">
-        <Button
-          size="sm"
-          colorScheme="green"
-          onClick={handleSave}
-          isDisabled={
-            rosterView !== 'main' || !hasDirtyChanges || isSavingRosters
-          }
-          isLoading={isSavingRosters}
+    <>
+      <Flex direction="column" h="100%">
+        <Box
+          px={3}
+          pt={3}
+          pb={2}
+          borderBottomWidth="1px"
+          borderColor="gray.200"
+          display="flex"
+          flexDirection="column"
+          gap={2}
         >
-          Save Changes
-        </Button>
+          <Box display="flex" justifyContent="center" gap={2}>
+            <Button
+              size="sm"
+              variant="outline"
+              colorScheme="green"
+              onClick={compareModal.onOpen}
+            >
+              Compare
+            </Button>
+            <Button
+              as={Link}
+              href={`/leagues/${league._id}`}
+              size="sm"
+              variant="outline"
+              colorScheme="green"
+            >
+              Back to league
+            </Button>
+          </Box>
+          <Box display="flex" justifyContent="center">
+            <ButtonGroup isAttached variant="outline" size="sm">
+              <Button
+                onClick={() => setRosterView('main')}
+                colorScheme={rosterView === 'main' ? 'green' : undefined}
+                variant={rosterView === 'main' ? 'solid' : 'outline'}
+              >
+                Main Roster
+              </Button>
+              <Button
+                onClick={() => setRosterView('minorLeague')}
+                colorScheme={rosterView === 'minorLeague' ? 'green' : undefined}
+                variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
+              >
+                Minor League
+              </Button>
+              <Button
+                onClick={() => setRosterView('taxiSquad')}
+                colorScheme={rosterView === 'taxiSquad' ? 'green' : undefined}
+                variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
+              >
+                Taxi Squad
+              </Button>
+            </ButtonGroup>
+          </Box>
+        </Box>
+
+        <Box flex="1" overflowY="auto">
+          <Stack spacing={4} p={4}>
+            {rosterView === 'main' &&
+              teams.map((team, index) => {
+                const [teamId] = team;
+                return (
+                  <LeagueTeamTable
+                    key={teamId}
+                    team={team}
+                    rosterSlots={league.rosterSlots}
+                    allTakenPlayers={takenPlayers}
+                    takenPlayers={takenPlayersByTeam[teamId] ?? []}
+                    startingBudget={league.totalBudget ?? 0}
+                    leagueType={league.leagueType}
+                    onDirtyChange={handleDirtyChange}
+                    onRowsChange={handleRowsChange}
+                    onCrossTeamTransfer={handleCrossTeamTransfer}
+                    forcedEmptyPlayerIds={forcedEmptyPlayersByTeam[teamId]}
+                    isSaving={isSavingRosters}
+                    colorIndex={index}
+                    draftMode
+                  />
+                );
+              })}
+
+            {(rosterView === 'minorLeague' || rosterView === 'taxiSquad') &&
+              teams.map((team, index) => {
+                const [teamId] = team;
+                return (
+                  <SimpleTeamTable
+                    key={teamId}
+                    team={team}
+                    mode={rosterView}
+                    slotCount={
+                      rosterView === 'minorLeague'
+                        ? (league.minorLeagueSlotsPerTeam ?? 0)
+                        : (league.taxiSquadPlayersPerTeam ?? 0)
+                    }
+                    startingBudget={league.totalBudget ?? 0}
+                    leagueType={league.leagueType}
+                    takenPlayers={takenPlayersByTeam[teamId] ?? []}
+                    allTakenPlayers={takenPlayers}
+                    colorIndex={index}
+                    readOnly
+                  />
+                );
+              })}
+
+            {teams.length === 0 && (
+              <Text color="gray.400" fontSize="sm">
+                No teams found in this league.
+              </Text>
+            )}
+          </Stack>
+        </Box>
+
+        <Flex borderTopWidth="1px" borderColor="gray.200" p={4} align="center">
+          <Button
+            size="sm"
+            colorScheme="green"
+            onClick={handleSave}
+            isDisabled={
+              rosterView !== 'main' || !hasDirtyChanges || isSavingRosters
+            }
+            isLoading={isSavingRosters}
+          >
+            Save Changes
+          </Button>
+        </Flex>
       </Flex>
-    </Flex>
+
+      <CompareModal
+        isOpen={compareModal.isOpen}
+        onClose={compareModal.onClose}
+        teams={teams}
+        battingCategories={league.battingCategories}
+        pitchingCategories={league.pitchingCategories}
+      />
+    </>
   );
 }
