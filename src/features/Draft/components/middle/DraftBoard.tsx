@@ -260,6 +260,8 @@ export default function DraftBoard({
                           {player.positions.join('/')} &middot; {player.team}
                         </Text>
                       </Box>
+                    ) : isLoading ? (
+                      'Loading players...'
                     ) : (
                       pid
                     )}
