@@ -1,5 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import UpsertLeagueModal from './UpsertLeagueModal';
 import type { League } from '../types/leagues.types';
@@ -27,9 +33,51 @@ function renderModal(initialLeague?: League) {
   );
 }
 
+const BASE_ROSTER_SLOTS = {
+  C: 1,
+  '1B': 1,
+  '2B': 1,
+  '3B': 1,
+  SS: 1,
+  CI: 0,
+  MI: 0,
+  OF: 3,
+  SP: 5,
+  RP: 2,
+  P: 0,
+  UTIL: 0,
+  BENCH: 0,
+};
+
+function makeLeague(overrides: Partial<League> = {}): League {
+  return {
+    _id: 'league-1',
+    externalId: 'custom-league-1',
+    name: 'Test League',
+    totalBudget: 260,
+    description: '3 teams',
+    format: 'roto',
+    draftType: 'auction',
+    taken_players: [],
+    teams: [
+      ['team-1', 'Team 1', 260],
+      ['team-2', 'Team 2', 260],
+      ['team-3', 'Team 3', 260],
+    ],
+    battingCategories: ['R', 'HR', 'RBI', 'SB', 'AVG'],
+    pitchingCategories: ['W', 'SV', 'K', 'ERA', 'WHIP'],
+    rosterSlots: { ...BASE_ROSTER_SLOTS },
+    ...overrides,
+  };
+}
+
 describe('UpsertLeagueModal', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('submits update with existing league context', async () => {
@@ -106,5 +154,147 @@ describe('UpsertLeagueModal', () => {
     expect(args.input.teams).toBe(10);
     expect(args.input.totalBudget).toBe(300);
     expect(args.input.taxiSquadPlayersPerTeam).toBe(2);
+  });
+
+  it('saves immediately without a confirmation dialog when no taken players would be orphaned', () => {
+    mutateAsyncMock.mockResolvedValue({});
+    renderModal(makeLeague({ taken_players: [] }));
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a confirmation dialog when reducing team count would orphan a drafted player', async () => {
+    renderModal(
+      makeLeague({
+        taken_players: [['player-drop', 'team-3', 'C-0', 20]],
+      }),
+    );
+
+    // Reduce from 3 teams to 2 — team-3's player becomes orphaned
+    fireEvent.change(screen.getByLabelText(/of teams/i), {
+      target: { value: '2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toBeTruthy();
+    expect(within(dialog).getByText('1')).toBeTruthy();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call mutateAsync when the confirmation dialog is cancelled', async () => {
+    renderModal(
+      makeLeague({
+        taken_players: [['player-drop', 'team-3', 'C-0', 20]],
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(/of teams/i), {
+      target: { value: '2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('calls mutateAsync with orphaned players removed when the confirmation is accepted after team reduction', async () => {
+    mutateAsyncMock.mockResolvedValue({});
+
+    renderModal(
+      makeLeague({
+        taken_players: [
+          ['player-keep', 'team-1', 'C-0', 30],
+          ['player-drop', 'team-3', 'C-0', 20],
+        ],
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(/of teams/i), {
+      target: { value: '2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: /save & remove/i }),
+    );
+
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledTimes(1));
+
+    const { input } = mutateAsyncMock.mock.calls[0][0];
+    expect(input.takenPlayers).toEqual([['player-keep', 'team-1', 'C-0', 30]]);
+    expect(input.takenPlayers).not.toContainEqual([
+      'player-drop',
+      'team-3',
+      'C-0',
+      20,
+    ]);
+  });
+
+  it('shows a confirmation dialog when reducing a position slot count orphans a drafted player', async () => {
+    renderModal(
+      makeLeague({
+        rosterSlots: { ...BASE_ROSTER_SLOTS, C: 2 },
+        taken_players: [['player-slot', 'team-1', 'C-1', 25]],
+      }),
+    );
+
+    // Reduce C slots from 2 → 1; player at C-1 becomes orphaned
+    fireEvent.change(screen.getByLabelText('C'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toBeTruthy();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves players with unrecognized slot formats and only removes truly orphaned entries', async () => {
+    mutateAsyncMock.mockResolvedValue({});
+
+    // player-sentinel has an 'UNSLOTTED' slot (sentinel value) on a valid team — must be preserved
+    // player-drop is on team-3, which will be removed
+    renderModal(
+      makeLeague({
+        taken_players: [
+          ['player-sentinel', 'team-1', 'UNSLOTTED', 10],
+          ['player-drop', 'team-3', 'C-0', 20],
+        ],
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(/of teams/i), {
+      target: { value: '2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    // Only 1 player orphaned (player-drop); player-sentinel's slot is not a known format
+    expect(within(dialog).getByText('1')).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: /save & remove/i }),
+    );
+
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledTimes(1));
+
+    const { input } = mutateAsyncMock.mock.calls[0][0];
+    expect(input.takenPlayers).toContainEqual([
+      'player-sentinel',
+      'team-1',
+      'UNSLOTTED',
+      10,
+    ]);
+    expect(input.takenPlayers).not.toContainEqual([
+      'player-drop',
+      'team-3',
+      'C-0',
+      20,
+    ]);
   });
 });

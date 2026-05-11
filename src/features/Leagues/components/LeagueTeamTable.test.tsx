@@ -924,4 +924,137 @@ describe('LeagueTeamTable', () => {
     expect(options).toContain('Player A'); // AL
     expect(options).toContain('Catcher Player'); // NL
   });
+
+  it('in draft mode, hides cross-team players whose salary exceeds the remaining budget and shows affordable ones', async () => {
+    // team-1 has player-adley ($40); remaining = 100 - 40 = $60
+    // player-william (C, team-2, $50): $50 ≤ $60 → affordable, should appear
+    // player-a (C, team-3, $70): $70 > $60 → unaffordable, should NOT appear
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 0]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 2,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-1', 'C-0', 40]]}
+          allTakenPlayers={[
+            ['player-adley', 'team-1', 'C-0', 40],
+            ['player-william', 'team-2', 'C-0', 50],
+            ['player-a', 'team-3', 'C-0', 70],
+          ]}
+          draftMode
+        />
+      </ChakraProvider>,
+    );
+
+    const datalists = document.querySelectorAll('datalist');
+    for (const datalist of datalists) {
+      const options = Array.from(datalist.querySelectorAll('option')).map(
+        (o) => o.value,
+      );
+      expect(options).toContain('William Contreras'); // $50 ≤ $60 remaining
+      expect(options).not.toContain('Player A'); // $70 > $60 remaining
+    }
+  });
+
+  it('in draft mode, shows a cross-team player whose salary exactly equals the remaining budget', async () => {
+    // team-1 has player-adley ($40); remaining = 100 - 40 = $60
+    // player-william (C, team-2, $60): salary == remaining → should appear
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 0]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 2,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-1', 'C-0', 40]]}
+          allTakenPlayers={[
+            ['player-adley', 'team-1', 'C-0', 40],
+            ['player-william', 'team-2', 'C-0', 60],
+          ]}
+          draftMode
+        />
+      </ChakraProvider>,
+    );
+
+    const datalists = document.querySelectorAll('datalist');
+    for (const datalist of datalists) {
+      const options = Array.from(datalist.querySelectorAll('option')).map(
+        (o) => o.value,
+      );
+      expect(options).toContain('William Contreras'); // salary == remaining budget
+    }
+  });
+
+  it('in draft mode, always shows players already on the same team even when the budget is fully exhausted', async () => {
+    // team-1 spends $80 + $80 = $160 on a $100 budget → remaining clamped to $0
+    // player-adley and player-william are on team-1 → always visible (no extra cost to rearrange)
+    // player-a (C, team-2, $1): $1 > $0 remaining → excluded as cross-team
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 0]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 2,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[
+            ['player-adley', 'team-1', 'C-0', 80],
+            ['player-william', 'team-1', 'C-1', 80],
+          ]}
+          allTakenPlayers={[
+            ['player-adley', 'team-1', 'C-0', 80],
+            ['player-william', 'team-1', 'C-1', 80],
+            ['player-a', 'team-2', 'C-0', 1],
+          ]}
+          draftMode
+        />
+      </ChakraProvider>,
+    );
+
+    const datalists = document.querySelectorAll('datalist');
+    for (const datalist of datalists) {
+      const options = Array.from(datalist.querySelectorAll('option')).map(
+        (o) => o.value,
+      );
+      expect(options).toContain('Adley Rutschman'); // same-team, always shown
+      expect(options).toContain('William Contreras'); // same-team, always shown
+      expect(options).not.toContain('Player A'); // cross-team, $1 > $0 remaining
+    }
+  });
 });
