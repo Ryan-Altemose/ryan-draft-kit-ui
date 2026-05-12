@@ -185,6 +185,7 @@ export default function DraftBoard({
       winningTeamId,
       slot,
       salaryNum,
+      '',
     ];
 
     onPickEntered?.(newPick, newTakenEntry);

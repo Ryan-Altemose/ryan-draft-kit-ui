@@ -19,7 +19,12 @@ import LeagueTeamTable from '@/features/Leagues/components/LeagueTeamTable';
 import SimpleTeamTable from '@/features/Leagues/components/SimpleTeamTable';
 import CompareModal from '@/shared/components/ui/CompareModal';
 
-type TeamRow = { rowId: string; playerId: string; price: number };
+type TeamRow = {
+  rowId: string;
+  playerId: string;
+  price: number;
+  contract: string;
+};
 
 type Props = {
   league: League | null;
@@ -144,7 +149,13 @@ export default function DraftRightPanel({
       for (const row of rows) {
         if (!row.playerId) continue;
 
-        newTakenPlayers.push([row.playerId, teamId, row.rowId, row.price]);
+        newTakenPlayers.push([
+          row.playerId,
+          teamId,
+          row.rowId,
+          row.price,
+          row.contract ?? '',
+        ]);
       }
     }
 
@@ -199,7 +210,7 @@ export default function DraftRightPanel({
               variant="outline"
               colorScheme="green"
             >
-              Back to league
+              Go to league
             </Button>
           </Box>
           <Box display="flex" justifyContent="center">
