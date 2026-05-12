@@ -58,12 +58,6 @@ export const DraftTypeSchema = z.enum(['auction', 'snake']);
 
 export const LeagueTypeSchema = z.enum(['MLB', 'AL', 'NL']);
 
-export const DraftPickMetaSchema = z.tuple([
-  z.number().int().min(1), // pick number
-  z.string(), // nominating team id
-  z.string(), // winning team id
-]);
-
 export const TakenPlayerBaseSchema = z.tuple([
   z.string(), // player id
   z.string(), // team id
@@ -130,7 +124,6 @@ export const LeagueFiltersSchema = z.object({
 
 export type RosterSlots = z.infer<typeof RosterSlotsSchema>;
 export type TakenPlayer = z.infer<typeof TakenPlayerSchema>;
-export type DraftPickMeta = z.infer<typeof DraftPickMetaSchema>;
 export type DraftPick = z.infer<typeof DraftPickSchema>;
 export type LeagueDraft = z.infer<typeof LeagueDraftSchema>;
 export type LeagueTeam = z.infer<typeof LeagueTeamSchema>;

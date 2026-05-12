@@ -330,7 +330,7 @@ describe('LeagueTeamTable', () => {
 
     expect(onSaveChanges).toHaveBeenCalledWith({
       teamName: 'Echo Updated',
-      rows: [{ rowId: 'C-0', playerId: 'player-a', price: 15 }],
+      rows: [{ rowId: 'C-0', playerId: 'player-a', price: 15, contract: '' }],
     });
   });
 
