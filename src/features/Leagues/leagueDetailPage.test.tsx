@@ -73,11 +73,16 @@ vi.mock('./components/LeagueTeamTable', () => ({
   }: {
     team: LeagueTeam;
     rosterSlots?: Record<string, number>;
-    takenPlayers?: Array<[string, string, string, number]>;
+    takenPlayers?: Array<[string, string, string, number, string]>;
     startingBudget: number;
     onSaveChanges?: (payload: {
       teamName: string;
-      rows: Array<{ rowId: string; playerId: string; price: number }>;
+      rows: Array<{
+        rowId: string;
+        playerId: string;
+        price: number;
+        contract: string;
+      }>;
     }) => void;
   }) => {
     const [localTeamName, setLocalTeamName] = useState(team[1]);
@@ -92,8 +97,9 @@ vi.mock('./components/LeagueTeamTable', () => ({
               rowId: player[2],
               playerId: player[0],
               price: player[3],
+              contract: player[4] ?? '',
             }))
-        : [{ rowId: 'C-0', playerId: '', price: 0 }];
+        : [{ rowId: 'C-0', playerId: '', price: 0, contract: '' }];
 
     const [rows, setRows] = useState(buildRows);
     const currentBudget =
@@ -169,8 +175,8 @@ describe('LeagueDetailPage', () => {
         ['team-2', 'Beta', 215],
       ],
       taken_players: [
-        ['player-1', 'team-1', 'C-0', 20],
-        ['player-2', 'team-2', 'C-0', 45],
+        ['player-1', 'team-1', 'C-0', 20, ''],
+        ['player-2', 'team-2', 'C-0', 45, ''],
       ],
       totalBudget: 260,
       draftType: 'auction',
@@ -321,8 +327,8 @@ describe('LeagueDetailPage', () => {
       ['team-2', 'Beta', 215],
     ]);
     expect(args.input.takenPlayers).toEqual([
-      ['player-1', 'team-1', 'C-0', 30],
-      ['player-2', 'team-2', 'C-0', 45],
+      ['player-1', 'team-1', 'C-0', 30, ''],
+      ['player-2', 'team-2', 'C-0', 45, ''],
     ]);
   });
 

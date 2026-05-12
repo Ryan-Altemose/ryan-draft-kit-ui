@@ -187,7 +187,7 @@ describe('DraftBoard', () => {
 
     expect(onPickEntered).toHaveBeenCalledWith(
       [1, 'team-1', 'team-2', 'player-adley', 30],
-      ['player-adley', 'team-2', 'C-0', 30],
+      ['player-adley', 'team-2', 'C-0', 30, ''],
     );
   });
 

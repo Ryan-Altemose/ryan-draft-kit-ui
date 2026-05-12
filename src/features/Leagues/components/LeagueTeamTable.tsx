@@ -40,12 +40,18 @@ type LeagueTeamTableProps = {
       rowId: string;
       playerId: string;
       price: number;
+      contract: string;
     }>;
   }) => void;
   onDirtyChange?: (teamId: string, isDirty: boolean) => void;
   onRowsChange?: (
     teamId: string,
-    rows: Array<{ rowId: string; playerId: string; price: number }>,
+    rows: Array<{
+      rowId: string;
+      playerId: string;
+      price: number;
+      contract: string;
+    }>,
   ) => void;
   onCrossTeamTransfer?: (playerId: string, destTeamId: string) => void;
   forcedEmptyPlayerIds?: Set<string>;
@@ -62,6 +68,7 @@ type TeamTableRow = {
   search: string;
   team: string;
   price: string;
+  contract: string;
 };
 
 function buildTeamRows(
@@ -81,6 +88,7 @@ function buildTeamRows(
         search: '',
         team: '',
         price: String(player?.[3] ?? 0),
+        contract: player?.[4] ?? '',
       };
     }),
   );
@@ -172,6 +180,7 @@ export default function LeagueTeamTable({
               ...propRow,
               search: formatPlayerDisplay(matchingPlayer),
               team: matchingPlayer.team,
+              contract: localRow?.contract ?? '',
             }
           : propRow;
       }),
@@ -214,9 +223,33 @@ export default function LeagueTeamTable({
     [takenPlayersForAvailability],
   );
 
-  // In draft mode, show all drafted players across the league (to support trades)
+  const playerSalaryMap = useMemo(
+    () =>
+      new Map(
+        (allTakenPlayers ?? takenPlayers).map(([pid, , , price]) => [
+          pid,
+          price,
+        ]),
+      ),
+    [allTakenPlayers, takenPlayers],
+  );
+
+  const teamPlayerIds = useMemo(
+    () => new Set(localRows.map((r) => r.playerId).filter(Boolean)),
+    [localRows],
+  );
+
+  // In draft mode, show all drafted players across the league (to support trades),
+  // but exclude cross-team players whose salary exceeds this team's remaining budget.
+  // Same-team players are always shown since rearranging them doesn't change total spend.
   const availablePlayers = draftMode
-    ? players.filter((p) => leagueTakenPlayerIds.has(p._id))
+    ? players
+        .filter((p) => leagueTakenPlayerIds.has(p._id))
+        .filter(
+          (p) =>
+            teamPlayerIds.has(p._id) ||
+            (playerSalaryMap.get(p._id) ?? 0) <= currentBudget,
+        )
     : players;
 
   // Returns IDs unavailable for a given row: league-wide taken + other slots in this table
@@ -236,7 +269,8 @@ export default function LeagueTeamTable({
     rows.some(
       (row, index) =>
         row.price !== propRows[index]?.price ||
-        row.playerId !== propRows[index]?.playerId,
+        row.playerId !== propRows[index]?.playerId ||
+        row.contract !== propRows[index]?.contract,
     );
 
   useEffect(() => {
@@ -250,6 +284,7 @@ export default function LeagueTeamTable({
         rowId: row.rowId,
         playerId: row.playerId,
         price: parsePrice(row.price),
+        contract: row.contract,
       })),
     );
   }, [teamId, localRows, onRowsChange]);
@@ -318,9 +353,17 @@ export default function LeagueTeamTable({
               playerId,
               team,
               price: salary,
+              contract: '',
             };
           if (index === sourceIndex)
-            return { ...row, playerId: '', search: '', team: '', price: '0' };
+            return {
+              ...row,
+              playerId: '',
+              search: '',
+              team: '',
+              price: '0',
+              contract: '',
+            };
           return row;
         });
       });
@@ -330,7 +373,22 @@ export default function LeagueTeamTable({
       prev.map((row, index) =>
         index !== rowIndex
           ? row
-          : { ...row, search: searchText, playerId, team },
+          : {
+              ...row,
+              search: searchText,
+              playerId,
+              team,
+              contract: playerId !== row.playerId ? '' : row.contract,
+            },
+      ),
+    );
+  }
+
+  function handleContractChange(rowIndex: number, value: string) {
+    if (value.length > 2) return;
+    setLocalRows((prev) =>
+      prev.map((row, index) =>
+        index === rowIndex ? { ...row, contract: value } : row,
       ),
     );
   }
@@ -343,6 +401,7 @@ export default function LeagueTeamTable({
         search: '',
         team: '',
         price: '0',
+        contract: '',
       })),
     );
   }
@@ -372,6 +431,7 @@ export default function LeagueTeamTable({
         rowId: row.rowId,
         playerId: row.playerId,
         price: parsePrice(row.price),
+        contract: row.contract,
       })),
     });
   }
@@ -430,6 +490,7 @@ export default function LeagueTeamTable({
                   <Th>Player</Th>
                   <Th>Team</Th>
                   <Th isNumeric>Price</Th>
+                  {!draftMode && <Th>Contract</Th>}
                 </Tr>
               </Thead>
               <Tbody>
@@ -483,6 +544,22 @@ export default function LeagueTeamTable({
                         isDisabled={isSaving || readOnly || draftMode}
                       />
                     </Td>
+                    {!draftMode && (
+                      <Td>
+                        <Input
+                          size="sm"
+                          maxLength={2}
+                          value={row.contract}
+                          onChange={(e) =>
+                            handleContractChange(rowIndex, e.target.value)
+                          }
+                          width="50px"
+                          minWidth="50px"
+                          placeholder="--"
+                          isDisabled={isSaving || readOnly}
+                        />
+                      </Td>
+                    )}
                   </Tr>
                 ))}
               </Tbody>

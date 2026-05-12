@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Button,
   Checkbox,
   FormControl,
@@ -28,6 +34,7 @@ import type {
   CreateLeagueInput,
   League,
   RosterSlots,
+  TakenPlayer,
 } from '../types/leagues.types';
 import {
   BattingCategorySchema,
@@ -39,6 +46,57 @@ import {
   parseTeamsFromDescription,
   ROSTER_POSITIONS,
 } from '../utils/leagueForm';
+
+const KNOWN_SLOT_POSITIONS = new Set<string>([
+  ...ROSTER_POSITIONS,
+  'MiLB',
+  'TAXI',
+]);
+
+function isKnownSlotFormat(slot: string): boolean {
+  const lastDash = slot.lastIndexOf('-');
+  if (lastDash < 0) return false;
+  const position = slot.slice(0, lastDash);
+  const indexStr = slot.slice(lastDash + 1);
+  return KNOWN_SLOT_POSITIONS.has(position) && /^\d+$/.test(indexStr);
+}
+
+function computeOrphanedTakenPlayers(
+  existingLeague: League,
+  newTeamCount: number,
+  newRosterSlots: RosterSlots,
+  newMinorLeagueSlots: number,
+  newTaxiSquadSlots: number,
+): { orphanedCount: number; filteredTakenPlayers: TakenPlayer[] } {
+  const takenPlayers = existingLeague.taken_players ?? [];
+  if (takenPlayers.length === 0)
+    return { orphanedCount: 0, filteredTakenPlayers: [] };
+
+  const validTeamIds = new Set(
+    (existingLeague.teams ?? []).slice(0, newTeamCount).map(([id]) => id),
+  );
+
+  const validSlots = new Set<string>();
+  for (const position of ROSTER_POSITIONS) {
+    const count = newRosterSlots[position] ?? 0;
+    for (let i = 0; i < count; i++) validSlots.add(`${position}-${i}`);
+  }
+  for (let i = 0; i < newMinorLeagueSlots; i++) validSlots.add(`MiLB-${i}`);
+  for (let i = 0; i < newTaxiSquadSlots; i++) validSlots.add(`TAXI-${i}`);
+
+  const filteredTakenPlayers = takenPlayers.filter(
+    ([, teamId, positionSlot]) => {
+      if (!validTeamIds.has(teamId)) return false;
+      if (!isKnownSlotFormat(positionSlot)) return true;
+      return validSlots.has(positionSlot);
+    },
+  );
+
+  return {
+    orphanedCount: takenPlayers.length - filteredTakenPlayers.length,
+    filteredTakenPlayers,
+  };
+}
 
 const ALL_BATTING_CATEGORIES = BattingCategorySchema.options;
 const ALL_PITCHING_CATEGORIES = PitchingCategorySchema.options;
@@ -57,6 +115,12 @@ export default function UpsertLeagueModal({
   initialLeague,
 }: UpsertLeagueModalProps) {
   const upsertLeagueMutation = useUpsertLeague();
+  const confirmCancelRef = useRef<HTMLButtonElement>(null);
+  const [confirmState, setConfirmState] = useState<{
+    payload: CreateLeagueInput;
+    filteredTakenPlayers: TakenPlayer[];
+    orphanedCount: number;
+  } | null>(null);
 
   type LeagueForm = {
     leagueName: string;
@@ -181,6 +245,22 @@ export default function UpsertLeagueModal({
     onClose();
   }
 
+  async function doSubmit(
+    payload: CreateLeagueInput,
+    takenPlayers?: TakenPlayer[],
+  ) {
+    try {
+      await upsertLeagueMutation.mutateAsync({
+        input: { ...payload, takenPlayers },
+        existingLeague: initialLeague,
+      });
+      resetForm();
+      handleClose();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   async function handleSubmit() {
     if (!canSubmit) return;
 
@@ -222,232 +302,287 @@ export default function UpsertLeagueModal({
       pitchingCategories: form.pitchingCategories,
     };
 
-    try {
-      await upsertLeagueMutation.mutateAsync({
-        input: payload,
-        existingLeague: initialLeague,
-      });
-      resetForm();
-      handleClose();
-    } catch (error) {
-      console.error(error);
+    if (initialLeague) {
+      const { orphanedCount, filteredTakenPlayers } =
+        computeOrphanedTakenPlayers(
+          initialLeague,
+          parsedTeams,
+          rosterSlots,
+          parsedMinorLeagueSlots,
+          parsedTaxiSquadPlayers,
+        );
+      if (orphanedCount > 0) {
+        setConfirmState({ payload, filteredTakenPlayers, orphanedCount });
+        return;
+      }
     }
+
+    await doSubmit(payload);
+  }
+
+  async function handleConfirmSubmit() {
+    if (!confirmState) return;
+    const { payload, filteredTakenPlayers } = confirmState;
+    setConfirmState(null);
+    await doSubmit(payload, filteredTakenPlayers);
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="xl">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>
-          {initialLeague ? 'Edit League' : 'Create League'}
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={4} align="stretch">
-            <FormControl isRequired>
-              <FormLabel htmlFor="leagueName">League Name</FormLabel>
-              <Input
-                id="leagueName"
-                placeholder="Enter league name"
-                value={form.leagueName}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, leagueName: e.target.value }))
-                }
-              />
-            </FormControl>
+    <>
+      <Modal isOpen={isOpen} onClose={handleClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            {initialLeague ? 'Edit League' : 'Create League'}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel htmlFor="leagueName">League Name</FormLabel>
+                <Input
+                  id="leagueName"
+                  placeholder="Enter league name"
+                  value={form.leagueName}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, leagueName: e.target.value }))
+                  }
+                />
+              </FormControl>
 
-            <FormControl isRequired>
-              <FormLabel htmlFor="teams"># of Teams</FormLabel>
-              <Input
-                id="teams"
-                type="number"
-                min={2}
-                max={16}
-                value={form.teams}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (next !== '' && !/^\d+$/.test(next)) return;
-                  setForm((prev) => ({ ...prev, teams: next }));
-                }}
-              />
-              {Number.parseInt(form.teams, 10) > 16 && (
-                <Text color="red.500" fontSize="sm" mt={1}>
-                  Maximum 16 teams allowed.
-                </Text>
-              )}
-            </FormControl>
+              <FormControl isRequired>
+                <FormLabel htmlFor="teams"># of Teams</FormLabel>
+                <Input
+                  id="teams"
+                  type="number"
+                  min={2}
+                  max={16}
+                  value={form.teams}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next !== '' && !/^\d+$/.test(next)) return;
+                    setForm((prev) => ({ ...prev, teams: next }));
+                  }}
+                />
+                {Number.parseInt(form.teams, 10) > 16 && (
+                  <Text color="red.500" fontSize="sm" mt={1}>
+                    Maximum 16 teams allowed.
+                  </Text>
+                )}
+              </FormControl>
 
-            <FormControl isRequired>
-              <FormLabel>League</FormLabel>
-              <RadioGroup
-                value={form.leagueType}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    leagueType: val as 'MLB' | 'AL' | 'NL',
-                  }))
-                }
+              <FormControl isRequired>
+                <FormLabel>League</FormLabel>
+                <RadioGroup
+                  value={form.leagueType}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      leagueType: val as 'MLB' | 'AL' | 'NL',
+                    }))
+                  }
+                >
+                  <HStack spacing={6}>
+                    <Radio value="MLB">MLB</Radio>
+                    <Radio value="AL">AL</Radio>
+                    <Radio value="NL">NL</Radio>
+                  </HStack>
+                </RadioGroup>
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel htmlFor="totalBudget">Starting Budget ($)</FormLabel>
+                <Input
+                  id="totalBudget"
+                  type="number"
+                  min={0}
+                  value={form.totalBudget}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next !== '' && !/^\d+$/.test(next)) return;
+                    setForm((prev) => ({ ...prev, totalBudget: next }));
+                  }}
+                />
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel htmlFor="minorLeagueSlotsPerTeam">
+                  Minor League Players Per Team
+                </FormLabel>
+                <Input
+                  id="minorLeagueSlotsPerTeam"
+                  type="number"
+                  min={0}
+                  value={form.minorLeagueSlotsPerTeam}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next !== '' && !/^\d+$/.test(next)) return;
+                    setForm((prev) => ({
+                      ...prev,
+                      minorLeagueSlotsPerTeam: next,
+                    }));
+                  }}
+                />
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel htmlFor="taxiSquadPlayersPerTeam">
+                  Taxi Squad Players Per Team
+                </FormLabel>
+                <Input
+                  id="taxiSquadPlayersPerTeam"
+                  type="number"
+                  min={0}
+                  value={form.taxiSquadPlayersPerTeam}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next !== '' && !/^\d+$/.test(next)) return;
+                    setForm((prev) => ({
+                      ...prev,
+                      taxiSquadPlayersPerTeam: next,
+                    }));
+                  }}
+                />
+              </FormControl>
+
+              <FormControl
+                isRequired
+                isInvalid={form.battingCategories.length === 0}
               >
-                <HStack spacing={6}>
-                  <Radio value="MLB">MLB</Radio>
-                  <Radio value="AL">AL</Radio>
-                  <Radio value="NL">NL</Radio>
-                </HStack>
-              </RadioGroup>
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel htmlFor="totalBudget">Starting Budget ($)</FormLabel>
-              <Input
-                id="totalBudget"
-                type="number"
-                min={0}
-                value={form.totalBudget}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (next !== '' && !/^\d+$/.test(next)) return;
-                  setForm((prev) => ({ ...prev, totalBudget: next }));
-                }}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel htmlFor="minorLeagueSlotsPerTeam">
-                Minor League Players Per Team
-              </FormLabel>
-              <Input
-                id="minorLeagueSlotsPerTeam"
-                type="number"
-                min={0}
-                value={form.minorLeagueSlotsPerTeam}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (next !== '' && !/^\d+$/.test(next)) return;
-                  setForm((prev) => ({
-                    ...prev,
-                    minorLeagueSlotsPerTeam: next,
-                  }));
-                }}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel htmlFor="taxiSquadPlayersPerTeam">
-                Taxi Squad Players Per Team
-              </FormLabel>
-              <Input
-                id="taxiSquadPlayersPerTeam"
-                type="number"
-                min={0}
-                value={form.taxiSquadPlayersPerTeam}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  if (next !== '' && !/^\d+$/.test(next)) return;
-                  setForm((prev) => ({
-                    ...prev,
-                    taxiSquadPlayersPerTeam: next,
-                  }));
-                }}
-              />
-            </FormControl>
-
-            <FormControl
-              isRequired
-              isInvalid={form.battingCategories.length === 0}
-            >
-              <FormLabel>Batting Categories</FormLabel>
-              <Wrap spacing={3}>
-                {ALL_BATTING_CATEGORIES.map((cat) => (
-                  <WrapItem key={cat}>
-                    <Checkbox
-                      isChecked={form.battingCategories.includes(cat)}
-                      onChange={() => toggleCategory('battingCategories', cat)}
-                    >
-                      {cat}
-                    </Checkbox>
-                  </WrapItem>
-                ))}
-              </Wrap>
-              {form.battingCategories.length === 0 && (
-                <Text color="red.500" fontSize="sm" mt={1}>
-                  Select at least one batting category.
-                </Text>
-              )}
-            </FormControl>
-
-            <FormControl
-              isRequired
-              isInvalid={form.pitchingCategories.length === 0}
-            >
-              <FormLabel>Pitching Categories</FormLabel>
-              <Wrap spacing={3}>
-                {ALL_PITCHING_CATEGORIES.map((cat) => (
-                  <WrapItem key={cat}>
-                    <Checkbox
-                      isChecked={form.pitchingCategories.includes(cat)}
-                      onChange={() => toggleCategory('pitchingCategories', cat)}
-                    >
-                      {cat}
-                    </Checkbox>
-                  </WrapItem>
-                ))}
-              </Wrap>
-              {form.pitchingCategories.length === 0 && (
-                <Text color="red.500" fontSize="sm" mt={1}>
-                  Select at least one pitching category.
-                </Text>
-              )}
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Roster Slots Per Position</FormLabel>
-              <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={3}>
-                {ROSTER_POSITIONS.map((position) => (
-                  <GridItem key={position}>
-                    <FormControl>
-                      <FormLabel
-                        fontSize="sm"
-                        mb={1}
-                        htmlFor={`roster-${position}`}
-                      >
-                        {position}
-                      </FormLabel>
-                      <Input
-                        id={`roster-${position}`}
-                        type="number"
-                        min={0}
-                        value={form.rosterSlots[position]}
-                        onChange={(e) =>
-                          handleRosterSlotChange(position, e.target.value)
+                <FormLabel>Batting Categories</FormLabel>
+                <Wrap spacing={3}>
+                  {ALL_BATTING_CATEGORIES.map((cat) => (
+                    <WrapItem key={cat}>
+                      <Checkbox
+                        isChecked={form.battingCategories.includes(cat)}
+                        onChange={() =>
+                          toggleCategory('battingCategories', cat)
                         }
-                      />
-                    </FormControl>
-                  </GridItem>
-                ))}
-              </Grid>
-            </FormControl>
+                      >
+                        {cat}
+                      </Checkbox>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+                {form.battingCategories.length === 0 && (
+                  <Text color="red.500" fontSize="sm" mt={1}>
+                    Select at least one batting category.
+                  </Text>
+                )}
+              </FormControl>
 
-            {upsertLeagueMutation.isError ? (
-              <Text color="red.500" fontSize="sm">
-                Failed to save league. Check API connection and API key.
-              </Text>
-            ) : null}
-          </VStack>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            colorScheme="green"
-            onClick={handleSubmit}
-            isDisabled={!canSubmit}
-            isLoading={upsertLeagueMutation.isPending}
-          >
-            {initialLeague ? 'Save Changes' : 'Create League'}
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+              <FormControl
+                isRequired
+                isInvalid={form.pitchingCategories.length === 0}
+              >
+                <FormLabel>Pitching Categories</FormLabel>
+                <Wrap spacing={3}>
+                  {ALL_PITCHING_CATEGORIES.map((cat) => (
+                    <WrapItem key={cat}>
+                      <Checkbox
+                        isChecked={form.pitchingCategories.includes(cat)}
+                        onChange={() =>
+                          toggleCategory('pitchingCategories', cat)
+                        }
+                      >
+                        {cat}
+                      </Checkbox>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+                {form.pitchingCategories.length === 0 && (
+                  <Text color="red.500" fontSize="sm" mt={1}>
+                    Select at least one pitching category.
+                  </Text>
+                )}
+              </FormControl>
+
+              <FormControl>
+                <FormLabel>Roster Slots Per Position</FormLabel>
+                <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={3}>
+                  {ROSTER_POSITIONS.map((position) => (
+                    <GridItem key={position}>
+                      <FormControl>
+                        <FormLabel
+                          fontSize="sm"
+                          mb={1}
+                          htmlFor={`roster-${position}`}
+                        >
+                          {position}
+                        </FormLabel>
+                        <Input
+                          id={`roster-${position}`}
+                          type="number"
+                          min={0}
+                          value={form.rosterSlots[position]}
+                          onChange={(e) =>
+                            handleRosterSlotChange(position, e.target.value)
+                          }
+                        />
+                      </FormControl>
+                    </GridItem>
+                  ))}
+                </Grid>
+              </FormControl>
+
+              {upsertLeagueMutation.isError ? (
+                <Text color="red.500" fontSize="sm">
+                  Failed to save league. Check API connection and API key.
+                </Text>
+              ) : null}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="green"
+              onClick={handleSubmit}
+              isDisabled={!canSubmit}
+              isLoading={upsertLeagueMutation.isPending}
+            >
+              {initialLeague ? 'Save Changes' : 'Create League'}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <AlertDialog
+        isOpen={confirmState !== null}
+        leastDestructiveRef={confirmCancelRef}
+        onClose={() => setConfirmState(null)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Remove Drafted Players?
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Saving will permanently remove{' '}
+              <strong>{confirmState?.orphanedCount}</strong> drafted player
+              {confirmState?.orphanedCount === 1 ? '' : 's'} that belong to
+              eliminated teams or positions. This cannot be undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button
+                ref={confirmCancelRef}
+                onClick={() => setConfirmState(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                colorScheme="red"
+                onClick={() => void handleConfirmSubmit()}
+                ml={3}
+                isLoading={upsertLeagueMutation.isPending}
+              >
+                Save & Remove
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+    </>
   );
 }
