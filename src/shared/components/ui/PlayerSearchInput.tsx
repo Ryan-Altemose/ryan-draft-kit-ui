@@ -27,6 +27,8 @@ type PlayerSearchInputProps = {
   value: string;
   onChange: (searchText: string, playerId: string, team: string) => void;
   isDisabled?: boolean;
+  isReadOnly?: boolean;
+  onClick?: () => void;
   placeholder?: string;
   listId: string;
 };
@@ -39,6 +41,8 @@ export default function PlayerSearchInput({
   value,
   onChange,
   isDisabled,
+  isReadOnly,
+  onClick,
   placeholder = 'Search players...',
   listId,
 }: PlayerSearchInputProps) {
@@ -73,6 +77,10 @@ export default function PlayerSearchInput({
         list={listId}
         onChange={(e) => handleChange(e.target.value)}
         isDisabled={isDisabled}
+        isReadOnly={isReadOnly}
+        onClick={onClick}
+        cursor={onClick ? 'pointer' : undefined}
+        _hover={onClick ? { borderColor: 'green.400' } : undefined}
       />
       <datalist id={listId}>
         {allowedPlayers.map((player) => (

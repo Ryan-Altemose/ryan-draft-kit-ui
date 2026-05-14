@@ -18,6 +18,7 @@ import type {
 import LeagueTeamTable from '@/features/Leagues/components/LeagueTeamTable';
 import SimpleTeamTable from '@/features/Leagues/components/SimpleTeamTable';
 import CompareModal from '@/shared/components/ui/CompareModal';
+import type { Player } from '@/shared/hooks/usePlayers';
 
 type TeamRow = {
   rowId: string;
@@ -30,12 +31,14 @@ type Props = {
   league: League | null;
   onSaveRosters: (updatedTakenPlayers: TakenPlayer[]) => void;
   isSavingRosters?: boolean;
+  onPlayerNotebookOpen?: (player: Player) => void;
 };
 
 export default function DraftRightPanel({
   league,
   onSaveRosters,
   isSavingRosters = false,
+  onPlayerNotebookOpen,
 }: Props) {
   const [rosterView, setRosterView] = useState<
     'main' | 'minorLeague' | 'taxiSquad'
@@ -260,6 +263,7 @@ export default function DraftRightPanel({
                     forcedEmptyPlayerIds={forcedEmptyPlayersByTeam[teamId]}
                     isSaving={isSavingRosters}
                     colorIndex={index}
+                    onPlayerNotebookOpen={onPlayerNotebookOpen}
                     draftMode
                   />
                 );

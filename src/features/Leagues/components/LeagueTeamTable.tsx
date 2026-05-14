@@ -23,7 +23,7 @@ import type {
 } from '../types/leagues.types';
 import { DEFAULT_ROSTER_SLOTS, ROSTER_POSITIONS } from '../utils/leagueForm';
 import { getTeamColor } from '../utils/teamColors';
-import { usePlayers } from '@/shared/hooks/usePlayers';
+import { usePlayers, type Player } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 
@@ -59,6 +59,7 @@ type LeagueTeamTableProps = {
   readOnly?: boolean;
   draftMode?: boolean;
   colorIndex?: number;
+  onPlayerNotebookOpen?: (player: Player) => void;
 };
 
 type TeamTableRow = {
@@ -130,6 +131,7 @@ export default function LeagueTeamTable({
   readOnly = false,
   draftMode = false,
   colorIndex,
+  onPlayerNotebookOpen,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [teamId, teamName] = team;
@@ -494,74 +496,90 @@ export default function LeagueTeamTable({
                 </Tr>
               </Thead>
               <Tbody>
-                {rows.map((row, rowIndex) => (
-                  <Tr key={row.rowId}>
-                    <Td>{row.position}</Td>
-                    <Td>
-                      <PlayerSearchInput
-                        players={availablePlayers}
-                        unavailablePlayerIds={getUnavailablePlayerIds(rowIndex)}
-                        position={row.position}
-                        leagueType={leagueType}
-                        value={row.search}
-                        onChange={(searchText, playerId, team) =>
-                          handlePlayerSearchChange(
-                            rowIndex,
-                            searchText,
-                            playerId,
-                            team,
-                          )
-                        }
-                        isDisabled={
-                          isSaving ||
-                          isLoadingPlayers ||
-                          readOnly ||
-                          (draftMode && !!row.playerId)
-                        }
-                        placeholder={
-                          isLoadingPlayers
-                            ? 'Loading players...'
-                            : 'Search players...'
-                        }
-                        listId={`player-options-${row.rowId}`}
-                      />
-                    </Td>
-                    <Td>{row.team || '-'}</Td>
-                    <Td isNumeric>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={startingBudget}
-                        value={row.price}
-                        onChange={(e) => {
-                          handleLocalPriceChange(rowIndex, e.target.value);
-                        }}
-                        textAlign="right"
-                        size="sm"
-                        width="50px"
-                        minWidth="50px"
-                        marginLeft="auto"
-                        isDisabled={isSaving || readOnly || draftMode}
-                      />
-                    </Td>
-                    {!draftMode && (
+                {rows.map((row, rowIndex) => {
+                  const rowPlayer = row.playerId
+                    ? players.find((player) => player._id === row.playerId)
+                    : undefined;
+                  const canOpenNotebook =
+                    draftMode && !!rowPlayer && !!onPlayerNotebookOpen;
+
+                  return (
+                    <Tr key={row.rowId}>
+                      <Td>{row.position}</Td>
                       <Td>
-                        <Input
-                          size="sm"
-                          maxLength={2}
-                          value={row.contract}
-                          onChange={(e) =>
-                            handleContractChange(rowIndex, e.target.value)
+                        <PlayerSearchInput
+                          players={availablePlayers}
+                          unavailablePlayerIds={getUnavailablePlayerIds(
+                            rowIndex,
+                          )}
+                          position={row.position}
+                          leagueType={leagueType}
+                          value={row.search}
+                          onChange={(searchText, playerId, team) =>
+                            handlePlayerSearchChange(
+                              rowIndex,
+                              searchText,
+                              playerId,
+                              team,
+                            )
                           }
-                          width="50px"
-                          minWidth="50px"
-                          placeholder="--"
-                          isDisabled={isSaving || readOnly}
+                          isDisabled={
+                            isSaving ||
+                            isLoadingPlayers ||
+                            readOnly ||
+                            (draftMode && !!row.playerId && !canOpenNotebook)
+                          }
+                          isReadOnly={canOpenNotebook}
+                          onClick={
+                            canOpenNotebook
+                              ? () => onPlayerNotebookOpen(rowPlayer)
+                              : undefined
+                          }
+                          placeholder={
+                            isLoadingPlayers
+                              ? 'Loading players...'
+                              : 'Search players...'
+                          }
+                          listId={`player-options-${row.rowId}`}
                         />
                       </Td>
-                    )}
-                  </Tr>
-                ))}
+                      <Td>{row.team || '-'}</Td>
+                      <Td isNumeric>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={startingBudget}
+                          value={row.price}
+                          onChange={(e) => {
+                            handleLocalPriceChange(rowIndex, e.target.value);
+                          }}
+                          textAlign="right"
+                          size="sm"
+                          width="50px"
+                          minWidth="50px"
+                          marginLeft="auto"
+                          isDisabled={isSaving || readOnly || draftMode}
+                        />
+                      </Td>
+                      {!draftMode && (
+                        <Td>
+                          <Input
+                            size="sm"
+                            maxLength={2}
+                            value={row.contract}
+                            onChange={(e) =>
+                              handleContractChange(rowIndex, e.target.value)
+                            }
+                            width="50px"
+                            minWidth="50px"
+                            placeholder="--"
+                            isDisabled={isSaving || readOnly}
+                          />
+                        </Td>
+                      )}
+                    </Tr>
+                  );
+                })}
               </Tbody>
             </Table>
           </TableContainer>

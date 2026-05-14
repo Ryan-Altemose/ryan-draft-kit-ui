@@ -26,6 +26,7 @@ type NotebookWorkspaceProps = {
   selectedPlayer: Player | null;
   onCloseNotebook: () => void;
   onOpenPlayerNotebook: (player: Player) => void;
+  showLauncher?: boolean;
 };
 
 export default function NotebookWorkspace({
@@ -38,6 +39,7 @@ export default function NotebookWorkspace({
   selectedPlayer,
   onCloseNotebook,
   onOpenPlayerNotebook,
+  showLauncher = true,
 }: NotebookWorkspaceProps) {
   const [windowRect, setWindowRect] = useState<NotebookWindowRect>({
     x: 0,
@@ -171,24 +173,26 @@ export default function NotebookWorkspace({
 
   return (
     <>
-      <Box
-        flex="1"
-        borderRadius="md"
-        border="2px solid"
-        borderColor="gray.200"
-        bg="white"
-        p={6}
-      >
-        <Flex direction="column" gap={6} h="100%">
-          <TopPlayersPanel onOpenPlayer={onOpenPlayerNotebook} />
-          <Box
-            flex="1"
-            borderRadius="md"
-            border="1px dashed"
-            borderColor="gray.200"
-          />
-        </Flex>
-      </Box>
+      {showLauncher ? (
+        <Box
+          flex="1"
+          borderRadius="md"
+          border="2px solid"
+          borderColor="gray.200"
+          bg="white"
+          p={6}
+        >
+          <Flex direction="column" gap={6} h="100%">
+            <TopPlayersPanel onOpenPlayer={onOpenPlayerNotebook} />
+            <Box
+              flex="1"
+              borderRadius="md"
+              border="1px dashed"
+              borderColor="gray.200"
+            />
+          </Flex>
+        </Box>
+      ) : null}
 
       {selectedNotebookName ? (
         <Box position="fixed" inset={0} bg="blackAlpha.200" zIndex={10}>
