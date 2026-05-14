@@ -15,7 +15,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 import type { LeagueTeam, TakenPlayer } from '../types/leagues.types';
-import { usePlayers } from '@/shared/hooks/usePlayers';
+import { usePlayers, type Player } from '@/shared/hooks/usePlayers';
 import { formatPlayerDisplay } from '@/shared/utils/format';
 import PlayerSearchInput from '@/shared/components/ui/PlayerSearchInput';
 import { getTeamColor } from '../utils/teamColors';
@@ -35,6 +35,7 @@ type SimpleTeamTableProps = {
   isSaving?: boolean;
   readOnly?: boolean;
   colorIndex?: number;
+  onPlayerNotebookOpen?: (player: Player) => void;
 };
 
 type SimpleTableRow = {
@@ -78,6 +79,7 @@ export default function SimpleTeamTable({
   isSaving = false,
   readOnly = false,
   colorIndex,
+  onPlayerNotebookOpen,
 }: SimpleTeamTableProps) {
   const [teamId, teamName] = team;
   const { players, isLoading: isLoadingPlayers } = usePlayers();
@@ -228,34 +230,51 @@ export default function SimpleTeamTable({
                 </Tr>
               </Thead>
               <Tbody>
-                {localRows.map((row, rowIndex) => (
-                  <Tr key={row.rowId}>
-                    <Td>
-                      <PlayerSearchInput
-                        players={eligiblePlayers}
-                        unavailablePlayerIds={getUnavailableIds(rowIndex)}
-                        leagueType={leagueType}
-                        value={row.search}
-                        onChange={(searchText, playerId, playerTeam) =>
-                          handlePlayerChange(
-                            rowIndex,
-                            searchText,
-                            playerId,
-                            playerTeam,
-                          )
-                        }
-                        isDisabled={isSaving || isLoadingPlayers || readOnly}
-                        placeholder={
-                          isLoadingPlayers
-                            ? 'Loading players...'
-                            : 'Search players...'
-                        }
-                        listId={`player-options-${row.rowId}-${teamId}`}
-                      />
-                    </Td>
-                    <Td>{row.team || '-'}</Td>
-                  </Tr>
-                ))}
+                {localRows.map((row, rowIndex) => {
+                  const rowPlayer = row.playerId
+                    ? players.find((player) => player._id === row.playerId)
+                    : undefined;
+                  const canOpenNotebook = !!rowPlayer && !!onPlayerNotebookOpen;
+
+                  return (
+                    <Tr key={row.rowId}>
+                      <Td>
+                        <PlayerSearchInput
+                          players={eligiblePlayers}
+                          unavailablePlayerIds={getUnavailableIds(rowIndex)}
+                          leagueType={leagueType}
+                          value={row.search}
+                          onChange={(searchText, playerId, playerTeam) =>
+                            handlePlayerChange(
+                              rowIndex,
+                              searchText,
+                              playerId,
+                              playerTeam,
+                            )
+                          }
+                          isDisabled={
+                            isSaving ||
+                            isLoadingPlayers ||
+                            (readOnly && !canOpenNotebook)
+                          }
+                          isReadOnly={canOpenNotebook && readOnly}
+                          onClick={
+                            canOpenNotebook
+                              ? () => onPlayerNotebookOpen(rowPlayer)
+                              : undefined
+                          }
+                          placeholder={
+                            isLoadingPlayers
+                              ? 'Loading players...'
+                              : 'Search players...'
+                          }
+                          listId={`player-options-${row.rowId}-${teamId}`}
+                        />
+                      </Td>
+                      <Td>{row.team || '-'}</Td>
+                    </Tr>
+                  );
+                })}
               </Tbody>
             </Table>
           </TableContainer>

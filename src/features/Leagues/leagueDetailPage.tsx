@@ -34,8 +34,19 @@ import { useDeleteLeague } from './hooks/useDeleteLeague';
 import { useUpsertLeague } from './hooks/useUpsertLeague';
 import UpsertLeagueModal from './components/UpsertLeagueModal';
 import CompareModal from '@/shared/components/ui/CompareModal';
+import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
+import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
 import { parseTeamsFromDescription } from './utils/leagueForm';
 import type { LeagueTeam, TakenPlayer } from './types/leagues.types';
+import type { Player as RosterPlayer } from '@/shared/hooks/usePlayers';
+import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
+
+function toNotebookPlayer(player: RosterPlayer): NotebookPlayer {
+  return {
+    ...player,
+    injuryStatus: 'unknown',
+  };
+}
 
 function buildDisplayTeams(
   teams: LeagueTeam[] | undefined,
@@ -68,6 +79,17 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   const [rosterView, setRosterView] = useState<
     'main' | 'minorLeague' | 'taxiSquad'
   >('main');
+  const {
+    selectedNotebookId,
+    selectedNotebookName,
+    selectedNotebookContent,
+    selectedPlayerName,
+    selectedPlayer,
+    updateNotebookContent,
+    updatePlayerContent,
+    openPlayerNotebook,
+    closeNotebook,
+  } = useNotebookManager();
   const league = data?.data;
   const isForbidden = isApiError(error) && error.status === 403;
   const isNotFound = isApiError(error) && error.status === 404;
@@ -227,332 +249,354 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     }
   }
 
+  function handlePlayerNotebookOpen(player: RosterPlayer) {
+    openPlayerNotebook(toNotebookPlayer(player));
+  }
+
   return (
-    <Box p={8}>
-      <Stack spacing={4}>
-        <Stack direction="row" spacing={2} align="center">
-          <Button as={Link} href="/leagues" variant="ghost">
-            Back
-          </Button>
-          <Button
-            onClick={editModal.onOpen}
-            colorScheme="blue"
-            variant="outline"
-          >
-            Edit
-          </Button>
-          <Button
-            as={Link}
-            href={`/draft?leagueId=${encodeURIComponent(league._id)}`}
-            bg="green.600"
-            color="white"
-            _hover={{ bg: 'green.700' }}
-          >
-            Draft
-          </Button>
-          <Button
-            onClick={deleteConfirm.onOpen}
-            colorScheme="red"
-            variant="outline"
-          >
-            Delete
-          </Button>
-        </Stack>
-
-        <Heading>{league.name}</Heading>
-
-        <Box borderWidth="1px" borderRadius="md" p={4}>
-          <Flex gap={8} mb={4}>
-            <Box>
-              <Text
-                fontSize="xs"
-                fontWeight="semibold"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Teams
-              </Text>
-              <Text fontWeight="semibold" fontSize="md" mt={1}>
-                {teamCount ?? '—'}
-              </Text>
-            </Box>
-            <Box>
-              <Text
-                fontSize="xs"
-                fontWeight="semibold"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                League
-              </Text>
-              <Text fontWeight="semibold" fontSize="md" mt={1}>
-                {league.leagueType ?? 'MLB'}
-              </Text>
-            </Box>
-            <Box>
-              <Text
-                fontSize="xs"
-                fontWeight="semibold"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Budget
-              </Text>
-              <Text fontWeight="semibold" fontSize="md" mt={1}>
-                {typeof league.totalBudget === 'number'
-                  ? `$${league.totalBudget}`
-                  : '—'}
-              </Text>
-            </Box>
-          </Flex>
-
-          <Divider mb={4} />
-
-          <Flex direction="column" gap={3}>
-            <Box>
-              <Text
-                fontSize="xs"
-                fontWeight="semibold"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Hitting Categories
-              </Text>
-              <Wrap mt={2} spacing={1}>
-                {league.battingCategories?.map((cat) => (
-                  <WrapItem key={`bat-${cat}`}>
-                    <Tag size="sm" colorScheme="green" variant="subtle">
-                      {cat}
-                    </Tag>
-                  </WrapItem>
-                ))}
-              </Wrap>
-            </Box>
-            <Box>
-              <Text
-                fontSize="xs"
-                fontWeight="semibold"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Pitching Categories
-              </Text>
-              <Wrap mt={2} spacing={1}>
-                {league.pitchingCategories?.map((cat) => (
-                  <WrapItem key={`pit-${cat}`}>
-                    <Tag size="sm" colorScheme="blue" variant="subtle">
-                      {cat}
-                    </Tag>
-                  </WrapItem>
-                ))}
-              </Wrap>
-            </Box>
-          </Flex>
-        </Box>
-
-        <Box display="flex" justifyContent="center" position="relative">
-          <Button
-            size="sm"
-            variant="outline"
-            colorScheme="green"
-            position="absolute"
-            left={0}
-            top="50%"
-            transform="translateY(-50%)"
-            onClick={compareModal.onOpen}
-          >
-            Compare
-          </Button>
-          <ButtonGroup isAttached variant="outline" size="sm">
-            <Button
-              onClick={() => setRosterView('main')}
-              colorScheme={rosterView === 'main' ? 'green' : undefined}
-              variant={rosterView === 'main' ? 'solid' : 'outline'}
-            >
-              Main Roster
+    <>
+      <Box p={8}>
+        <Stack spacing={4}>
+          <Stack direction="row" spacing={2} align="center">
+            <Button as={Link} href="/leagues" variant="ghost">
+              Back
             </Button>
             <Button
-              onClick={() => setRosterView('minorLeague')}
-              colorScheme={rosterView === 'minorLeague' ? 'green' : undefined}
-              variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
+              onClick={editModal.onOpen}
+              colorScheme="blue"
+              variant="outline"
             >
-              Minor League Roster
+              Edit
             </Button>
             <Button
-              onClick={() => setRosterView('taxiSquad')}
-              colorScheme={rosterView === 'taxiSquad' ? 'green' : undefined}
-              variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
+              as={Link}
+              href={`/draft?leagueId=${encodeURIComponent(league._id)}`}
+              bg="green.600"
+              color="white"
+              _hover={{ bg: 'green.700' }}
             >
-              Taxi Squad
+              Draft
             </Button>
-          </ButtonGroup>
-        </Box>
-
-        {displayTeams.length ? (
-          <Box>
-            <Heading size="md" mb={2}>
-              {rosterView === 'main' && 'Main Rosters'}
-              {rosterView === 'minorLeague' && 'Minor League Rosters'}
-              {rosterView === 'taxiSquad' && 'Taxi Squads'}
-            </Heading>
-            <SimpleGrid
-              columns={{ base: 1, xl: 2 }}
-              spacing={4}
-              alignItems="start"
+            <Button
+              onClick={deleteConfirm.onOpen}
+              colorScheme="red"
+              variant="outline"
             >
-              {displayTeams.map((team, index) => {
-                const [teamId] = team;
-                const takenPlayersForTeam = editedTakenPlayers.filter(
-                  ([, takenPlayerTeamId]) => takenPlayerTeamId === teamId,
-                );
+              Delete
+            </Button>
+          </Stack>
 
-                if (rosterView === 'minorLeague') {
-                  return (
-                    <SimpleTeamTable
-                      key={teamId}
-                      team={team}
-                      mode="minorLeague"
-                      slotCount={league.minorLeagueSlotsPerTeam ?? 0}
-                      startingBudget={league.totalBudget ?? 0}
-                      leagueType={league.leagueType}
-                      takenPlayers={takenPlayersForTeam}
-                      allTakenPlayers={editedTakenPlayers}
-                      isSaving={upsertLeagueMutation.isPending}
-                      colorIndex={index}
-                      onSaveChanges={({ rows }) => {
-                        const nextTakenPlayers = updateTeamTakenPlayers(
-                          editedTakenPlayers,
-                          teamId,
-                          rows,
-                        );
-                        setEditedTakenPlayers(nextTakenPlayers);
-                        void saveLeagueChanges(editedTeams, nextTakenPlayers);
-                      }}
-                    />
-                  );
-                }
+          <Heading>{league.name}</Heading>
 
-                if (rosterView === 'taxiSquad') {
-                  return (
-                    <SimpleTeamTable
-                      key={teamId}
-                      team={team}
-                      mode="taxiSquad"
-                      slotCount={league.taxiSquadPlayersPerTeam ?? 0}
-                      startingBudget={league.totalBudget ?? 0}
-                      leagueType={league.leagueType}
-                      takenPlayers={takenPlayersForTeam}
-                      allTakenPlayers={editedTakenPlayers}
-                      isSaving={upsertLeagueMutation.isPending}
-                      colorIndex={index}
-                      onSaveChanges={({ rows }) => {
-                        const nextTakenPlayers = updateTeamTakenPlayers(
-                          editedTakenPlayers,
-                          teamId,
-                          rows,
-                        );
-                        setEditedTakenPlayers(nextTakenPlayers);
-                        void saveLeagueChanges(editedTeams, nextTakenPlayers);
-                      }}
-                    />
-                  );
-                }
-
-                return (
-                  <LeagueTeamTable
-                    key={teamId}
-                    team={team}
-                    rosterSlots={league.rosterSlots}
-                    allTakenPlayers={editedTakenPlayers}
-                    takenPlayers={takenPlayersForTeam}
-                    startingBudget={league.totalBudget ?? 0}
-                    leagueType={league.leagueType}
-                    isSaving={upsertLeagueMutation.isPending}
-                    colorIndex={index}
-                    onSaveChanges={({ teamName, rows }) => {
-                      const nextTeams = displayTeams.map((currentTeam) =>
-                        currentTeam[0] === teamId
-                          ? [currentTeam[0], teamName, currentTeam[2]]
-                          : currentTeam,
-                      ) as LeagueTeam[];
-                      const nextTakenPlayers = updateTeamTakenPlayers(
-                        editedTakenPlayers,
-                        teamId,
-                        rows,
-                      );
-                      setEditedTeams(nextTeams);
-                      setEditedTakenPlayers(nextTakenPlayers);
-                      void saveLeagueChanges(nextTeams, nextTakenPlayers);
-                    }}
-                  />
-                );
-              })}
-            </SimpleGrid>
-            {upsertLeagueMutation.isError ? (
-              <Text mt={3} color="red.500" fontSize="sm">
-                Failed to save league changes. Check API connection and API key.
-              </Text>
-            ) : null}
-          </Box>
-        ) : null}
-      </Stack>
-
-      <UpsertLeagueModal
-        isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
-        initialLeague={league}
-      />
-
-      <CompareModal
-        isOpen={compareModal.isOpen}
-        onClose={compareModal.onClose}
-        teams={displayTeams}
-        battingCategories={currentLeague.battingCategories}
-        pitchingCategories={currentLeague.pitchingCategories}
-      />
-
-      <AlertDialog
-        isOpen={deleteConfirm.isOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={deleteConfirm.onClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete League
-            </AlertDialogHeader>
-
-            <AlertDialogBody>
-              This will permanently delete “{league.name}”. This action cannot
-              be undone.
-              {deleteLeagueMutation.isError ? (
-                <Text mt={2} color="red.500">
-                  Failed to delete league. Check API connection and API key.
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Flex gap={8} mb={4}>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Teams
                 </Text>
-              ) : null}
-            </AlertDialogBody>
+                <Text fontWeight="semibold" fontSize="md" mt={1}>
+                  {teamCount ?? '—'}
+                </Text>
+              </Box>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  League
+                </Text>
+                <Text fontWeight="semibold" fontSize="md" mt={1}>
+                  {league.leagueType ?? 'MLB'}
+                </Text>
+              </Box>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Budget
+                </Text>
+                <Text fontWeight="semibold" fontSize="md" mt={1}>
+                  {typeof league.totalBudget === 'number'
+                    ? `$${league.totalBudget}`
+                    : '—'}
+                </Text>
+              </Box>
+            </Flex>
 
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={deleteConfirm.onClose}>
-                Cancel
+            <Divider mb={4} />
+
+            <Flex direction="column" gap={3}>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Hitting Categories
+                </Text>
+                <Wrap mt={2} spacing={1}>
+                  {league.battingCategories?.map((cat) => (
+                    <WrapItem key={`bat-${cat}`}>
+                      <Tag size="sm" colorScheme="green" variant="subtle">
+                        {cat}
+                      </Tag>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Pitching Categories
+                </Text>
+                <Wrap mt={2} spacing={1}>
+                  {league.pitchingCategories?.map((cat) => (
+                    <WrapItem key={`pit-${cat}`}>
+                      <Tag size="sm" colorScheme="blue" variant="subtle">
+                        {cat}
+                      </Tag>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+            </Flex>
+          </Box>
+
+          <Box display="flex" justifyContent="center" position="relative">
+            <Button
+              size="sm"
+              variant="outline"
+              colorScheme="green"
+              position="absolute"
+              left={0}
+              top="50%"
+              transform="translateY(-50%)"
+              onClick={compareModal.onOpen}
+            >
+              Compare
+            </Button>
+            <ButtonGroup isAttached variant="outline" size="sm">
+              <Button
+                onClick={() => setRosterView('main')}
+                colorScheme={rosterView === 'main' ? 'green' : undefined}
+                variant={rosterView === 'main' ? 'solid' : 'outline'}
+              >
+                Main Roster
               </Button>
               <Button
-                colorScheme="red"
-                onClick={handleDelete}
-                ml={3}
-                isLoading={deleteLeagueMutation.isPending}
+                onClick={() => setRosterView('minorLeague')}
+                colorScheme={rosterView === 'minorLeague' ? 'green' : undefined}
+                variant={rosterView === 'minorLeague' ? 'solid' : 'outline'}
               >
-                Delete
+                Minor League Roster
               </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-    </Box>
+              <Button
+                onClick={() => setRosterView('taxiSquad')}
+                colorScheme={rosterView === 'taxiSquad' ? 'green' : undefined}
+                variant={rosterView === 'taxiSquad' ? 'solid' : 'outline'}
+              >
+                Taxi Squad
+              </Button>
+            </ButtonGroup>
+          </Box>
+
+          {displayTeams.length ? (
+            <Box>
+              <Heading size="md" mb={2}>
+                {rosterView === 'main' && 'Main Rosters'}
+                {rosterView === 'minorLeague' && 'Minor League Rosters'}
+                {rosterView === 'taxiSquad' && 'Taxi Squads'}
+              </Heading>
+              <SimpleGrid
+                columns={{ base: 1, xl: 2 }}
+                spacing={4}
+                alignItems="start"
+              >
+                {displayTeams.map((team, index) => {
+                  const [teamId] = team;
+                  const takenPlayersForTeam = editedTakenPlayers.filter(
+                    ([, takenPlayerTeamId]) => takenPlayerTeamId === teamId,
+                  );
+
+                  if (rosterView === 'minorLeague') {
+                    return (
+                      <SimpleTeamTable
+                        key={teamId}
+                        team={team}
+                        mode="minorLeague"
+                        slotCount={league.minorLeagueSlotsPerTeam ?? 0}
+                        startingBudget={league.totalBudget ?? 0}
+                        leagueType={league.leagueType}
+                        takenPlayers={takenPlayersForTeam}
+                        allTakenPlayers={editedTakenPlayers}
+                        isSaving={upsertLeagueMutation.isPending}
+                        colorIndex={index}
+                        onPlayerNotebookOpen={handlePlayerNotebookOpen}
+                        onSaveChanges={({ rows }) => {
+                          const nextTakenPlayers = updateTeamTakenPlayers(
+                            editedTakenPlayers,
+                            teamId,
+                            rows,
+                          );
+                          setEditedTakenPlayers(nextTakenPlayers);
+                          void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                        }}
+                      />
+                    );
+                  }
+
+                  if (rosterView === 'taxiSquad') {
+                    return (
+                      <SimpleTeamTable
+                        key={teamId}
+                        team={team}
+                        mode="taxiSquad"
+                        slotCount={league.taxiSquadPlayersPerTeam ?? 0}
+                        startingBudget={league.totalBudget ?? 0}
+                        leagueType={league.leagueType}
+                        takenPlayers={takenPlayersForTeam}
+                        allTakenPlayers={editedTakenPlayers}
+                        isSaving={upsertLeagueMutation.isPending}
+                        colorIndex={index}
+                        onPlayerNotebookOpen={handlePlayerNotebookOpen}
+                        onSaveChanges={({ rows }) => {
+                          const nextTakenPlayers = updateTeamTakenPlayers(
+                            editedTakenPlayers,
+                            teamId,
+                            rows,
+                          );
+                          setEditedTakenPlayers(nextTakenPlayers);
+                          void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                        }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <LeagueTeamTable
+                      key={teamId}
+                      team={team}
+                      rosterSlots={league.rosterSlots}
+                      allTakenPlayers={editedTakenPlayers}
+                      takenPlayers={takenPlayersForTeam}
+                      startingBudget={league.totalBudget ?? 0}
+                      leagueType={league.leagueType}
+                      isSaving={upsertLeagueMutation.isPending}
+                      colorIndex={index}
+                      onPlayerNotebookOpen={handlePlayerNotebookOpen}
+                      onSaveChanges={({ teamName, rows }) => {
+                        const nextTeams = displayTeams.map((currentTeam) =>
+                          currentTeam[0] === teamId
+                            ? [currentTeam[0], teamName, currentTeam[2]]
+                            : currentTeam,
+                        ) as LeagueTeam[];
+                        const nextTakenPlayers = updateTeamTakenPlayers(
+                          editedTakenPlayers,
+                          teamId,
+                          rows,
+                        );
+                        setEditedTeams(nextTeams);
+                        setEditedTakenPlayers(nextTakenPlayers);
+                        void saveLeagueChanges(nextTeams, nextTakenPlayers);
+                      }}
+                    />
+                  );
+                })}
+              </SimpleGrid>
+              {upsertLeagueMutation.isError ? (
+                <Text mt={3} color="red.500" fontSize="sm">
+                  Failed to save league changes. Check API connection and API
+                  key.
+                </Text>
+              ) : null}
+            </Box>
+          ) : null}
+        </Stack>
+
+        <UpsertLeagueModal
+          isOpen={editModal.isOpen}
+          onClose={editModal.onClose}
+          initialLeague={league}
+        />
+
+        <CompareModal
+          isOpen={compareModal.isOpen}
+          onClose={compareModal.onClose}
+          teams={displayTeams}
+          battingCategories={currentLeague.battingCategories}
+          pitchingCategories={currentLeague.pitchingCategories}
+        />
+
+        <AlertDialog
+          isOpen={deleteConfirm.isOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={deleteConfirm.onClose}
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete League
+              </AlertDialogHeader>
+
+              <AlertDialogBody>
+                This will permanently delete “{league.name}”. This action cannot
+                be undone.
+                {deleteLeagueMutation.isError ? (
+                  <Text mt={2} color="red.500">
+                    Failed to delete league. Check API connection and API key.
+                  </Text>
+                ) : null}
+              </AlertDialogBody>
+
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={deleteConfirm.onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  colorScheme="red"
+                  onClick={handleDelete}
+                  ml={3}
+                  isLoading={deleteLeagueMutation.isPending}
+                >
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      </Box>
+      <NotebookWorkspace
+        selectedNotebookId={selectedNotebookId}
+        selectedNotebookName={selectedNotebookName}
+        selectedNotebookContent={selectedNotebookContent}
+        onNotebookContentChange={updateNotebookContent}
+        onPlayerContentChange={updatePlayerContent}
+        selectedPlayerName={selectedPlayerName}
+        selectedPlayer={selectedPlayer}
+        onCloseNotebook={closeNotebook}
+        onOpenPlayerNotebook={openPlayerNotebook}
+        showLauncher={false}
+      />
+    </>
   );
 }

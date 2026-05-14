@@ -13,10 +13,21 @@ import type {
 } from '@/features/Leagues/types/leagues.types';
 import { useUpsertLeague } from '@/features/Leagues/hooks/useUpsertLeague';
 import { localApiClient } from '@/shared/utils/api-client';
+import type { Player as DraftPlayer } from '@/shared/hooks/usePlayers';
+import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
+import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
+import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
 import { toDraftLeagueInput } from './utils/draftState';
 import DraftLeftPanel from './components/left/DraftLeftPanel';
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
+
+function toNotebookPlayer(player: DraftPlayer): NotebookPlayer {
+  return {
+    ...player,
+    injuryStatus: 'unknown',
+  };
+}
 
 export default function DraftPage() {
   const searchParams = useSearchParams();
@@ -25,6 +36,17 @@ export default function DraftPage() {
   const [selectedDraft, setSelectedDraft] = useState<LeagueDraft | null>(null);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
+  const {
+    selectedNotebookId,
+    selectedNotebookName,
+    selectedNotebookContent,
+    selectedPlayerName,
+    selectedPlayer,
+    updateNotebookContent,
+    updatePlayerContent,
+    openPlayerNotebook,
+    closeNotebook,
+  } = useNotebookManager();
 
   function handleLeagueChange(league: League | null) {
     setSelectedLeague(league);
@@ -108,51 +130,70 @@ export default function DraftPage() {
     }
   }
 
+  function handlePlayerNotebookOpen(player: DraftPlayer) {
+    openPlayerNotebook(toNotebookPlayer(player));
+  }
+
   return (
-    <Flex h="100vh" overflow="hidden">
-      <Box
-        flexBasis="16.67%"
-        flexShrink={0}
-        borderRightWidth="1px"
-        borderColor="gray.200"
-        overflowY="auto"
-      >
-        <DraftLeftPanel
-          onLeagueChange={handleLeagueChange}
-          onDraftChange={setSelectedDraft}
-          initialLeagueId={initialLeagueId}
-        />
-      </Box>
-      <Box
-        flexBasis="50%"
-        flexShrink={0}
-        borderRightWidth="1px"
-        borderColor="gray.200"
-        overflow="hidden"
-      >
-        <DraftMiddlePanel
-          teams={selectedLeague?.teams ?? []}
-          takenPlayers={selectedLeague?.taken_players ?? []}
-          draftPicks={
-            selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
-          }
-          startingBudget={selectedLeague?.totalBudget ?? 0}
-          rosterSlots={selectedLeague?.rosterSlots}
-          minorLeagueSlots={selectedLeague?.minorLeagueSlotsPerTeam ?? 0}
-          leagueType={selectedLeague?.leagueType}
-          onPickEntered={handlePickEntered}
-          onUndo={handleUndo}
-          onFinishDraft={handleFinishDraft}
-          readOnly={Boolean(selectedDraft)}
-        />
-      </Box>
-      <Box flex={1} minW={0} overflow="hidden">
-        <DraftRightPanel
-          league={selectedLeague}
-          onSaveRosters={handleSaveRosters}
-          isSavingRosters={upsertLeagueMutation.isPending}
-        />
-      </Box>
-    </Flex>
+    <>
+      <Flex h="100vh" overflow="hidden">
+        <Box
+          flexBasis="16.67%"
+          flexShrink={0}
+          borderRightWidth="1px"
+          borderColor="gray.200"
+          overflowY="auto"
+        >
+          <DraftLeftPanel
+            onLeagueChange={handleLeagueChange}
+            onDraftChange={setSelectedDraft}
+            initialLeagueId={initialLeagueId}
+          />
+        </Box>
+        <Box
+          flexBasis="50%"
+          flexShrink={0}
+          borderRightWidth="1px"
+          borderColor="gray.200"
+          overflow="hidden"
+        >
+          <DraftMiddlePanel
+            teams={selectedLeague?.teams ?? []}
+            takenPlayers={selectedLeague?.taken_players ?? []}
+            draftPicks={
+              selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
+            }
+            startingBudget={selectedLeague?.totalBudget ?? 0}
+            rosterSlots={selectedLeague?.rosterSlots}
+            minorLeagueSlots={selectedLeague?.minorLeagueSlotsPerTeam ?? 0}
+            leagueType={selectedLeague?.leagueType}
+            onPickEntered={handlePickEntered}
+            onUndo={handleUndo}
+            onFinishDraft={handleFinishDraft}
+            readOnly={Boolean(selectedDraft)}
+          />
+        </Box>
+        <Box flex={1} minW={0} overflow="hidden">
+          <DraftRightPanel
+            league={selectedLeague}
+            onSaveRosters={handleSaveRosters}
+            isSavingRosters={upsertLeagueMutation.isPending}
+            onPlayerNotebookOpen={handlePlayerNotebookOpen}
+          />
+        </Box>
+      </Flex>
+      <NotebookWorkspace
+        selectedNotebookId={selectedNotebookId}
+        selectedNotebookName={selectedNotebookName}
+        selectedNotebookContent={selectedNotebookContent}
+        onNotebookContentChange={updateNotebookContent}
+        onPlayerContentChange={updatePlayerContent}
+        selectedPlayerName={selectedPlayerName}
+        selectedPlayer={selectedPlayer}
+        onCloseNotebook={closeNotebook}
+        onOpenPlayerNotebook={openPlayerNotebook}
+        showLauncher={false}
+      />
+    </>
   );
 }

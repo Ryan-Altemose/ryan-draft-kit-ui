@@ -63,6 +63,24 @@ vi.mock('./components/UpsertLeagueModal', () => ({
   default: () => null,
 }));
 
+vi.mock('@/features/Notebook/hooks/useNotebookManager', () => ({
+  useNotebookManager: () => ({
+    selectedNotebookId: null,
+    selectedNotebookName: null,
+    selectedNotebookContent: '',
+    selectedPlayerName: null,
+    selectedPlayer: null,
+    updateNotebookContent: vi.fn(),
+    updatePlayerContent: vi.fn(),
+    openPlayerNotebook: vi.fn(),
+    closeNotebook: vi.fn(),
+  }),
+}));
+
+vi.mock('@/features/Notebook/components/NotebookWorkspace', () => ({
+  default: () => null,
+}));
+
 vi.mock('./components/LeagueTeamTable', () => ({
   default: ({
     team,
