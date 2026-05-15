@@ -80,7 +80,10 @@ export default function PlayerSearchInput({
         onChange={(e) => handleChange(e.target.value)}
         isDisabled={isDisabled}
         isReadOnly={isReadOnly}
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
         cursor={onClick ? 'pointer' : undefined}
         _hover={onClick ? { borderColor: 'green.400' } : undefined}
         width={width}

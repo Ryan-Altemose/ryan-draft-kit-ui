@@ -247,7 +247,7 @@ export default function SimpleTeamTable({
                       cursor={canOpenNotebook ? 'pointer' : undefined}
                       _hover={canOpenNotebook ? { bg: 'green.50' } : undefined}
                     >
-                      <Td onClick={(e) => e.stopPropagation()}>
+                      <Td>
                         <PlayerSearchInput
                           players={eligiblePlayers}
                           unavailablePlayerIds={getUnavailableIds(rowIndex)}

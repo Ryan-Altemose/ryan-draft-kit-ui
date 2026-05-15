@@ -514,7 +514,7 @@ export default function LeagueTeamTable({
                       _hover={canOpenNotebook ? { bg: 'green.50' } : undefined}
                     >
                       <Td>{row.position}</Td>
-                      <Td onClick={(e) => e.stopPropagation()}>
+                      <Td>
                         <PlayerSearchInput
                           players={availablePlayers}
                           unavailablePlayerIds={getUnavailablePlayerIds(
@@ -547,7 +547,7 @@ export default function LeagueTeamTable({
                         />
                       </Td>
                       <Td>{row.team || '-'}</Td>
-                      <Td isNumeric onClick={(e) => e.stopPropagation()}>
+                      <Td isNumeric>
                         <Input
                           type="number"
                           min={0}
@@ -556,6 +556,7 @@ export default function LeagueTeamTable({
                           onChange={(e) => {
                             handleLocalPriceChange(rowIndex, e.target.value);
                           }}
+                          onClick={(e) => e.stopPropagation()}
                           textAlign="right"
                           size="sm"
                           width="50px"
@@ -565,7 +566,7 @@ export default function LeagueTeamTable({
                         />
                       </Td>
                       {!draftMode && (
-                        <Td onClick={(e) => e.stopPropagation()}>
+                        <Td>
                           <Input
                             size="sm"
                             maxLength={2}
@@ -573,6 +574,7 @@ export default function LeagueTeamTable({
                             onChange={(e) =>
                               handleContractChange(rowIndex, e.target.value)
                             }
+                            onClick={(e) => e.stopPropagation()}
                             width="50px"
                             minWidth="50px"
                             placeholder="--"
