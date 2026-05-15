@@ -39,7 +39,7 @@ export default function RankingsPage() {
 
   return (
     <Box p={8}>
-      <Heading mb={6}>Rankings</Heading>
+      <Heading mb={6}>Scout Players</Heading>
       <RankingsTable onPlayerClick={handlePlayerClick} />
       <NotebookWorkspace
         selectedNotebookId={selectedNotebookId}
