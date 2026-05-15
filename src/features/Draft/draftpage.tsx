@@ -25,7 +25,7 @@ import DraftRightPanel from './components/right/DraftRightPanel';
 function toNotebookPlayer(player: DraftPlayer): NotebookPlayer {
   return {
     ...player,
-    injuryStatus: 'unknown',
+    injuryStatus: player.injuryStatus ?? 'unknown',
   };
 }
 

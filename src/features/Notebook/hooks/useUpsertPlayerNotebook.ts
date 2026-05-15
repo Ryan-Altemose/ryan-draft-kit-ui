@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { upsertPlayerNotebook } from '../utils/upsertPlayerNotebook';
 
 type UpsertPlayerNotebookVariables = {
@@ -8,13 +8,8 @@ type UpsertPlayerNotebookVariables = {
 };
 
 export function useUpsertPlayerNotebook() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (input: UpsertPlayerNotebookVariables) =>
       upsertPlayerNotebook(input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notebooks'] });
-    },
   });
 }

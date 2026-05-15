@@ -6,7 +6,21 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
-import { Badge, Box, Button, Flex, Text, Textarea } from '@chakra-ui/react';
+import {
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Text,
+  Textarea,
+  Th,
+  Thead,
+  Tr,
+} from '@chakra-ui/react';
 import type { NotebookWindowRect, Player } from '../types/notebook.types';
 import {
   NOTEBOOK_WINDOW_DEFAULT_HEIGHT,
@@ -243,13 +257,15 @@ export default function NotebookWorkspace({
                   )
                 }
                 placeholder="Write notes here..."
+                focusBorderColor="green.400"
               />
             ) : selectedPlayerName ? (
               <Flex
                 direction="column"
-                gap={4}
+                gap={3}
                 h={`calc(${windowRect.height}px - 88px)`}
               >
+                {/* Player info */}
                 <Box
                   borderWidth="1px"
                   borderColor="gray.200"
@@ -259,7 +275,7 @@ export default function NotebookWorkspace({
                 >
                   <Flex align="center" justify="space-between" gap={3} mb={2}>
                     <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                      Player Stats
+                      Player Info
                     </Text>
                     <Badge
                       colorScheme={
@@ -272,31 +288,91 @@ export default function NotebookWorkspace({
                       {selectedPlayer?.injuryStatus ?? 'unknown'}
                     </Badge>
                   </Flex>
-                  <Text fontSize="sm" color="gray.600">
-                    Team: {selectedPlayer?.team ?? '-'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Positions: {selectedPlayer?.positions.join(', ') ?? '-'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    League: {selectedPlayer?.league ?? '-'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Type: {selectedPlayer?.playerType ?? '-'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Age: {selectedPlayer?.age ?? '-'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Bats/Throws:{' '}
-                    {selectedPlayer?.batSide ??
-                      selectedPlayer?.pitchHand ??
-                      '-'}
-                  </Text>
+                  <Box
+                    display="grid"
+                    gridTemplateColumns="1fr 1fr"
+                    gap={1}
+                    fontSize="sm"
+                    color="gray.600"
+                  >
+                    <Text>Team: {selectedPlayer?.team ?? '-'}</Text>
+                    <Text>League: {selectedPlayer?.league ?? '-'}</Text>
+                    <Text>
+                      Positions: {selectedPlayer?.positions.join(', ') ?? '-'}
+                    </Text>
+                    <Text>Type: {selectedPlayer?.playerType ?? '-'}</Text>
+                    <Text>Age: {selectedPlayer?.age ?? '-'}</Text>
+                    <Text>
+                      Bats/Throws:{' '}
+                      {selectedPlayer?.batSide ??
+                        selectedPlayer?.pitchHand ??
+                        '-'}
+                    </Text>
+                  </Box>
                 </Box>
+
+                {/* Season stats */}
+                <Box
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  borderRadius="md"
+                  overflow="hidden"
+                  flexShrink={0}
+                >
+                  <Flex
+                    px={3}
+                    py={2}
+                    bg="gray.50"
+                    borderBottomWidth={
+                      selectedPlayer?.stats?.length ? '1px' : undefined
+                    }
+                    borderColor="gray.200"
+                    align="center"
+                  >
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color="gray.600"
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                    >
+                      Season Stats
+                    </Text>
+                  </Flex>
+                  {selectedPlayer?.stats?.length ? (
+                    <TableContainer>
+                      <Table size="sm">
+                        <Thead>
+                          <Tr>
+                            {selectedPlayer.stats.map((s) => (
+                              <Th key={s.label} isNumeric>
+                                {s.label}
+                              </Th>
+                            ))}
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          <Tr>
+                            {selectedPlayer.stats.map((s) => (
+                              <Td key={s.label} isNumeric>
+                                {s.value}
+                              </Td>
+                            ))}
+                          </Tr>
+                        </Tbody>
+                      </Table>
+                    </TableContainer>
+                  ) : (
+                    <Text fontSize="xs" color="gray.400" px={3} py={3}>
+                      Stats not yet available
+                    </Text>
+                  )}
+                </Box>
+
+                {/* Notes */}
                 <Textarea
                   flex="1"
-                  minH="120px"
+                  minH="80px"
                   resize="none"
                   value={selectedNotebookContent}
                   onChange={(event) =>
@@ -306,6 +382,7 @@ export default function NotebookWorkspace({
                     )
                   }
                   placeholder="Write notes here..."
+                  focusBorderColor="green.400"
                 />
               </Flex>
             ) : null}

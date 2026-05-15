@@ -162,7 +162,9 @@ export function useNotebookManager() {
 
         setLocalNotebooks((current) =>
           current.map((notebook) =>
-            notebook._id === id ? response.data : notebook,
+            notebook._id === id
+              ? { ...response.data, content: notebook.content }
+              : notebook,
           ),
         );
         setSaveError(null);
@@ -209,7 +211,10 @@ export function useNotebookManager() {
 
         setLocalPlayerNotes((current) => ({
           ...current,
-          [player._id]: response.data,
+          [player._id]: {
+            ...response.data,
+            content: current[player._id]?.content ?? response.data.content,
+          },
         }));
         setSaveError(null);
       } catch (error) {

@@ -14,7 +14,7 @@ import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager
 function toNotebookPlayer(player: RosterPlayer): NotebookPlayer {
   return {
     ...player,
-    injuryStatus: 'unknown',
+    injuryStatus: player.injuryStatus ?? 'unknown',
   };
 }
 

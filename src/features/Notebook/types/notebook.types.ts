@@ -2,6 +2,11 @@
 
 import type { BaseEntity } from '@/shared/types/api';
 
+export type PlayerStat = {
+  label: string;
+  value: string | number;
+};
+
 export type Player = {
   _id: string;
   name: string;
@@ -14,6 +19,7 @@ export type Player = {
   age?: number;
   batSide?: string;
   pitchHand?: string;
+  stats?: PlayerStat[];
 };
 
 export type PlayersResponse = {

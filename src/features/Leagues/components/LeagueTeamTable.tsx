@@ -503,7 +503,16 @@ export default function LeagueTeamTable({
                   const canOpenNotebook = !!rowPlayer && !!onPlayerNotebookOpen;
 
                   return (
-                    <Tr key={row.rowId}>
+                    <Tr
+                      key={row.rowId}
+                      onClick={
+                        canOpenNotebook
+                          ? () => onPlayerNotebookOpen(rowPlayer)
+                          : undefined
+                      }
+                      cursor={canOpenNotebook ? 'pointer' : undefined}
+                      _hover={canOpenNotebook ? { bg: 'green.50' } : undefined}
+                    >
                       <Td>{row.position}</Td>
                       <Td>
                         <PlayerSearchInput
@@ -525,16 +534,8 @@ export default function LeagueTeamTable({
                           isDisabled={
                             isSaving ||
                             isLoadingPlayers ||
-                            (readOnly && !canOpenNotebook) ||
-                            (draftMode && !!row.playerId && !canOpenNotebook)
-                          }
-                          isReadOnly={
-                            canOpenNotebook && (draftMode || readOnly)
-                          }
-                          onClick={
-                            canOpenNotebook
-                              ? () => onPlayerNotebookOpen(rowPlayer)
-                              : undefined
+                            readOnly ||
+                            (draftMode && !!row.playerId)
                           }
                           placeholder={
                             isLoadingPlayers
@@ -542,6 +543,7 @@ export default function LeagueTeamTable({
                               : 'Search players...'
                           }
                           listId={`player-options-${row.rowId}`}
+                          width="160px"
                         />
                       </Td>
                       <Td>{row.team || '-'}</Td>
@@ -554,6 +556,7 @@ export default function LeagueTeamTable({
                           onChange={(e) => {
                             handleLocalPriceChange(rowIndex, e.target.value);
                           }}
+                          onClick={(e) => e.stopPropagation()}
                           textAlign="right"
                           size="sm"
                           width="50px"
@@ -571,6 +574,7 @@ export default function LeagueTeamTable({
                             onChange={(e) =>
                               handleContractChange(rowIndex, e.target.value)
                             }
+                            onClick={(e) => e.stopPropagation()}
                             width="50px"
                             minWidth="50px"
                             placeholder="--"

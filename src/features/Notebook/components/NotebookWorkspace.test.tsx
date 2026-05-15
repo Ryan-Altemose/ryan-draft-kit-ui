@@ -90,7 +90,7 @@ describe('NotebookWorkspace', () => {
       </ChakraProvider>,
     );
 
-    expect(screen.getByText('Player Stats')).toBeTruthy();
+    expect(screen.getByText('Player Info')).toBeTruthy();
     expect(screen.getByText('Team: NYY')).toBeTruthy();
     expect(screen.getByText('Positions: OF')).toBeTruthy();
 
