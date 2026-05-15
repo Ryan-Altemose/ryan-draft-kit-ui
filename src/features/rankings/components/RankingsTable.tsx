@@ -348,7 +348,7 @@ export default function RankingsTable({
       <Wrap mb={4} spacing={2}>
         <WrapItem>
           <Button
-            colorScheme={selectedPosition === null ? 'teal' : 'gray'}
+            colorScheme={selectedPosition === null ? 'green' : 'gray'}
             onClick={() => setSelectedPosition(null)}
             size="sm"
           >
@@ -358,7 +358,7 @@ export default function RankingsTable({
         {positions.map((position) => (
           <WrapItem key={position}>
             <Button
-              colorScheme={selectedPosition === position ? 'teal' : 'gray'}
+              colorScheme={selectedPosition === position ? 'green' : 'gray'}
               onClick={() => setSelectedPosition(position)}
               size="sm"
             >

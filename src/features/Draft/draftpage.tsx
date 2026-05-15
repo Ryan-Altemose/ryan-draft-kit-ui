@@ -170,6 +170,7 @@ export default function DraftPage() {
             onPickEntered={handlePickEntered}
             onUndo={handleUndo}
             onFinishDraft={handleFinishDraft}
+            onValuationPlayerClick={openPlayerNotebook}
             readOnly={Boolean(selectedDraft)}
           />
         </Box>

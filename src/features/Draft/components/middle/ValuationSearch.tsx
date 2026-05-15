@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -22,12 +22,14 @@ import {
   WrapItem,
 } from '@chakra-ui/react';
 import { externalApiClient } from '@/shared/utils/api-client';
+import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
 
 type Player = {
   _id: string;
   name: string;
   team: string;
   positions: string[];
+  injuryStatus: string;
 };
 
 type PlayersResponse = {
@@ -37,18 +39,24 @@ type PlayersResponse = {
   };
 };
 
+type SortKey = 'name' | 'value';
+type SortDir = 'asc' | 'desc' | null;
+
 type ValuationSearchProps = {
   valuations?: Record<string, number>;
+  onPlayerClick?: (player: NotebookPlayer) => void;
 };
 
 export default function ValuationSearch({
   valuations = {},
+  onPlayerClick,
 }: ValuationSearchProps) {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [displayed, setDisplayed] = useState<Player[]>([]);
   const [positions, setPositions] = useState<string[]>([]);
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,7 +102,6 @@ export default function ValuationSearch({
         });
 
         setAllPlayers(sorted);
-        setDisplayed(sorted.slice(0, 50));
         setPositions(
           Array.from(new Set(allData.flatMap((p) => p.positions))).sort(),
         );
@@ -111,7 +118,7 @@ export default function ValuationSearch({
     };
   }, []);
 
-  useEffect(() => {
+  const displayed = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
     const filtered = allPlayers.filter((p) => {
       const matchesSearch =
@@ -120,8 +127,47 @@ export default function ValuationSearch({
         !selectedPosition || p.positions.includes(selectedPosition);
       return matchesSearch && matchesPosition;
     });
-    setDisplayed(filtered.slice(0, 50));
-  }, [searchTerm, selectedPosition, allPlayers]);
+
+    if (sortKey && sortDir) {
+      filtered.sort((a, b) => {
+        if (sortKey === 'value') {
+          const valA = valuations[a._id] ?? -Infinity;
+          const valB = valuations[b._id] ?? -Infinity;
+          return sortDir === 'asc' ? valA - valB : valB - valA;
+        }
+        if (sortKey === 'name') {
+          const lastA = a.name.split(' ').pop() ?? '';
+          const lastB = b.name.split(' ').pop() ?? '';
+          const cmp = lastA.localeCompare(lastB);
+          return sortDir === 'asc' ? cmp : -cmp;
+        }
+        return 0;
+      });
+    }
+
+    return filtered.slice(0, 50);
+  }, [searchTerm, selectedPosition, sortKey, sortDir, allPlayers, valuations]);
+
+  function handleHeaderClick(key: SortKey) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir('asc');
+    } else if (sortDir === 'asc') {
+      setSortDir('desc');
+    } else {
+      setSortKey(null);
+      setSortDir(null);
+    }
+  }
+
+  function sortIndicator(key: SortKey) {
+    if (sortKey !== key || !sortDir) return null;
+    return (
+      <Text as="span" ml={1} fontSize="10px">
+        {sortDir === 'asc' ? '▲' : '▼'}
+      </Text>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -167,7 +213,7 @@ export default function ValuationSearch({
       <Wrap mb={2} spacing={1} flexShrink={0}>
         <WrapItem>
           <Button
-            colorScheme={selectedPosition === null ? 'teal' : 'gray'}
+            colorScheme={selectedPosition === null ? 'green' : 'gray'}
             onClick={() => setSelectedPosition(null)}
             size="xs"
           >
@@ -177,7 +223,7 @@ export default function ValuationSearch({
         {positions.map((position) => (
           <WrapItem key={position}>
             <Button
-              colorScheme={selectedPosition === position ? 'teal' : 'gray'}
+              colorScheme={selectedPosition === position ? 'green' : 'gray'}
               onClick={() => setSelectedPosition(position)}
               size="xs"
             >
@@ -191,15 +237,36 @@ export default function ValuationSearch({
         <Table size="sm" variant="simple">
           <Thead position="sticky" top={0} bg="white" zIndex={1}>
             <Tr>
-              <Th>Name</Th>
+              <Th
+                cursor="pointer"
+                userSelect="none"
+                onClick={() => handleHeaderClick('name')}
+                color={sortKey === 'name' ? 'green' : undefined}
+                _hover={{ bg: 'green.100' }}
+              >
+                Name{sortIndicator('name')}
+              </Th>
               <Th>Team</Th>
               <Th>Pos</Th>
-              <Th>$ Value</Th>
+              <Th
+                cursor="pointer"
+                userSelect="none"
+                onClick={() => handleHeaderClick('value')}
+                color={sortKey === 'value' ? 'green' : undefined}
+                _hover={{ bg: 'green.100' }}
+              >
+                $ Value{sortIndicator('value')}
+              </Th>
             </Tr>
           </Thead>
           <Tbody>
             {displayed.map((player) => (
-              <Tr key={player._id} _hover={{ bg: 'gray.50' }}>
+              <Tr
+                key={player._id}
+                onClick={() => onPlayerClick?.({ ...player })}
+                cursor={onPlayerClick ? 'pointer' : undefined}
+                _hover={{ bg: 'green.100' }}
+              >
                 <Td>{player.name}</Td>
                 <Td>{player.team}</Td>
                 <Td>{player.positions.join(', ')}</Td>
