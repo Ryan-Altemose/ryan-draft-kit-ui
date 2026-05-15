@@ -9,6 +9,10 @@ export type Player = {
   team: string;
   league?: string;
   mlbDebutDate?: string;
+  injuryStatus?: string;
+  age?: number;
+  batSide?: string;
+  pitchHand?: string;
 };
 
 type PlayersResponse = {

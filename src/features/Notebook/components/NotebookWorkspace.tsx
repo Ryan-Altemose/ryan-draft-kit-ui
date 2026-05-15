@@ -257,6 +257,7 @@ export default function NotebookWorkspace({
                   )
                 }
                 placeholder="Write notes here..."
+                focusBorderColor="green.400"
               />
             ) : selectedPlayerName ? (
               <Flex
@@ -381,6 +382,7 @@ export default function NotebookWorkspace({
                     )
                   }
                   placeholder="Write notes here..."
+                  focusBorderColor="green.400"
                 />
               </Flex>
             ) : null}

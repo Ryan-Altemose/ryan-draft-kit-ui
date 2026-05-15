@@ -44,7 +44,7 @@ import type { Player as NotebookPlayer } from '@/features/Notebook/types/noteboo
 function toNotebookPlayer(player: RosterPlayer): NotebookPlayer {
   return {
     ...player,
-    injuryStatus: 'unknown',
+    injuryStatus: player.injuryStatus ?? 'unknown',
   };
 }
 
