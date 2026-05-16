@@ -20,15 +20,8 @@ import {
 } from '@chakra-ui/react';
 import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
 
-export const BATTING_LOWER_IS_BETTER = new Set(['K']);
-export const PITCHING_LOWER_IS_BETTER = new Set([
-  'ERA',
-  'WHIP',
-  'H',
-  'BB',
-  'HR',
-  'L',
-]);
+export const BATTING_LOWER_IS_BETTER = new Set<string>([]);
+export const PITCHING_LOWER_IS_BETTER = new Set(['ERA', 'L']);
 
 export function isLowerBetter(
   stat: string,
