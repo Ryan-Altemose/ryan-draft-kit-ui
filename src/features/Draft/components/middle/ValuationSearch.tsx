@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -22,23 +22,8 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';
-import { externalApiClient } from '@/shared/utils/api-client';
+import { usePlayers } from '@/shared/hooks/usePlayers';
 import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
-
-type Player = {
-  _id: string;
-  name: string;
-  team: string;
-  positions: string[];
-  injuryStatus: string;
-};
-
-type PlayersResponse = {
-  data?: Player[];
-  pagination?: {
-    totalPages?: number;
-  };
-};
 
 type SortKey = 'name' | 'value';
 type SortDir = 'asc' | 'desc' | null;
@@ -52,72 +37,16 @@ export default function ValuationSearch({
   valuations = {},
   onPlayerClick,
 }: ValuationSearchProps) {
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [positions, setPositions] = useState<string[]>([]);
+  const { players: allPlayers, isLoading } = usePlayers();
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadPlayers() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const firstPage = await externalApiClient.get<PlayersResponse>(
-          '/api/players',
-          { params: { limit: 100, page: 1 } },
-        );
-        const firstBatch = firstPage.data ?? [];
-        const totalPages = firstPage.pagination?.totalPages ?? 1;
-
-        const pageRequests: Promise<PlayersResponse>[] = [];
-        for (let page = 2; page <= totalPages; page += 1) {
-          pageRequests.push(
-            externalApiClient.get<PlayersResponse>('/api/players', {
-              params: { limit: 100, page },
-            }),
-          );
-        }
-
-        const remainingPages = await Promise.all(pageRequests);
-        const allData = [
-          ...firstBatch,
-          ...remainingPages.flatMap((p) => p.data ?? []),
-        ];
-
-        if (!active || allData.length === 0) {
-          setError('Failed to retrieve player data');
-          return;
-        }
-
-        const sorted = allData.slice().sort((a, b) => {
-          const lastA = a.name.split(' ').pop() ?? '';
-          const lastB = b.name.split(' ').pop() ?? '';
-          return lastA.localeCompare(lastB);
-        });
-
-        setAllPlayers(sorted);
-        setPositions(
-          Array.from(new Set(allData.flatMap((p) => p.positions))).sort(),
-        );
-      } catch {
-        if (active) setError('Failed to retrieve player data');
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-
-    loadPlayers();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const positions = useMemo(
+    () => Array.from(new Set(allPlayers.flatMap((p) => p.positions))).sort(),
+    [allPlayers],
+  );
 
   const displayed = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
@@ -144,6 +73,12 @@ export default function ValuationSearch({
           return sortDir === 'asc' ? cmp : -cmp;
         }
         return 0;
+      });
+    } else {
+      filtered.sort((a, b) => {
+        const lastA = a.name.split(' ').pop() ?? '';
+        const lastB = b.name.split(' ').pop() ?? '';
+        return lastA.localeCompare(lastB);
       });
     }
 
@@ -179,10 +114,10 @@ export default function ValuationSearch({
     );
   }
 
-  if (error) {
+  if (allPlayers.length === 0) {
     return (
       <Text fontSize="sm" color="red.500">
-        {error}
+        Failed to retrieve player data
       </Text>
     );
   }
@@ -275,7 +210,12 @@ export default function ValuationSearch({
             {displayed.map((player) => (
               <Tr
                 key={player._id}
-                onClick={() => onPlayerClick?.({ ...player })}
+                onClick={() =>
+                  onPlayerClick?.({
+                    ...player,
+                    injuryStatus: player.injuryStatus ?? '',
+                  })
+                }
                 cursor={onPlayerClick ? 'pointer' : undefined}
                 _hover={{ bg: 'green.100' }}
               >

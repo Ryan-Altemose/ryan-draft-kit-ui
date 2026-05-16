@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Box,
@@ -31,24 +31,10 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';
-import { externalApiClient } from '@/shared/utils/api-client';
+import { usePlayers } from '@/shared/hooks/usePlayers';
+import type { Player } from '@/shared/hooks/usePlayers';
 
-export type RankingsPlayer = {
-  _id: string;
-  name: string;
-  team: string;
-  positions: string[];
-  playerType: string;
-  league: string;
-  injuryStatus: string;
-  depthChartStatus?: string;
-  active: boolean;
-  age?: number;
-  batSide?: string;
-  pitchHand?: string;
-};
-
-type Player = RankingsPlayer;
+export type { Player as RankingsPlayer };
 
 const DEPTH_CHART_STATUSES = [
   'starter',
@@ -64,24 +50,13 @@ const DEPTH_CHART_COLORS: Record<string, string> = {
   minors: 'gray',
 };
 
-type PlayersResponse = {
-  data?: Player[];
-  pagination?: {
-    totalPages?: number;
-  };
-};
-
 export default function RankingsTable({
   onPlayerClick,
 }: {
   onPlayerClick: (player: Player) => void;
 }) {
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const { players: allPlayers, isLoading } = usePlayers();
   const [players, setPlayers] = useState<Player[]>([]);
-  const [positions, setPositions] = useState<string[]>([]);
-  const [teams, setTeams] = useState<string[]>([]);
-  const [leagues, setLeagues] = useState<string[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([]);
@@ -91,122 +66,76 @@ export default function RankingsTable({
   );
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadPlayers() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const firstPage = await externalApiClient.get<PlayersResponse>(
-          '/api/players',
-          {
-            params: { limit: 100, page: 1 },
-          },
-        );
-        const firstBatch = firstPage.data ?? [];
-        const totalPages = firstPage.pagination?.totalPages ?? 1;
-        const pageRequests: Promise<PlayersResponse>[] = [];
-
-        for (let page = 2; page <= totalPages; page += 1) {
-          pageRequests.push(
-            externalApiClient.get<PlayersResponse>('/api/players', {
-              params: { limit: 100, page },
-            }),
-          );
-        }
-
-        const remainingPages = await Promise.all(pageRequests);
-        const allData = [
-          ...firstBatch,
-          ...remainingPages.flatMap((page) => page.data ?? []),
-        ];
-
-        if (!active || allData.length === 0) {
-          setError('failed to retrieve data');
-          return;
-        }
-
-        const sorted = allData.slice().sort((a, b) => {
-          const lastA = a.name.split(' ').pop() ?? '';
-          const lastB = b.name.split(' ').pop() ?? '';
-          return lastA.localeCompare(lastB);
-        });
-
-        setAllPlayers(sorted);
-        setPlayers(sorted.slice(0, 50));
-        setPositions(
-          Array.from(
-            new Set(allData.flatMap((player) => player.positions)),
-          ).sort(),
-        );
-        setTeams(
-          Array.from(new Set(allData.map((player) => player.team))).sort(),
-        );
-        setLeagues(
-          Array.from(new Set(allData.map((player) => player.league))).sort(),
-        );
-        setStatuses(
-          Array.from(
-            new Set(allData.map((player) => player.injuryStatus)),
-          ).sort(),
-        );
-      } catch {
-        if (active) {
-          setError('failed to retrieve data');
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadPlayers();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const positions = useMemo(
+    () => Array.from(new Set(allPlayers.flatMap((p) => p.positions))).sort(),
+    [allPlayers],
+  );
+  const teams = useMemo(
+    () => Array.from(new Set(allPlayers.map((p) => p.team))).sort(),
+    [allPlayers],
+  );
+  const leagues = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allPlayers.map((p) => p.league).filter((l): l is string => !!l),
+        ),
+      ).sort(),
+    [allPlayers],
+  );
+  const statuses = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allPlayers.map((p) => p.injuryStatus).filter((s): s is string => !!s),
+        ),
+      ).sort(),
+    [allPlayers],
+  );
 
   useEffect(() => {
     const normalizedSearch = appliedSearch.trim().toLowerCase();
 
-    const filteredPlayers = allPlayers.filter((player) => {
-      const matchesPosition =
-        selectedPositions.length === 0 ||
-        selectedPositions.some((pos) => player.positions.includes(pos));
-      const matchesSearch =
-        !normalizedSearch ||
-        player.name.toLowerCase().includes(normalizedSearch);
-      const matchesTeam =
-        selectedTeams.length === 0 || selectedTeams.includes(player.team);
-      const matchesLeague =
-        selectedLeagues.length === 0 || selectedLeagues.includes(player.league);
-      const matchesStatus =
-        selectedStatuses.length === 0 ||
-        selectedStatuses.includes(player.injuryStatus);
-      const matchesDepthStatus =
-        selectedDepthStatuses.length === 0 ||
-        (player.depthChartStatus !== undefined &&
-          selectedDepthStatuses.includes(player.depthChartStatus));
+    const filtered = allPlayers
+      .filter((player) => {
+        const matchesPosition =
+          selectedPositions.length === 0 ||
+          selectedPositions.some((pos) => player.positions.includes(pos));
+        const matchesSearch =
+          !normalizedSearch ||
+          player.name.toLowerCase().includes(normalizedSearch);
+        const matchesTeam =
+          selectedTeams.length === 0 || selectedTeams.includes(player.team);
+        const matchesLeague =
+          selectedLeagues.length === 0 ||
+          (player.league !== undefined &&
+            selectedLeagues.includes(player.league));
+        const matchesStatus =
+          selectedStatuses.length === 0 ||
+          (player.injuryStatus !== undefined &&
+            selectedStatuses.includes(player.injuryStatus));
+        const matchesDepthStatus =
+          selectedDepthStatuses.length === 0 ||
+          (player.depthChartStatus !== undefined &&
+            selectedDepthStatuses.includes(player.depthChartStatus));
 
-      return (
-        matchesPosition &&
-        matchesSearch &&
-        matchesTeam &&
-        matchesLeague &&
-        matchesStatus &&
-        matchesDepthStatus
-      );
-    });
+        return (
+          matchesPosition &&
+          matchesSearch &&
+          matchesTeam &&
+          matchesLeague &&
+          matchesStatus &&
+          matchesDepthStatus
+        );
+      })
+      .sort((a, b) => {
+        const lastA = a.name.split(' ').pop() ?? '';
+        const lastB = b.name.split(' ').pop() ?? '';
+        return lastA.localeCompare(lastB);
+      });
 
-    setError(null);
-    setPlayers(filteredPlayers.slice(0, 50));
+    setPlayers(filtered.slice(0, 50));
   }, [
     allPlayers,
     appliedSearch,
@@ -225,8 +154,8 @@ export default function RankingsTable({
     );
   }
 
-  if (error) {
-    return <Text>{error}</Text>;
+  if (allPlayers.length === 0) {
+    return <Text>failed to retrieve data</Text>;
   }
 
   function applySearch() {

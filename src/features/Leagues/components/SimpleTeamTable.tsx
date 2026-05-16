@@ -137,10 +137,11 @@ export default function SimpleTeamTable({
     return Math.max(0, startingBudget - extraSpend);
   }, [localRows, takenPlayers, startingBudget]);
 
-  // Minor league view: only players without an MLB debut date; taxi squad: no restriction
   const eligiblePlayers = useMemo(
     () =>
-      mode === 'minorLeague' ? players.filter((p) => !p.mlbDebutDate) : players,
+      mode === 'minorLeague'
+        ? players.filter((p) => p.depthChartStatus === 'minors')
+        : players,
     [mode, players],
   );
 
