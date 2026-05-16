@@ -563,6 +563,7 @@ export default function LeagueTeamTable({
                           minWidth="50px"
                           marginLeft="auto"
                           isDisabled={isSaving || readOnly || draftMode}
+                          bg="white"
                         />
                       </Td>
                       {!draftMode && (
@@ -579,6 +580,7 @@ export default function LeagueTeamTable({
                             minWidth="50px"
                             placeholder="--"
                             isDisabled={isSaving || readOnly}
+                            bg="white"
                           />
                         </Td>
                       )}
