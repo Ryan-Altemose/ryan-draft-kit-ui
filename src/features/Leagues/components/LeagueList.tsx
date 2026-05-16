@@ -28,8 +28,8 @@ export default function LeagueList() {
 
   return (
     <>
-      <SimpleGrid columns={{ base: 3 }}>
-        <LeagueCard label="+ New League" onClick={onOpen} />
+      <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
+        <LeagueCard isNew onClick={onOpen} />
         {leagues.map((league) => (
           <LeagueCard
             key={league._id}
