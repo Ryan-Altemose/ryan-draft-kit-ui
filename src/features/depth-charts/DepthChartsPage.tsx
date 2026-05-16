@@ -13,6 +13,9 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { externalApiClient } from '@/shared/utils/api-client';
+import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
+import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
+import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
 
 const TEAMS = [
   'ARI',
@@ -59,7 +62,10 @@ const DEPTH_COLORS: Record<string, string> = {
 type Player = {
   _id: string;
   name: string;
+  team: string;
   positions: string[];
+  playerType?: string;
+  league?: string;
   depthChartStatus?: string;
   depthChartOrder?: number;
   injuryStatus: string;
@@ -103,9 +109,11 @@ function groupByPosition(players: Player[]): Record<string, Player[]> {
 function PositionGroup({
   position,
   players,
+  onPlayerClick,
 }: {
   position: string;
   players: Player[];
+  onPlayerClick: (player: Player) => void;
 }) {
   if (players.length === 0) return null;
 
@@ -116,7 +124,18 @@ function PositionGroup({
       </Text>
       <Stack spacing={2}>
         {players.map((player, index) => (
-          <Flex key={player._id} align="center" justify="space-between" gap={2}>
+          <Flex
+            key={player._id}
+            align="center"
+            justify="space-between"
+            gap={2}
+            cursor="pointer"
+            borderRadius="sm"
+            px={1}
+            mx={-1}
+            _hover={{ bg: 'teal.50' }}
+            onClick={() => onPlayerClick(player)}
+          >
             <Flex align="center" gap={2} minW={0}>
               <Text
                 fontSize="sm"
@@ -158,6 +177,31 @@ export default function DepthChartsPage() {
   const [groups, setGroups] = useState<Record<string, Player[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {
+    selectedNotebookId,
+    selectedNotebookName,
+    selectedNotebookContent,
+    selectedPlayerName,
+    selectedPlayer,
+    updateNotebookContent,
+    updatePlayerContent,
+    openPlayerNotebook,
+    closeNotebook,
+  } = useNotebookManager();
+
+  function handlePlayerClick(player: Player) {
+    const notebookPlayer: NotebookPlayer = {
+      _id: player._id,
+      name: player.name,
+      team: player.team,
+      positions: player.positions,
+      playerType: player.playerType,
+      league: player.league,
+      injuryStatus: player.injuryStatus,
+      age: player.age,
+    };
+    openPlayerNotebook(notebookPlayer);
+  }
 
   useEffect(() => {
     let active = true;
@@ -203,39 +247,54 @@ export default function DepthChartsPage() {
   }, [selectedTeam]);
 
   return (
-    <Box p={8}>
-      <Flex align="center" justify="space-between" mb={6}>
-        <Heading>Depth Charts</Heading>
-        <Select
-          value={selectedTeam}
-          onChange={(e) => setSelectedTeam(e.target.value)}
-          w="160px"
-        >
-          {TEAMS.map((team) => (
-            <option key={team} value={team}>
-              {team}
-            </option>
-          ))}
-        </Select>
-      </Flex>
+    <>
+      <Box p={8}>
+        <Flex align="center" justify="space-between" mb={6}>
+          <Heading>Depth Charts</Heading>
+          <Select
+            value={selectedTeam}
+            onChange={(e) => setSelectedTeam(e.target.value)}
+            w="160px"
+          >
+            {TEAMS.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </Select>
+        </Flex>
 
-      {isLoading ? (
-        <Box py={10} textAlign="center">
-          <Spinner size="lg" />
-        </Box>
-      ) : error ? (
-        <Text>{error}</Text>
-      ) : (
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-          {POSITION_ORDER.map((pos) => (
-            <PositionGroup
-              key={pos}
-              position={pos}
-              players={groups[pos] ?? []}
-            />
-          ))}
-        </SimpleGrid>
-      )}
-    </Box>
+        {isLoading ? (
+          <Box py={10} textAlign="center">
+            <Spinner size="lg" />
+          </Box>
+        ) : error ? (
+          <Text>{error}</Text>
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+            {POSITION_ORDER.map((pos) => (
+              <PositionGroup
+                key={pos}
+                position={pos}
+                players={groups[pos] ?? []}
+                onPlayerClick={handlePlayerClick}
+              />
+            ))}
+          </SimpleGrid>
+        )}
+      </Box>
+      <NotebookWorkspace
+        selectedNotebookId={selectedNotebookId}
+        selectedNotebookName={selectedNotebookName}
+        selectedNotebookContent={selectedNotebookContent}
+        onNotebookContentChange={updateNotebookContent}
+        onPlayerContentChange={updatePlayerContent}
+        selectedPlayerName={selectedPlayerName}
+        selectedPlayer={selectedPlayer}
+        onCloseNotebook={closeNotebook}
+        onOpenPlayerNotebook={openPlayerNotebook}
+        showLauncher={false}
+      />
+    </>
   );
 }
