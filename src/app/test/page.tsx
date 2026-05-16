@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Box, Button, Code, Heading, Stack, Text } from '@chakra-ui/react';
 import { buildLeagueDraftRosterJson } from '@/features/Draft/utils/buildLeagueDraftRosterJson';
 import type { League } from '@/features/Leagues/types/leagues.types';
+import AlertWidget from '@/shared/components/ui/AlertWidget';
 import { externalApiClient, localApiClient } from '@/shared/utils/api-client';
 import type { Player } from '@/shared/hooks/usePlayers';
 
@@ -48,6 +49,7 @@ type PlayersResponse = {
 
 export default function TestPage() {
   const [showBackendLocation, setShowBackendLocation] = useState(false);
+  const [showAlertWidget, setShowAlertWidget] = useState(false);
   const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
   const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
   const [mongoDataError, setMongoDataError] = useState<string | null>(null);
@@ -178,6 +180,21 @@ export default function TestPage() {
             ? 'Hide Backend Save Location'
             : 'Show Backend Save Location'}
         </Button>
+
+        <Button
+          alignSelf="flex-start"
+          colorScheme="orange"
+          onClick={() => setShowAlertWidget(true)}
+        >
+          Open Alert Widget
+        </Button>
+
+        <AlertWidget
+          isOpen={showAlertWidget}
+          onClose={() => setShowAlertWidget(false)}
+          category="Test Alert"
+          description="This is the reusable shared alert widget preview."
+        />
 
         {showBackendLocation ? (
           <Stack
