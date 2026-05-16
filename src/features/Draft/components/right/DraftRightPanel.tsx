@@ -287,6 +287,7 @@ export default function DraftRightPanel({
                     takenPlayers={takenPlayersByTeam[teamId] ?? []}
                     allTakenPlayers={takenPlayers}
                     colorIndex={index}
+                    onPlayerNotebookOpen={onPlayerNotebookOpen}
                     readOnly
                   />
                 );

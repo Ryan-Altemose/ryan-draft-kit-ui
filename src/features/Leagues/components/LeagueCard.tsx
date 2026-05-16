@@ -21,7 +21,7 @@ export default function LeagueCard({
         w="100%"
         minH="130px"
         borderRadius="lg"
-        border="2px dashed"
+        border="2px solid"
         borderColor="green.500"
         bg="white"
         display="flex"
@@ -38,12 +38,12 @@ export default function LeagueCard({
         <Text
           fontSize="3xl"
           lineHeight={1}
-          color="green.400"
+          color="green.500"
           fontWeight="light"
         >
           +
         </Text>
-        <Text fontSize="sm" fontWeight="semibold" color="green.400">
+        <Text fontSize="sm" fontWeight="semibold" color="green.500">
           New League
         </Text>
       </Box>
