@@ -1,6 +1,8 @@
 export type PlayerValuation = {
   playerId: string;
   dollarValue: number;
+  playerType?: 'hitter' | 'pitcher';
+  averagedStats?: Record<string, number>;
 };
 
 export type LeagueValuationsData = {

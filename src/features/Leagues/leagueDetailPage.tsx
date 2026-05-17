@@ -542,6 +542,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
         <CompareModal
           isOpen={compareModal.isOpen}
           onClose={compareModal.onClose}
+          league={currentLeague}
           teams={displayTeams}
           battingCategories={currentLeague.battingCategories}
           pitchingCategories={currentLeague.pitchingCategories}

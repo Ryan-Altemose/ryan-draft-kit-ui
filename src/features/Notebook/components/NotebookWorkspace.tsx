@@ -55,6 +55,12 @@ export default function NotebookWorkspace({
   onOpenPlayerNotebook,
   showLauncher = true,
 }: NotebookWorkspaceProps) {
+  const formatStatNumber = (key: string, value: number): string => {
+    const lower = key.toLowerCase();
+    if (lower === 'ba' || lower === 'avg') return value.toFixed(3);
+    return value.toFixed(2);
+  };
+
   const [windowRect, setWindowRect] = useState<NotebookWindowRect>({
     x: 0,
     y: 0,
@@ -410,7 +416,9 @@ export default function NotebookWorkspace({
                                     const display =
                                       value === undefined || value === null
                                         ? '-'
-                                        : String(value);
+                                        : typeof value === 'number'
+                                          ? formatStatNumber(key, value)
+                                          : String(value);
                                     return (
                                       <Td
                                         key={`${seasonRow.season}-${key}`}
@@ -530,19 +538,7 @@ export default function NotebookWorkspace({
                             key: string,
                             value: number,
                           ): string => {
-                            const lower = key.toLowerCase();
-                            if (lower === 'ba' || lower === 'avg') {
-                              return value.toFixed(3);
-                            }
-                            if (lower === 'era') {
-                              return value.toFixed(2);
-                            }
-                            if (lower === 'innings') {
-                              return value.toFixed(1);
-                            }
-                            return Number.isInteger(value)
-                              ? String(value)
-                              : value.toFixed(2);
+                            return formatStatNumber(key, value);
                           };
 
                           const headerLabel = (key: string) =>
