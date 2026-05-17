@@ -25,6 +25,54 @@ function formatTimestamp(timestamp: string): string {
   return parsed.toLocaleString();
 }
 
+function stripSource(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stripSource);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => key !== 'source')
+        .map(([key, nestedValue]) => [key, stripSource(nestedValue)]),
+    );
+  }
+
+  return value;
+}
+
+function getRenderableData(
+  data: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  if (!data) {
+    return null;
+  }
+
+  const sanitized = stripSource(data);
+  if (
+    !sanitized ||
+    typeof sanitized !== 'object' ||
+    Array.isArray(sanitized) ||
+    Object.keys(sanitized).length === 0
+  ) {
+    return null;
+  }
+
+  return sanitized as Record<string, unknown>;
+}
+
+function formatNotificationData(
+  data: Record<string, unknown> | null | undefined,
+): string | null {
+  const sanitizedData = getRenderableData(data);
+
+  if (!sanitizedData) {
+    return null;
+  }
+
+  return JSON.stringify(sanitizedData, null, 2);
+}
+
 export default function NotificationsPage() {
   const notificationsQuery = useNotifications();
   const dismissMutation = useDismissNotification();
@@ -102,49 +150,53 @@ export default function NotificationsPage() {
         ) : null}
 
         <Stack spacing={4}>
-          {notifications.map((notification) => (
-            <Box
-              key={notification._id}
-              borderWidth="1px"
-              borderRadius="md"
-              p={5}
-              bg="white"
-            >
-              <Flex
-                gap={4}
-                justify="space-between"
-                align={{ base: 'flex-start', md: 'center' }}
-                direction={{ base: 'column', md: 'row' }}
-              >
-                <Stack spacing={2} flex="1">
-                  <Flex gap={2} wrap="wrap" align="center">
-                    <Code>{notification.type}</Code>
-                    <Text fontSize="sm" color="gray.500">
-                      {formatTimestamp(notification.timestamp)}
-                    </Text>
-                  </Flex>
-                  <Text color="gray.800">{notification.message}</Text>
-                  {Object.keys(notification.data ?? {}).length > 0 ? (
-                    <Code whiteSpace="pre-wrap" display="block" p={3}>
-                      {JSON.stringify(notification.data, null, 2)}
-                    </Code>
-                  ) : null}
-                </Stack>
+          {notifications.map((notification) => {
+            const renderedData = formatNotificationData(notification.data);
 
-                <Button
-                  colorScheme="red"
-                  variant="outline"
-                  isLoading={
-                    dismissMutation.isPending &&
-                    dismissMutation.variables === notification._id
-                  }
-                  onClick={() => dismissMutation.mutate(notification._id)}
+            return (
+              <Box
+                key={notification._id}
+                borderWidth="1px"
+                borderRadius="md"
+                p={5}
+                bg="white"
+              >
+                <Flex
+                  gap={4}
+                  justify="space-between"
+                  align={{ base: 'flex-start', md: 'center' }}
+                  direction={{ base: 'column', md: 'row' }}
                 >
-                  Delete
-                </Button>
-              </Flex>
-            </Box>
-          ))}
+                  <Stack spacing={2} flex="1">
+                    <Flex gap={2} wrap="wrap" align="center">
+                      <Code>{notification.type}</Code>
+                      <Text fontSize="sm" color="gray.500">
+                        {formatTimestamp(notification.timestamp)}
+                      </Text>
+                    </Flex>
+                    <Text color="gray.800">{notification.message}</Text>
+                    {renderedData ? (
+                      <Code whiteSpace="pre-wrap" display="block" p={3}>
+                        {renderedData}
+                      </Code>
+                    ) : null}
+                  </Stack>
+
+                  <Button
+                    colorScheme="red"
+                    variant="outline"
+                    isLoading={
+                      dismissMutation.isPending &&
+                      dismissMutation.variables === notification._id
+                    }
+                    onClick={() => dismissMutation.mutate(notification._id)}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              </Box>
+            );
+          })}
         </Stack>
       </Stack>
     </Box>

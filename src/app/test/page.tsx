@@ -69,7 +69,7 @@ export default function TestPage() {
     'Custom notification from /test',
   );
   const [customNotificationData, setCustomNotificationData] = useState(
-    '{\n  "source": "test-page"\n}',
+    '{\n  "player": "Fake Player",\n  "status": "injured"\n}',
   );
   const [notificationDelaySeconds, setNotificationDelaySeconds] = useState('0');
   const [isSendingCustomNotification, setIsSendingCustomNotification] =
@@ -200,7 +200,6 @@ export default function TestPage() {
           data: {
             player: 'Fake Player',
             status: 'injured',
-            source: 'test-page',
           },
         },
       );
@@ -328,7 +327,6 @@ export default function TestPage() {
         message: 'Button timer 10 sec',
         delayMs: 10_000,
         data: {
-          source: 'test-page',
           mode: 'timer',
           delaySeconds: 10,
         },
@@ -434,7 +432,7 @@ export default function TestPage() {
             minH="160px"
             value={customNotificationData}
             onChange={(event) => setCustomNotificationData(event.target.value)}
-            placeholder='{"source":"test-page"}'
+            placeholder='{"player":"Fake Player","status":"injured"}'
           />
           <Button
             alignSelf="flex-start"
