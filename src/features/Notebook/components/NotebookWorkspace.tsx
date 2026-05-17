@@ -407,9 +407,9 @@ export default function NotebookWorkspace({
                               </Tr>
                             </Thead>
                             <Tbody>
-                              {seasons.map((seasonRow) => (
+                              {seasons.map((seasonRow, rowIndex) => (
                                 <Tr
-                                  key={`${seasonRow.type}-${seasonRow.season}`}
+                                  key={`${seasonRow.type}-${seasonRow.season}-${rowIndex}`}
                                 >
                                   <Td>{seasonRow.season}</Td>
                                   {statKeys.map((key) => {
