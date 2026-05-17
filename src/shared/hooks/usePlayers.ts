@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react';
 import { externalApiClient } from '@/shared/utils/api-client';
 
+export type HitterStatData = {
+  ba?: number;
+  hr?: number;
+  rbi?: number;
+  walk?: number;
+  sb?: number;
+};
+
+export type PitcherStatData = {
+  era?: number;
+  wins?: number;
+  losses?: number;
+  saves?: number;
+  strikeouts?: number;
+  innings?: number;
+};
+
+export type PlayerStat =
+  | { season: string; type: 'hitter'; data: HitterStatData }
+  | { season: string; type: 'pitcher'; data: PitcherStatData };
+
 export type Player = {
   _id: string;
   name: string;
@@ -9,12 +30,15 @@ export type Player = {
   team: string;
   league?: string;
   depthChartStatus?: 'starter' | 'backup' | 'reserve' | 'minors';
+  depthChartOrder?: number;
   mlbDebutDate?: string | null;
   injuryStatus?: string;
+  injuryNote?: string;
   active?: boolean;
   age?: number;
   batSide?: string;
   pitchHand?: string;
+  stats?: PlayerStat[];
 };
 
 type PlayersResponse = {
