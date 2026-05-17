@@ -14,16 +14,14 @@ function getBackendUrl(): string {
   return backendUrl.replace(/\/+$/, '');
 }
 
-function getBackendInternalAuthSecret(): string {
-  const secret = process.env.BACKEND_INTERNAL_AUTH_SECRET;
+function getBackendApiKey(): string {
+  const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
 
-  if (!secret) {
-    throw new Error(
-      'BACKEND_INTERNAL_AUTH_SECRET is required for protected routes',
-    );
+  if (!apiKey) {
+    throw new Error('API_KEY or NEXT_PUBLIC_API_KEY is required');
   }
 
-  return secret;
+  return apiKey;
 }
 
 function getDraftSaveBackendUrl(): string {
@@ -45,6 +43,7 @@ function getDraftSaveBackendUrl(): string {
 function buildHeaders(request: Request, backendUserId?: string): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'x-api-key': getBackendApiKey(),
   };
 
   const contentType = request.headers.get('content-type');
@@ -52,14 +51,8 @@ function buildHeaders(request: Request, backendUserId?: string): HeadersInit {
     headers['Content-Type'] = contentType;
   }
 
-  const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
-  if (apiKey) {
-    headers['x-api-key'] = apiKey;
-  }
-
   if (backendUserId) {
-    headers['X-Internal-User-Id'] = backendUserId;
-    headers['X-Internal-Auth-Secret'] = getBackendInternalAuthSecret();
+    headers['X-User-Id'] = backendUserId;
   }
 
   return headers;

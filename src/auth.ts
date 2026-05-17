@@ -23,14 +23,14 @@ function getBackendUrl(): string {
   return backendUrl.replace(/\/+$/, '');
 }
 
-function getBackendInternalAuthSecret(): string {
-  const secret = process.env.BACKEND_INTERNAL_AUTH_SECRET;
+function getBackendApiKey(): string {
+  const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
 
-  if (!secret) {
-    throw new Error('BACKEND_INTERNAL_AUTH_SECRET is required');
+  if (!apiKey) {
+    throw new Error('API_KEY or NEXT_PUBLIC_API_KEY is required');
   }
 
-  return secret;
+  return apiKey;
 }
 
 async function syncBackendUser(input: {
@@ -43,7 +43,7 @@ async function syncBackendUser(input: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Auth-Secret': getBackendInternalAuthSecret(),
+      'x-api-key': getBackendApiKey(),
     },
     body: JSON.stringify({
       authProvider: 'google',
