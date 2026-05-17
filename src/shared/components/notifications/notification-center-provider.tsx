@@ -10,6 +10,7 @@ import {
 type NotificationCenterContextValue = {
   status: ReturnType<typeof useNotificationStream>['status'];
   lastEvent: NotificationEvent | null;
+  debug: ReturnType<typeof useNotificationStream>['debug'];
   dismissNotification: () => void;
 };
 
@@ -21,7 +22,7 @@ export function NotificationCenterProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { status, lastEvent } = useNotificationStream({ enabled: true });
+  const { status, lastEvent, debug } = useNotificationStream({ enabled: true });
   const [activeEvent, setActiveEvent] = useState<NotificationEvent | null>(
     null,
   );
@@ -38,9 +39,10 @@ export function NotificationCenterProvider({
     () => ({
       status,
       lastEvent,
+      debug,
       dismissNotification: () => setIsOpen(false),
     }),
-    [status, lastEvent],
+    [status, lastEvent, debug],
   );
 
   return (

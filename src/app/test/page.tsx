@@ -69,7 +69,7 @@ export default function TestPage() {
   const [rosterJson, setRosterJson] = useState<unknown>(null);
   const [isLoadingRosterJson, setIsLoadingRosterJson] = useState(false);
   const [rosterJsonError, setRosterJsonError] = useState<string | null>(null);
-  const { status, lastEvent } = useNotificationCenter();
+  const { status, lastEvent, debug } = useNotificationCenter();
 
   async function loadBackendLeagueDocuments() {
     const response = await localApiClient.get<LeaguesResponse>(
@@ -300,6 +300,41 @@ export default function TestPage() {
           ) : null}
           {notificationError ? (
             <Text color="red.500">{notificationError}</Text>
+          ) : null}
+          {status === 'error' ? (
+            <Stack
+              spacing={2}
+              pt={2}
+              borderTopWidth="1px"
+              borderColor="red.100"
+            >
+              <Text color="red.600" fontWeight="semibold">
+                Stream debug
+              </Text>
+              <Text color="gray.600">
+                Endpoint: <Code>{debug.streamUrl}</Code>
+              </Text>
+              <Text color="gray.600">
+                Last connected at:{' '}
+                <Code>{debug.lastConnectedAt ?? 'never'}</Code>
+              </Text>
+              <Text color="gray.600">
+                Last error at: <Code>{debug.lastErrorAt ?? 'unknown'}</Code>
+              </Text>
+              <Text color="gray.600">
+                Last event received at:{' '}
+                <Code>{debug.lastEventAt ?? 'none'}</Code>
+              </Text>
+              <Text color="gray.600">
+                Browser readyState: <Code>{String(debug.lastReadyState)}</Code>
+              </Text>
+              <Text color="gray.500" fontSize="sm">
+                If this is Vercel, check the app route <Code>/api/events</Code>,
+                the server env vars <Code>BACKEND_URL</Code> and{' '}
+                <Code>API_KEY</Code>, and confirm the backend stream is
+                reachable from the deployment.
+              </Text>
+            </Stack>
           ) : null}
         </Stack>
 

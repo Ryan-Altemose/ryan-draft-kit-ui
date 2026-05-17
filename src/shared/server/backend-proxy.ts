@@ -65,6 +65,49 @@ function buildHeaders(request: Request, backendUserId?: string): HeadersInit {
   return headers;
 }
 
+export async function proxyBackendStreamRequest(
+  request: Request,
+  endpoint: string,
+): Promise<NextResponse> {
+  try {
+    const backendUrl = new URL(`${getBackendUrl()}${endpoint}`);
+    const incomingUrl = new URL(request.url);
+    backendUrl.search = incomingUrl.search;
+
+    const response = await fetch(backendUrl.toString(), {
+      method: request.method,
+      headers: buildHeaders(request),
+      cache: 'no-store',
+    });
+
+    if (!response.body) {
+      return NextResponse.json(
+        { success: false, message: 'Notification stream unavailable' },
+        { status: 502 },
+      );
+    }
+
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: {
+        'Content-Type':
+          response.headers.get('content-type') ?? 'text/event-stream',
+        'Cache-Control':
+          response.headers.get('cache-control') ?? 'no-cache, no-transform',
+        Connection: response.headers.get('connection') ?? 'keep-alive',
+        'X-Accel-Buffering': response.headers.get('x-accel-buffering') ?? 'no',
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to reach the backend notification stream';
+
+    return NextResponse.json({ success: false, message }, { status: 502 });
+  }
+}
+
 export async function proxyBackendRequest(
   request: Request,
   endpoint: string,

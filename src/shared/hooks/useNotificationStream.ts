@@ -9,6 +9,14 @@ export type NotificationEvent = {
   timestamp: string;
 };
 
+export type NotificationStreamDebug = {
+  streamUrl: string;
+  lastConnectedAt: string | null;
+  lastErrorAt: string | null;
+  lastEventAt: string | null;
+  lastReadyState: number | null;
+};
+
 type NotificationStreamStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 type UseNotificationStreamOptions = {
@@ -26,8 +34,7 @@ function isNotificationEvent(
 }
 
 function getNotificationStreamUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-  return `${baseUrl}/api/events`;
+  return '/api/events';
 }
 
 export function useNotificationStream({
@@ -35,6 +42,13 @@ export function useNotificationStream({
 }: UseNotificationStreamOptions) {
   const [status, setStatus] = useState<NotificationStreamStatus>('idle');
   const [lastEvent, setLastEvent] = useState<NotificationEvent | null>(null);
+  const [debug, setDebug] = useState<NotificationStreamDebug>({
+    streamUrl: getNotificationStreamUrl(),
+    lastConnectedAt: null,
+    lastErrorAt: null,
+    lastEventAt: null,
+    lastReadyState: null,
+  });
 
   useEffect(() => {
     if (!enabled) {
@@ -42,11 +56,22 @@ export function useNotificationStream({
       return;
     }
 
-    const source = new EventSource(getNotificationStreamUrl());
+    const streamUrl = getNotificationStreamUrl();
+    const source = new EventSource(streamUrl);
     setStatus('connecting');
+    setDebug((current) => ({
+      ...current,
+      streamUrl,
+      lastReadyState: source.readyState,
+    }));
 
     source.onopen = () => {
       setStatus('connected');
+      setDebug((current) => ({
+        ...current,
+        lastConnectedAt: new Date().toISOString(),
+        lastReadyState: source.readyState,
+      }));
     };
 
     source.onmessage = (event) => {
@@ -63,19 +88,38 @@ export function useNotificationStream({
           data: payload.data ?? {},
           timestamp: payload.timestamp,
         });
+        setDebug((current) => ({
+          ...current,
+          lastEventAt: new Date().toISOString(),
+          lastReadyState: source.readyState,
+        }));
       } catch {
         setStatus('error');
+        setDebug((current) => ({
+          ...current,
+          lastErrorAt: new Date().toISOString(),
+          lastReadyState: source.readyState,
+        }));
       }
     };
 
     source.onerror = () => {
       setStatus('error');
+      setDebug((current) => ({
+        ...current,
+        lastErrorAt: new Date().toISOString(),
+        lastReadyState: source.readyState,
+      }));
     };
 
     return () => {
+      setDebug((current) => ({
+        ...current,
+        lastReadyState: source.readyState,
+      }));
       source.close();
     };
   }, [enabled]);
 
-  return { status, lastEvent };
+  return { status, lastEvent, debug };
 }
