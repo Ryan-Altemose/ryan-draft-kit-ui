@@ -24,6 +24,7 @@ type DraftMiddlePanelProps = {
   onFinishDraft?: (name: string) => void | Promise<void>;
   onValuationPlayerClick?: (player: NotebookPlayer) => void;
   valuations?: Record<string, number>;
+  isLoadingValuations?: boolean;
   readOnly?: boolean;
 };
 
@@ -40,6 +41,7 @@ export default function DraftMiddlePanel({
   onFinishDraft,
   onValuationPlayerClick,
   valuations,
+  isLoadingValuations,
   readOnly = false,
 }: DraftMiddlePanelProps) {
   return (
@@ -67,6 +69,7 @@ export default function DraftMiddlePanel({
       <Box flex="1" overflow="hidden" p={4}>
         <ValuationSearch
           valuations={valuations}
+          isLoadingValuations={isLoadingValuations}
           takenPlayers={takenPlayers}
           leagueType={leagueType}
           onPlayerClick={onValuationPlayerClick}

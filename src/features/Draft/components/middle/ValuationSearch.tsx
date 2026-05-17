@@ -31,6 +31,7 @@ type SortDir = 'asc' | 'desc' | null;
 
 type ValuationSearchProps = {
   valuations?: Record<string, number>;
+  isLoadingValuations?: boolean;
   takenPlayers?: TakenPlayer[];
   leagueType?: 'MLB' | 'AL' | 'NL';
   onPlayerClick?: (player: NotebookPlayer) => void;
@@ -38,6 +39,7 @@ type ValuationSearchProps = {
 
 export default function ValuationSearch({
   valuations = {},
+  isLoadingValuations = false,
   takenPlayers = [],
   leagueType,
   onPlayerClick,
@@ -248,9 +250,13 @@ export default function ValuationSearch({
                 <Td>{player.team}</Td>
                 <Td>{player.positions.join(', ')}</Td>
                 <Td>
-                  {valuations[player._id] !== undefined
-                    ? `$${valuations[player._id]}`
-                    : '-'}
+                  {isLoadingValuations ? (
+                    <Spinner size="xs" color="gray.400" />
+                  ) : valuations[player._id] !== undefined ? (
+                    `$${valuations[player._id]}`
+                  ) : (
+                    '-'
+                  )}
                 </Td>
               </Tr>
             ))}

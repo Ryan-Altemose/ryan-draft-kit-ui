@@ -180,6 +180,7 @@ export default function DraftPage() {
             onFinishDraft={handleFinishDraft}
             onValuationPlayerClick={openPlayerNotebook}
             valuations={valuationsQuery.data ?? {}}
+            isLoadingValuations={valuationsQuery.isLoading}
             readOnly={Boolean(selectedDraft)}
           />
         </Box>

@@ -15,6 +15,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Spinner,
   Tag,
   Text,
 } from '@chakra-ui/react';
@@ -259,7 +260,9 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    {leftVal !== null ? (
+                    {projectionsQuery.isLoading ? (
+                      <Spinner size="xs" color="gray.400" />
+                    ) : leftVal !== null ? (
                       <>
                         <Text color={leftColor}>
                           {formatCompareValue(stat, leftVal)}
@@ -290,7 +293,9 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    {rightVal !== null ? (
+                    {projectionsQuery.isLoading ? (
+                      <Spinner size="xs" color="gray.400" />
+                    ) : rightVal !== null ? (
                       <>
                         <Text color={rightColor}>
                           {formatCompareValue(stat, rightVal)}
