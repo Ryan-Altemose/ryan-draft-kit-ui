@@ -42,7 +42,6 @@ describe('useNotificationStream', () => {
 
   it('captures notification events from the stream', () => {
     global.EventSource = MockEventSource as unknown as typeof EventSource;
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3001');
 
     const { result } = renderHook(() =>
       useNotificationStream({ enabled: true }),
@@ -50,6 +49,7 @@ describe('useNotificationStream', () => {
 
     expect(MockEventSource.instances).toHaveLength(1);
     const instance = MockEventSource.instances[0];
+    expect(instance.url).toBe('/api/events');
 
     act(() => {
       instance.onmessage?.(
