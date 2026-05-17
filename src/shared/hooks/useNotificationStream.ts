@@ -19,6 +19,12 @@ type StreamMessage =
   | NotificationEvent
   | { type: 'connected'; message: string; timestamp: string };
 
+function isNotificationEvent(
+  payload: StreamMessage,
+): payload is NotificationEvent {
+  return payload.type !== 'connected';
+}
+
 function getNotificationStreamUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
   return `${baseUrl}/api/events`;
@@ -47,7 +53,7 @@ export function useNotificationStream({
       try {
         const payload = JSON.parse(event.data) as StreamMessage;
 
-        if (payload.type === 'connected') {
+        if (!isNotificationEvent(payload)) {
           return;
         }
 
