@@ -1,13 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { Box, Flex } from '@chakra-ui/react';
+import { useRef, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  Box,
+  Button,
+  Flex,
+} from '@chakra-ui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import type {
   DraftPick,
   League,
-  LeagueDraft,
   LeagueResponse,
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
@@ -19,7 +28,9 @@ import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace'
 import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
 import { useLeagueValuations } from '@/features/Valuations/hooks/useLeagueValuations';
 import { toDraftLeagueInput } from './utils/draftState';
-import DraftLeftPanel from './components/left/DraftLeftPanel';
+import DraftLeftPanel, {
+  type DraftSelection,
+} from './components/left/DraftLeftPanel';
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
 
@@ -30,11 +41,53 @@ function toNotebookPlayer(player: DraftPlayer): NotebookPlayer {
   };
 }
 
+function buildLegacyDraftLeague(league: League, draft: DraftSelection): League {
+  const draftPicks = draft.draft_picks ?? [];
+  const totalBudget = league.totalBudget ?? 0;
+  const spentByTeam = new Map<string, number>();
+
+  draftPicks.forEach(([, , winningTeamId, , salary]) => {
+    spentByTeam.set(
+      winningTeamId,
+      (spentByTeam.get(winningTeamId) ?? 0) + salary,
+    );
+  });
+
+  const teams =
+    (league.teams?.map(([teamId, teamName]) => [
+      teamId,
+      teamName,
+      Math.max(0, totalBudget - (spentByTeam.get(teamId) ?? 0)),
+    ]) as League['teams']) ?? [];
+
+  const takenPlayers: TakenPlayer[] = draftPicks.map(
+    ([, , winningTeamId, playerId, salary]) => [
+      playerId,
+      winningTeamId,
+      'DRAFT',
+      salary,
+      '',
+    ],
+  );
+
+  return {
+    ...league,
+    teams,
+    taken_players: takenPlayers,
+    draft_picks: draftPicks,
+  };
+}
+
 export default function DraftPage() {
   const searchParams = useSearchParams();
   const initialLeagueId = searchParams.get('leagueId') ?? undefined;
+  const copyDraftCancelRef = useRef<HTMLButtonElement>(null);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
-  const [selectedDraft, setSelectedDraft] = useState<LeagueDraft | null>(null);
+  const [selectedDraft, setSelectedDraft] = useState<DraftSelection | null>(
+    null,
+  );
+  const [isCopyingDraft, setIsCopyingDraft] = useState(false);
+  const [showCopyDraftWarning, setShowCopyDraftWarning] = useState(false);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
   const valuationsQuery = useLeagueValuations(selectedLeague);
@@ -142,6 +195,79 @@ export default function DraftPage() {
     openPlayerNotebook(toNotebookPlayer(player));
   }
 
+  const selectedArchivedDraftId =
+    selectedDraft && '_id' in selectedDraft ? selectedDraft._id : undefined;
+
+  async function copySelectedDraftToLiveDraft() {
+    if (!selectedLeague || !selectedDraft) return;
+
+    try {
+      setIsCopyingDraft(true);
+
+      if (selectedArchivedDraftId) {
+        const response = await localApiClient.post<LeagueResponse>(
+          `/api/draft-save/leagues/${selectedLeague._id}/drafts/${selectedArchivedDraftId}/copy`,
+        );
+
+        if (response?.success && response.data) {
+          const updated = response.data;
+          setSelectedLeague(updated);
+          setSelectedDraft(null);
+          queryClient.setQueryData(['draft-save-league', updated._id], {
+            success: true,
+            data: updated,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['draft-save-leagues'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['league-valuations', updated._id],
+          });
+        }
+        return;
+      }
+
+      const updatedLeague = buildLegacyDraftLeague(
+        selectedLeague,
+        selectedDraft,
+      );
+      await upsertLeagueMutation.mutateAsync({
+        input: toDraftLeagueInput(updatedLeague),
+        existingLeague: updatedLeague,
+        endpoint: '/api/draft-save/leagues',
+      });
+
+      setSelectedLeague(updatedLeague);
+      setSelectedDraft(null);
+      queryClient.setQueryData(['draft-save-league', updatedLeague._id], {
+        success: true,
+        data: updatedLeague,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['league-valuations', updatedLeague._id],
+      });
+    } finally {
+      setIsCopyingDraft(false);
+      setShowCopyDraftWarning(false);
+    }
+  }
+
+  function handleCopySelectedDraft() {
+    if (!selectedLeague || !selectedDraft) return;
+
+    const hasActiveLiveDraftState =
+      (selectedLeague.taken_players?.length ?? 0) > 0 ||
+      (selectedLeague.draft_picks?.length ?? 0) > 0;
+
+    if (hasActiveLiveDraftState) {
+      setShowCopyDraftWarning(true);
+      return;
+    }
+
+    void copySelectedDraftToLiveDraft();
+  }
+
   return (
     <>
       <Flex h="100vh" overflow="hidden">
@@ -155,6 +281,9 @@ export default function DraftPage() {
           <DraftLeftPanel
             onLeagueChange={handleLeagueChange}
             onDraftChange={setSelectedDraft}
+            onCopySelectedDraft={handleCopySelectedDraft}
+            canCopySelectedDraft={Boolean(selectedDraft)}
+            isCopyingDraft={isCopyingDraft}
             initialLeagueId={initialLeagueId}
           />
         </Box>
@@ -193,6 +322,42 @@ export default function DraftPage() {
           />
         </Box>
       </Flex>
+      <AlertDialog
+        isOpen={showCopyDraftWarning}
+        leastDestructiveRef={copyDraftCancelRef}
+        onClose={() => setShowCopyDraftWarning(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Override Live Draft?
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              The current live draft already has players picked. Copying this
+              draft will override the current live draft state with this saved
+              draft.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button
+                ref={copyDraftCancelRef}
+                onClick={() => setShowCopyDraftWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                colorScheme="green"
+                ml={3}
+                onClick={() => void copySelectedDraftToLiveDraft()}
+                isLoading={isCopyingDraft}
+              >
+                Copy This Draft
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
       <NotebookWorkspace
         selectedNotebookId={selectedNotebookId}
         selectedNotebookName={selectedNotebookName}

@@ -1,24 +1,42 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Divider, Flex, Select, Spinner } from '@chakra-ui/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Divider, Flex, Select, Spinner } from '@chakra-ui/react';
 import { useLeagues } from '@/features/Leagues/hooks/useLeagues';
 import { useLeague } from '@/features/Leagues/hooks/useLeague';
+import { useLeagueDrafts } from '@/features/Leagues/hooks/useLeagueDrafts';
 import type {
   League,
-  LeagueDraft,
+  LeagueDraft as EmbeddedLeagueDraft,
 } from '@/features/Leagues/types/leagues.types';
+import type { LeagueDraft as ArchivedLeagueDraft } from '@/features/Leagues/types/leagueDrafts.types';
 import LeagueInfo from './LeagueInfo';
+
+export type DraftSelection =
+  | ArchivedLeagueDraft
+  | (EmbeddedLeagueDraft & {
+      _id?: string;
+      taken_players?: never;
+      teams?: never;
+      leagueId?: string;
+      totalBudget?: number;
+    });
 
 type Props = {
   onLeagueChange: (league: League | null) => void;
-  onDraftChange: (draft: LeagueDraft | null) => void;
+  onDraftChange: (draft: DraftSelection | null) => void;
+  onCopySelectedDraft?: () => void;
+  canCopySelectedDraft?: boolean;
+  isCopyingDraft?: boolean;
   initialLeagueId?: string;
 };
 
 export default function DraftLeftPanel({
   onLeagueChange,
   onDraftChange,
+  onCopySelectedDraft,
+  canCopySelectedDraft = false,
+  isCopyingDraft = false,
   initialLeagueId,
 }: Props) {
   const { data, isLoading } = useLeagues({
@@ -32,6 +50,13 @@ export default function DraftLeftPanel({
     endpointBase: '/api/draft-save/leagues',
     queryKeyPrefix: 'draft-save-league',
   });
+  const { data: leagueDraftsData } = useLeagueDrafts(
+    selectedLeagueId || undefined,
+    {
+      endpointBase: '/api/draft-save/leagues',
+      queryKeyPrefix: 'draft-save-league-drafts',
+    },
+  );
   const lastEmittedLeague = useRef<League | null>(null);
 
   useEffect(() => {
@@ -62,7 +87,19 @@ export default function DraftLeftPanel({
     if (!id) onLeagueChange(null);
   }
 
-  const drafts = leagueData?.data?.drafts ?? [];
+  const drafts = useMemo(() => {
+    const draftsByName = new Map<string, DraftSelection>();
+
+    (leagueData?.data?.drafts ?? []).forEach((draft) => {
+      draftsByName.set(draft.name, draft);
+    });
+
+    (leagueDraftsData?.data ?? []).forEach((draft) => {
+      draftsByName.set(draft.name, draft);
+    });
+
+    return Array.from(draftsByName.values());
+  }, [leagueData?.data?.drafts, leagueDraftsData?.data]);
 
   return (
     <Flex direction="column" gap={3} p={4}>
@@ -106,6 +143,17 @@ export default function DraftLeftPanel({
           </option>
         ))}
       </Select>
+      {selectedDraftName ? (
+        <Button
+          size="sm"
+          colorScheme="green"
+          onClick={onCopySelectedDraft}
+          isDisabled={!canCopySelectedDraft}
+          isLoading={isCopyingDraft}
+        >
+          Copy This Draft
+        </Button>
+      ) : null}
 
       <Divider />
       <LeagueInfo league={leagueData?.data ?? null} />
