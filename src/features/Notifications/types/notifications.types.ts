@@ -15,6 +15,24 @@ export type NotificationResponse = {
   data: Notification;
 };
 
+export type NotificationArchiveResult = {
+  archived: boolean;
+  archivedCount: number;
+  status?: number;
+  message?: string;
+};
+
+export type NotificationPushResponse = {
+  success: boolean;
+  data?: {
+    pushed: boolean;
+    clients: number;
+    type: string;
+    archive?: NotificationArchiveResult;
+  };
+  message?: string;
+};
+
 export type NotificationsResponse = {
   success: boolean;
   data: Notification[];
