@@ -39,6 +39,7 @@ npm run lint             # Lint code
 
 Set `BACKEND_URL` to the Draft Kit backend deployment or local backend app.
 `NEXT_PUBLIC_BACKEND_URL` is still supported, but `BACKEND_URL` avoids exposing that value to the browser bundle.
+Set `API_KEY` to the Draft Kit backend service key sent in the `x-api-key` header.
 Set `NEXT_PUBLIC_API_URL` to the external player/stats API.
 
 ## Adding a Feature

@@ -334,6 +334,86 @@ describe('LeagueTeamTable', () => {
     });
   });
 
+  it('saves when Enter is pressed in the team name input', async () => {
+    const onSaveChanges = vi.fn().mockResolvedValue(undefined);
+
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-5', 'Echo', 0]}
+          startingBudget={50}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-a', 'team-5', 'C-0', 10]]}
+          onSaveChanges={onSaveChanges}
+        />
+      </ChakraProvider>,
+    );
+
+    const teamNameInput = screen.getByDisplayValue('Echo');
+    fireEvent.change(teamNameInput, {
+      target: { value: 'Echo Updated' },
+    });
+    fireEvent.keyDown(teamNameInput, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() =>
+      expect(onSaveChanges).toHaveBeenCalledWith({
+        teamName: 'Echo Updated',
+        rows: [{ rowId: 'C-0', playerId: 'player-a', price: 10, contract: '' }],
+      }),
+    );
+  });
+
+  it('shows a checkmark after a successful save', async () => {
+    const onSaveChanges = vi.fn().mockResolvedValue(undefined);
+
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-5', 'Echo', 0]}
+          startingBudget={50}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-a', 'team-5', 'C-0', 10]]}
+          onSaveChanges={onSaveChanges}
+        />
+      </ChakraProvider>,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('Echo'), {
+      target: { value: 'Echo Updated' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(await screen.findByLabelText('Saved to database')).toBeTruthy();
+  });
+
   it('keeps prices attached to their position slots instead of array order', async () => {
     await renderLeagueTeamTable(
       <ChakraProvider>

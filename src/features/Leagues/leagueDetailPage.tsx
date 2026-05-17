@@ -76,6 +76,9 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   const [editedTakenPlayers, setEditedTakenPlayers] = useState<TakenPlayer[]>(
     [],
   );
+  const [teamNameSavedIndicatorTokens, setTeamNameSavedIndicatorTokens] =
+    useState<Record<string, number>>({});
+  const [dirtyTeamNameIds, setDirtyTeamNameIds] = useState<string[]>([]);
   const [rosterView, setRosterView] = useState<
     'main' | 'minorLeague' | 'taxiSquad'
   >('main');
@@ -110,6 +113,8 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     );
     const nextTakenPlayers = league.taken_players ?? [];
     setEditedTakenPlayers(nextTakenPlayers);
+    setTeamNameSavedIndicatorTokens({});
+    setDirtyTeamNameIds([]);
   }, [league]);
 
   useEffect(() => {
@@ -136,14 +141,12 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     currentLeague.teams?.length ??
     parseTeamsFromDescription(currentLeague.description);
   const leagueIdToDelete = currentLeague._id;
-  const displayTeams =
-    editedTeams.length > 0
-      ? editedTeams
-      : buildDisplayTeams(
-          currentLeague.teams,
-          teamCount,
-          currentLeague.totalBudget ?? 0,
-        );
+  const persistedTeams = buildDisplayTeams(
+    currentLeague.teams,
+    teamCount,
+    currentLeague.totalBudget ?? 0,
+  );
+  const displayTeams = editedTeams.length > 0 ? editedTeams : persistedTeams;
 
   async function handleDelete() {
     try {
@@ -211,6 +214,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   async function saveLeagueChanges(
     nextTeams: LeagueTeam[],
     nextTakenPlayers: TakenPlayer[],
+    savedTeamIds: string[] = [],
   ) {
     try {
       if (!league) return;
@@ -244,9 +248,51 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
         },
         existingLeague: currentLeague,
       });
+      if (savedTeamIds.length > 0) {
+        const token = Date.now();
+        setTeamNameSavedIndicatorTokens((prev) => ({
+          ...prev,
+          ...Object.fromEntries(savedTeamIds.map((teamId) => [teamId, token])),
+        }));
+        setDirtyTeamNameIds((prev) =>
+          prev.filter((teamId) => !savedTeamIds.includes(teamId)),
+        );
+      }
+      return true;
     } catch (err) {
       console.error(err);
+      return false;
     }
+  }
+
+  function handleTeamNameChange(teamId: string, teamName: string) {
+    setEditedTeams(
+      (currentTeams) =>
+        currentTeams.map((currentTeam) =>
+          currentTeam[0] === teamId
+            ? [currentTeam[0], teamName, currentTeam[2]]
+            : currentTeam,
+        ) as LeagueTeam[],
+    );
+
+    const persistedTeamName =
+      persistedTeams.find(([currentTeamId]) => currentTeamId === teamId)?.[1] ??
+      '';
+
+    setDirtyTeamNameIds((currentIds) => {
+      const isDirty = teamName !== persistedTeamName;
+      if (isDirty) {
+        return currentIds.includes(teamId)
+          ? currentIds
+          : [...currentIds, teamId];
+      }
+
+      return currentIds.filter((currentId) => currentId !== teamId);
+    });
+  }
+
+  async function saveAllTeamNameChanges() {
+    return saveLeagueChanges(editedTeams, editedTakenPlayers, dirtyTeamNameIds);
   }
 
   function handlePlayerNotebookOpen(player: RosterPlayer) {
@@ -459,7 +505,11 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                             rows,
                           );
                           setEditedTakenPlayers(nextTakenPlayers);
-                          void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                          void saveLeagueChanges(
+                            editedTeams,
+                            nextTakenPlayers,
+                            [teamId],
+                          );
                         }}
                       />
                     );
@@ -486,7 +536,11 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                             rows,
                           );
                           setEditedTakenPlayers(nextTakenPlayers);
-                          void saveLeagueChanges(editedTeams, nextTakenPlayers);
+                          void saveLeagueChanges(
+                            editedTeams,
+                            nextTakenPlayers,
+                            [teamId],
+                          );
                         }}
                       />
                     );
@@ -504,8 +558,13 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       isSaving={upsertLeagueMutation.isPending}
                       colorIndex={index}
                       onPlayerNotebookOpen={handlePlayerNotebookOpen}
+                      onTeamNameChange={handleTeamNameChange}
+                      onSaveAllTextFields={saveAllTeamNameChanges}
+                      teamNameSavedIndicatorToken={
+                        teamNameSavedIndicatorTokens[teamId]
+                      }
                       onSaveChanges={({ teamName, rows }) => {
-                        const nextTeams = displayTeams.map((currentTeam) =>
+                        const nextTeams = editedTeams.map((currentTeam) =>
                           currentTeam[0] === teamId
                             ? [currentTeam[0], teamName, currentTeam[2]]
                             : currentTeam,
@@ -517,7 +576,11 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                         );
                         setEditedTeams(nextTeams);
                         setEditedTakenPlayers(nextTakenPlayers);
-                        void saveLeagueChanges(nextTeams, nextTakenPlayers);
+                        return saveLeagueChanges(
+                          nextTeams,
+                          nextTakenPlayers,
+                          dirtyTeamNameIds.includes(teamId) ? [teamId] : [],
+                        );
                       }}
                     />
                   );

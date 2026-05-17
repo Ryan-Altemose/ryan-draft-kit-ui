@@ -1,15 +1,33 @@
 'use client';
 
-import { Box, Button, Heading, Spinner, Stack, Text } from '@chakra-ui/react';
+import { useRef, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  Box,
+  Button,
+  Heading,
+  Spinner,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLeague } from './hooks/useLeague';
 import { useLeagueDraft } from './hooks/useLeagueDraft';
 import LeagueTeamTable from './components/LeagueTeamTable';
 import type { LeagueTeam, TakenPlayer } from './types/leagues.types';
+import type { LeagueResponse } from './types/leagues.types';
 import type { Player as RosterPlayer } from '@/shared/hooks/usePlayers';
 import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
 import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
 import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
+import { localApiClient } from '@/shared/utils/api-client';
 
 function toNotebookPlayer(player: RosterPlayer): NotebookPlayer {
   return {
@@ -25,7 +43,16 @@ export default function LeagueDraftDetailPage({
   leagueId: string;
   draftId: string;
 }) {
-  const { data: leagueData, isLoading: isLoadingLeague } = useLeague(leagueId);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const [isCopyingDraft, setIsCopyingDraft] = useState(false);
+  const [showOverrideWarning, setShowOverrideWarning] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const { data: leagueData, isLoading: isLoadingLeague } = useLeague(leagueId, {
+    endpointBase: '/api/draft-save/leagues',
+    queryKeyPrefix: 'draft-save-league',
+  });
   const { data: draftData, isLoading: isLoadingDraft } = useLeagueDraft(
     leagueId,
     draftId,
@@ -52,9 +79,47 @@ export default function LeagueDraftDetailPage({
   const teams = (draft.teams ?? []) as LeagueTeam[];
   const takenPlayers = (draft.taken_players ?? []) as TakenPlayer[];
   const startingBudget = draft.totalBudget ?? league.totalBudget ?? 0;
+  const hasActiveLiveDraftState =
+    (league.taken_players?.length ?? 0) > 0 ||
+    (league.draft_picks?.length ?? 0) > 0;
 
   function handlePlayerNotebookOpen(player: RosterPlayer) {
     openPlayerNotebook(toNotebookPlayer(player));
+  }
+
+  async function handleCopyDraft() {
+    try {
+      setIsCopyingDraft(true);
+      setCopyError(null);
+
+      const response = await localApiClient.post<LeagueResponse>(
+        `/api/draft-save/leagues/${leagueId}/drafts/${draftId}/copy`,
+      );
+
+      if (response?.success && response.data) {
+        queryClient.setQueryData(['draft-save-league', leagueId], response);
+        void queryClient.invalidateQueries({
+          queryKey: ['draft-save-leagues'],
+        });
+        setShowOverrideWarning(false);
+        router.push(`/draft?leagueId=${encodeURIComponent(leagueId)}`);
+      }
+    } catch (error) {
+      setCopyError(
+        error instanceof Error ? error.message : 'Failed to copy draft',
+      );
+    } finally {
+      setIsCopyingDraft(false);
+    }
+  }
+
+  function handleCopyButtonClick() {
+    if (hasActiveLiveDraftState) {
+      setShowOverrideWarning(true);
+      return;
+    }
+
+    void handleCopyDraft();
   }
 
   return (
@@ -64,6 +129,13 @@ export default function LeagueDraftDetailPage({
           <Stack direction="row" spacing={2} align="center">
             <Button as={Link} href={`/leagues/${leagueId}`} variant="ghost">
               Back
+            </Button>
+            <Button
+              colorScheme="green"
+              onClick={handleCopyButtonClick}
+              isLoading={isCopyingDraft}
+            >
+              Copy This Draft
             </Button>
           </Stack>
 
@@ -99,9 +171,50 @@ export default function LeagueDraftDetailPage({
                 No teams saved with this draft snapshot.
               </Text>
             ) : null}
+            {copyError ? (
+              <Text color="red.500" fontSize="sm">
+                {copyError}
+              </Text>
+            ) : null}
           </Stack>
         </Stack>
       </Box>
+      <AlertDialog
+        isOpen={showOverrideWarning}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setShowOverrideWarning(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Override Live Draft?
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              The current live draft already has players picked. Copying this
+              draft will override the current live draft state with this saved
+              draft.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button
+                ref={cancelRef}
+                onClick={() => setShowOverrideWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                colorScheme="green"
+                ml={3}
+                onClick={() => void handleCopyDraft()}
+                isLoading={isCopyingDraft}
+              >
+                Copy This Draft
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
       <NotebookWorkspace
         selectedNotebookId={selectedNotebookId}
         selectedNotebookName={selectedNotebookName}
