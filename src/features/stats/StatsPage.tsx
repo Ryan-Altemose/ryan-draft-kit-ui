@@ -132,8 +132,7 @@ export default function StatsPage() {
   const [hitterSearch, setHitterSearch] = useState('');
   const [hitterAppliedSearch, setHitterAppliedSearch] = useState('');
   const [hitterPositions, setHitterPositions] = useState<string[]>([]);
-  const [hitterSortField, setHitterSortField] =
-    useState<HitterSortField>('hr');
+  const [hitterSortField, setHitterSortField] = useState<HitterSortField>('hr');
   const [hitterSortDir, setHitterSortDir] = useState<SortDir>('desc');
 
   const [pitcherSearch, setPitcherSearch] = useState('');
@@ -165,18 +164,29 @@ export default function StatsPage() {
         }
         if (hitterSortField === 'age') {
           const fill =
-            hitterSortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            hitterSortDir === 'asc'
+              ? Number.POSITIVE_INFINITY
+              : Number.NEGATIVE_INFINITY;
           return hitterSortDir === 'asc'
             ? (a.age ?? fill) - (b.age ?? fill)
             : (b.age ?? fill) - (a.age ?? fill);
         }
         const fill =
-          hitterSortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+          hitterSortDir === 'asc'
+            ? Number.POSITIVE_INFINITY
+            : Number.NEGATIVE_INFINITY;
         const aVal = getHitterStat(a, hitterSortField, season) ?? fill;
         const bVal = getHitterStat(b, hitterSortField, season) ?? fill;
         return hitterSortDir === 'asc' ? aVal - bVal : bVal - aVal;
       });
-  }, [allPlayers, hitterAppliedSearch, hitterPositions, hitterSortField, hitterSortDir, season]);
+  }, [
+    allPlayers,
+    hitterAppliedSearch,
+    hitterPositions,
+    hitterSortField,
+    hitterSortDir,
+    season,
+  ]);
 
   const pitchers = useMemo(() => {
     const normalized = pitcherAppliedSearch.trim().toLowerCase();
@@ -200,18 +210,29 @@ export default function StatsPage() {
         }
         if (pitcherSortField === 'age') {
           const fill =
-            pitcherSortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            pitcherSortDir === 'asc'
+              ? Number.POSITIVE_INFINITY
+              : Number.NEGATIVE_INFINITY;
           return pitcherSortDir === 'asc'
             ? (a.age ?? fill) - (b.age ?? fill)
             : (b.age ?? fill) - (a.age ?? fill);
         }
         const fill =
-          pitcherSortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+          pitcherSortDir === 'asc'
+            ? Number.POSITIVE_INFINITY
+            : Number.NEGATIVE_INFINITY;
         const aVal = getPitcherStat(a, pitcherSortField, season) ?? fill;
         const bVal = getPitcherStat(b, pitcherSortField, season) ?? fill;
         return pitcherSortDir === 'asc' ? aVal - bVal : bVal - aVal;
       });
-  }, [allPlayers, pitcherAppliedSearch, pitcherPositions, pitcherSortField, pitcherSortDir, season]);
+  }, [
+    allPlayers,
+    pitcherAppliedSearch,
+    pitcherPositions,
+    pitcherSortField,
+    pitcherSortDir,
+    season,
+  ]);
 
   function toggleHitterSort(field: string) {
     const f = field as HitterSortField;
@@ -400,7 +421,10 @@ export default function StatsPage() {
                       <Tr key={player._id} _hover={{ bg: 'green.50' }}>
                         <Td fontWeight="medium" whiteSpace="nowrap">
                           {player.injuryNote ? (
-                            <Tooltip label={player.injuryNote} placement="right">
+                            <Tooltip
+                              label={player.injuryNote}
+                              placement="right"
+                            >
                               <Text as="span" cursor="help">
                                 {player.name}
                               </Text>
@@ -485,9 +509,7 @@ export default function StatsPage() {
               <WrapItem>
                 <Button
                   size="sm"
-                  colorScheme={
-                    pitcherPositions.length === 0 ? 'green' : 'gray'
-                  }
+                  colorScheme={pitcherPositions.length === 0 ? 'green' : 'gray'}
                   onClick={() => setPitcherPositions([])}
                 >
                   All
@@ -591,7 +613,10 @@ export default function StatsPage() {
                       <Tr key={player._id} _hover={{ bg: 'green.50' }}>
                         <Td fontWeight="medium" whiteSpace="nowrap">
                           {player.injuryNote ? (
-                            <Tooltip label={player.injuryNote} placement="right">
+                            <Tooltip
+                              label={player.injuryNote}
+                              placement="right"
+                            >
                               <Text as="span" cursor="help">
                                 {player.name}
                               </Text>

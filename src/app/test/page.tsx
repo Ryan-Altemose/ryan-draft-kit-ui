@@ -330,9 +330,9 @@ export default function TestPage() {
               </Text>
               <Text color="gray.500" fontSize="sm">
                 If this is Vercel, check the app route <Code>/api/events</Code>,
-                the server env vars <Code>BACKEND_URL</Code> and{' '}
-                <Code>API_KEY</Code>, and confirm the backend stream is
-                reachable from the deployment.
+                the server env vars <Code>NOTIFICATION_STREAM_URL</Code>,{' '}
+                <Code>API_URL</Code>, and <Code>API_KEY</Code>, and confirm the
+                upstream stream is reachable from the deployment.
               </Text>
             </Stack>
           ) : null}
