@@ -92,7 +92,7 @@ function getHitterStat(
   const stat = player.stats?.find(
     (s) => s.season === season && s.type === 'hitter',
   );
-  if (!stat || stat.type !== 'hitter') return undefined;
+  if (!stat || stat.type !== 'hitter' || !stat.data) return undefined;
   return stat.data[field as keyof typeof stat.data] as number | undefined;
 }
 
@@ -104,7 +104,7 @@ function getPitcherStat(
   const stat = player.stats?.find(
     (s) => s.season === season && s.type === 'pitcher',
   );
-  if (!stat || stat.type !== 'pitcher') return undefined;
+  if (!stat || stat.type !== 'pitcher' || !stat.data) return undefined;
   return stat.data[field as keyof typeof stat.data] as number | undefined;
 }
 
