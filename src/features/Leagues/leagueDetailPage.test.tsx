@@ -81,6 +81,10 @@ vi.mock('@/features/Notebook/components/NotebookWorkspace', () => ({
   default: () => null,
 }));
 
+vi.mock('@/shared/components/ui/CompareModal', () => ({
+  default: () => null,
+}));
+
 vi.mock('./components/LeagueTeamTable', () => ({
   default: ({
     team,

@@ -8,7 +8,7 @@ export function isPlayerAllowedForPosition(
   player: Player,
   position: string,
 ): boolean {
-  if (position === 'MiLB') return !player.mlbDebutDate;
+  if (position === 'MiLB') return player.depthChartStatus === 'minors';
   if (position === 'BENCH') return true;
   if (position === 'UTIL') return player.playerType === 'hitter';
   if (position === 'P') return player.playerType === 'pitcher';

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   isLowerBetter,
   getOrdinal,
-  getFakeProjection,
   getRank,
   getStatColors,
   BATTING_LOWER_IS_BETTER,
@@ -10,25 +9,8 @@ import {
 } from './CompareModal';
 
 describe('isLowerBetter', () => {
-  it('returns true for batting K', () => {
-    expect(isLowerBetter('K', 'Batting')).toBe(true);
-  });
-
-  it('returns false for all other batting stats', () => {
-    for (const stat of [
-      'R',
-      'HR',
-      'RBI',
-      'SB',
-      'AVG',
-      'OBP',
-      'SLG',
-      'OPS',
-      'H',
-      '2B',
-      '3B',
-      'BB',
-    ]) {
+  it('returns false for all batting stats (none are lower-is-better)', () => {
+    for (const stat of ['AVG', 'HR', 'RBI', 'BB', 'SB']) {
       expect(isLowerBetter(stat, 'Batting')).toBe(false);
     }
   });
@@ -40,7 +22,7 @@ describe('isLowerBetter', () => {
   });
 
   it('returns false for pitching higher-is-better stats', () => {
-    for (const stat of ['W', 'SV', 'K', 'QS', 'IP', 'HLD', 'SV+HLD']) {
+    for (const stat of ['W', 'SV', 'K', 'IP']) {
       expect(isLowerBetter(stat, 'Pitching')).toBe(false);
     }
   });
@@ -49,19 +31,14 @@ describe('isLowerBetter', () => {
     expect(isLowerBetter('K', 'Pitching')).toBe(false);
   });
 
-  it('H is lower-is-better for pitching but higher-is-better for batting', () => {
-    expect(isLowerBetter('H', 'Pitching')).toBe(true);
-    expect(isLowerBetter('H', 'Batting')).toBe(false);
-  });
-
-  it('HR is lower-is-better for pitching but higher-is-better for batting', () => {
-    expect(isLowerBetter('HR', 'Pitching')).toBe(true);
+  it('HR is higher-is-better for both batting and pitching', () => {
     expect(isLowerBetter('HR', 'Batting')).toBe(false);
+    expect(isLowerBetter('HR', 'Pitching')).toBe(false);
   });
 
-  it('BB is lower-is-better for pitching but higher-is-better for batting', () => {
-    expect(isLowerBetter('BB', 'Pitching')).toBe(true);
+  it('BB is higher-is-better for both batting and pitching', () => {
     expect(isLowerBetter('BB', 'Batting')).toBe(false);
+    expect(isLowerBetter('BB', 'Pitching')).toBe(false);
   });
 });
 
@@ -95,31 +72,6 @@ describe('getOrdinal', () => {
     expect(getOrdinal(111)).toBe('111th');
     expect(getOrdinal(112)).toBe('112th');
     expect(getOrdinal(113)).toBe('113th');
-  });
-});
-
-describe('getFakeProjection', () => {
-  it('always returns a positive integer', () => {
-    for (let t = 0; t < 12; t++) {
-      for (let s = 0; s < 15; s++) {
-        const val = getFakeProjection(t, s);
-        expect(val).toBeGreaterThan(0);
-        expect(Number.isInteger(val)).toBe(true);
-      }
-    }
-  });
-
-  it('produces different values for different team/stat combinations', () => {
-    const values = new Set(
-      Array.from({ length: 12 }, (_, t) =>
-        Array.from({ length: 10 }, (_, s) => getFakeProjection(t, s)),
-      ).flat(),
-    );
-    expect(values.size).toBeGreaterThan(1);
-  });
-
-  it('is deterministic', () => {
-    expect(getFakeProjection(3, 5)).toBe(getFakeProjection(3, 5));
   });
 });
 
@@ -171,19 +123,9 @@ describe('getStatColors', () => {
     expect(result).toEqual({ leftColor: 'red.500', rightColor: 'green.500' });
   });
 
-  it('left is green when left has fewer Ks (lower-is-better batting)', () => {
-    const result = getStatColors(50, 100, 'K', 'Batting');
-    expect(result).toEqual({ leftColor: 'green.500', rightColor: 'red.500' });
-  });
-
   it('left is green when left has lower ERA (lower-is-better pitching)', () => {
     const result = getStatColors(2, 5, 'ERA', 'Pitching');
     expect(result).toEqual({ leftColor: 'green.500', rightColor: 'red.500' });
-  });
-
-  it('right is green when right has lower WHIP', () => {
-    const result = getStatColors(1.5, 1.1, 'WHIP', 'Pitching');
-    expect(result).toEqual({ leftColor: 'red.500', rightColor: 'green.500' });
   });
 
   it('left is green for pitching Ks (higher-is-better)', () => {
@@ -200,7 +142,7 @@ describe('getStatColors', () => {
   });
 
   it('handles all batting higher-is-better stats', () => {
-    for (const stat of ['R', 'HR', 'RBI', 'SB', 'AVG', 'OBP', 'SLG', 'OPS']) {
+    for (const stat of ['AVG', 'HR', 'RBI', 'BB', 'SB']) {
       const result = getStatColors(10, 5, stat, 'Batting');
       expect(result.leftColor).toBe('green.500');
       expect(result.rightColor).toBe('red.500');

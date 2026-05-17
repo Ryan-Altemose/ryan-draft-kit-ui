@@ -13,6 +13,7 @@ const PLAYERS = [
     team: 'NYY',
     positions: ['OF'],
     injuryStatus: 'active',
+    league: 'AL',
   },
   {
     _id: 'p2',
@@ -20,6 +21,7 @@ const PLAYERS = [
     team: 'LAD',
     positions: ['1B'],
     injuryStatus: 'active',
+    league: 'NL',
   },
   {
     _id: 'p3',
@@ -27,6 +29,7 @@ const PLAYERS = [
     team: 'LAA',
     positions: ['OF'],
     injuryStatus: 'active',
+    league: 'AL',
   },
   {
     _id: 'p4',
@@ -34,6 +37,7 @@ const PLAYERS = [
     team: 'CLE',
     positions: ['3B'],
     injuryStatus: 'active',
+    league: 'AL',
   },
 ];
 
@@ -129,7 +133,7 @@ describe('ValuationSearch', () => {
 
     it('sorts by last name descending after the Name header is clicked twice', async () => {
       await renderAndWait();
-      // Default load order by last name asc: Freeman, Judge, Ramirez, Trout
+      // Default sort is by $ Value desc; clicking Name twice results in last name desc.
       const nameHeader = screen.getByRole('columnheader', { name: /^name/i });
       fireEvent.click(nameHeader); // asc (same as default)
       fireEvent.click(nameHeader); // desc: Trout, Ramirez, Judge, Freeman
@@ -148,12 +152,6 @@ describe('ValuationSearch', () => {
         </ChakraProvider>,
       );
       await screen.findByText('Freddie Freeman', undefined, { timeout: 3000 });
-
-      const valueHeader = screen.getByRole('columnheader', {
-        name: /\$ value/i,
-      });
-      fireEvent.click(valueHeader); // asc
-      fireEvent.click(valueHeader); // desc: Judge($30), Trout($25), then unvalued
 
       const rows = screen.getAllByRole('row').slice(1);
       expect(within(rows[0]).getByText('Aaron Judge')).toBeTruthy();
@@ -178,6 +176,34 @@ describe('ValuationSearch', () => {
       expect(onPlayerClick).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Freddie Freeman' }),
       );
+    });
+  });
+
+  describe('eligibility filtering', () => {
+    it('hides taken players', async () => {
+      render(
+        <ChakraProvider>
+          <ValuationSearch takenPlayers={[['p2', 't1', 'BENCH', 1, '']]} />
+        </ChakraProvider>,
+      );
+      await screen.findByText('Aaron Judge', undefined, { timeout: 3000 });
+
+      expect(screen.queryByText('Freddie Freeman')).toBeNull();
+      expect(screen.getByText('Aaron Judge')).toBeTruthy();
+    });
+
+    it('filters by leagueType (AL)', async () => {
+      render(
+        <ChakraProvider>
+          <ValuationSearch leagueType="AL" />
+        </ChakraProvider>,
+      );
+      await screen.findByText('Aaron Judge', undefined, { timeout: 3000 });
+
+      expect(screen.getByText('Aaron Judge')).toBeTruthy();
+      expect(screen.getByText('Mike Trout')).toBeTruthy();
+      expect(screen.getByText('Jose Ramirez')).toBeTruthy();
+      expect(screen.queryByText('Freddie Freeman')).toBeNull();
     });
   });
 });

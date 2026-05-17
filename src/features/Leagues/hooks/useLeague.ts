@@ -15,5 +15,9 @@ export function useLeague(leagueId?: string, options?: UseLeagueOptions) {
         endpointBase: options?.endpointBase,
       }),
     enabled: Boolean(leagueId),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

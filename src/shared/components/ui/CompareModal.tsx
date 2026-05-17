@@ -15,20 +15,36 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Spinner,
   Tag,
   Text,
 } from '@chakra-ui/react';
-import type { LeagueTeam } from '@/features/Leagues/types/leagues.types';
+import type {
+  League,
+  LeagueTeam,
+  TakenPlayer,
+} from '@/features/Leagues/types/leagues.types';
+import { useLeagueProjections } from '@/features/Valuations/hooks/useLeagueProjections';
 
-export const BATTING_LOWER_IS_BETTER = new Set(['K']);
-export const PITCHING_LOWER_IS_BETTER = new Set([
-  'ERA',
-  'WHIP',
-  'H',
-  'BB',
-  'HR',
-  'L',
-]);
+export const BATTING_LOWER_IS_BETTER = new Set<string>([]);
+export const PITCHING_LOWER_IS_BETTER = new Set(['ERA', 'L']);
+
+const BATTING_STAT_MAP: Record<string, string> = {
+  AVG: 'ba',
+  HR: 'hr',
+  RBI: 'rbi',
+  BB: 'walk',
+  SB: 'sb',
+};
+
+const PITCHING_STAT_MAP: Record<string, string> = {
+  ERA: 'era',
+  W: 'wins',
+  L: 'losses',
+  SV: 'saves',
+  K: 'strikeouts',
+  IP: 'innings',
+};
 
 export function isLowerBetter(
   stat: string,
@@ -43,14 +59,6 @@ export function getOrdinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
-}
-
-// Temporary stand-in — replace with real projected totals when available
-export function getFakeProjection(
-  teamIndex: number,
-  statIndex: number,
-): number {
-  return ((teamIndex * 7 + statIndex * 13) % 20) + 1;
 }
 
 export function getRank(
@@ -78,9 +86,16 @@ export function getStatColors(
   };
 }
 
+function formatCompareValue(stat: string, value: number): string {
+  if (stat === 'AVG') return value.toFixed(3);
+  if (stat === 'ERA') return value.toFixed(2);
+  return parseFloat(value.toFixed(2)).toString();
+}
+
 type CompareModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  league: League | null;
   teams: LeagueTeam[];
   battingCategories: string[];
   pitchingCategories: string[];
@@ -89,6 +104,7 @@ type CompareModalProps = {
 export default function CompareModal({
   isOpen,
   onClose,
+  league,
   teams,
   battingCategories,
   pitchingCategories,
@@ -96,6 +112,52 @@ export default function CompareModal({
   const [leftTeam, setLeftTeam] = useState('');
   const [rightTeam, setRightTeam] = useState('');
   const [category, setCategory] = useState<'Batting' | 'Pitching'>('Batting');
+
+  const projectionsQuery = useLeagueProjections(league);
+  const averagedStatsByPlayerId =
+    projectionsQuery.data?.averagedStatsByPlayerId ?? {};
+  const playerTypeByPlayerId =
+    projectionsQuery.data?.playerTypeByPlayerId ?? {};
+
+  const takenPlayers: TakenPlayer[] = league?.taken_players ?? [];
+
+  function getTeamPlayerIds(teamId: string): string[] {
+    return takenPlayers.filter(([, tid]) => tid === teamId).map(([pid]) => pid);
+  }
+
+  function computeTeamValue(
+    teamId: string,
+    statLabel: string,
+    activeCategory: 'Batting' | 'Pitching',
+  ): number | null {
+    const statMap =
+      activeCategory === 'Batting' ? BATTING_STAT_MAP : PITCHING_STAT_MAP;
+    const statKey = statMap[statLabel];
+    if (!statKey) return null;
+
+    const rateStat =
+      (activeCategory === 'Batting' && statLabel === 'AVG') ||
+      (activeCategory === 'Pitching' && statLabel === 'ERA');
+
+    const playerIds = getTeamPlayerIds(teamId);
+    const values: number[] = [];
+
+    for (const playerId of playerIds) {
+      const playerType = playerTypeByPlayerId[playerId];
+      if (activeCategory === 'Batting' && playerType === 'pitcher') continue;
+      if (activeCategory === 'Pitching' && playerType === 'hitter') continue;
+
+      const stats = averagedStatsByPlayerId[playerId];
+      const val = stats?.[statKey];
+      if (typeof val === 'number' && Number.isFinite(val)) {
+        values.push(val);
+      }
+    }
+
+    if (values.length === 0) return null;
+    if (!rateStat) return values.reduce((a, b) => a + b, 0);
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  }
 
   const activeCategories =
     category === 'Batting' ? battingCategories : pitchingCategories;
@@ -157,20 +219,23 @@ export default function CompareModal({
           <Divider mb={4} />
 
           <Grid templateColumns="1fr auto 1fr">
-            {activeCategories.map((stat, statIndex) => {
+            {activeCategories.map((stat) => {
               const lowerIsBetter = isLowerBetter(stat, category);
-              const allValues = teams.map((_, ti) =>
-                getFakeProjection(ti, statIndex),
-              );
+              const allValues = teams
+                .map(([id]) => computeTeamValue(id, stat, category))
+                .filter((v): v is number => v !== null);
 
-              const leftVal =
-                leftTeamIndex >= 0
-                  ? getFakeProjection(leftTeamIndex, statIndex)
-                  : null;
-              const rightVal =
-                rightTeamIndex >= 0
-                  ? getFakeProjection(rightTeamIndex, statIndex)
-                  : null;
+              const leftTeamId =
+                leftTeamIndex >= 0 ? teams[leftTeamIndex]?.[0] : null;
+              const rightTeamId =
+                rightTeamIndex >= 0 ? teams[rightTeamIndex]?.[0] : null;
+
+              const leftVal = leftTeamId
+                ? computeTeamValue(leftTeamId, stat, category)
+                : null;
+              const rightVal = rightTeamId
+                ? computeTeamValue(rightTeamId, stat, category)
+                : null;
 
               const leftRank =
                 leftVal !== null
@@ -195,9 +260,13 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    {leftVal !== null ? (
+                    {projectionsQuery.isLoading ? (
+                      <Spinner size="xs" color="gray.400" />
+                    ) : leftVal !== null ? (
                       <>
-                        <Text color={leftColor}>{leftVal}</Text>
+                        <Text color={leftColor}>
+                          {formatCompareValue(stat, leftVal)}
+                        </Text>
                         <Text fontSize="xs" color="gray.500">
                           {getOrdinal(leftRank!)}
                         </Text>
@@ -224,9 +293,13 @@ export default function CompareModal({
                     borderBottom="1px solid"
                     borderColor="chakra-border-color"
                   >
-                    {rightVal !== null ? (
+                    {projectionsQuery.isLoading ? (
+                      <Spinner size="xs" color="gray.400" />
+                    ) : rightVal !== null ? (
                       <>
-                        <Text color={rightColor}>{rightVal}</Text>
+                        <Text color={rightColor}>
+                          {formatCompareValue(stat, rightVal)}
+                        </Text>
                         <Text fontSize="xs" color="gray.500">
                           {getOrdinal(rightRank!)}
                         </Text>
