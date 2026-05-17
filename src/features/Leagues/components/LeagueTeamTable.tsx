@@ -42,7 +42,10 @@ type LeagueTeamTableProps = {
       price: number;
       contract: string;
     }>;
-  }) => void;
+  }) => unknown | Promise<unknown>;
+  onTeamNameChange?: (teamId: string, teamName: string) => void;
+  onSaveAllTextFields?: () => unknown | Promise<unknown>;
+  teamNameSavedIndicatorToken?: number;
   onDirtyChange?: (teamId: string, isDirty: boolean) => void;
   onRowsChange?: (
     teamId: string,
@@ -123,6 +126,9 @@ export default function LeagueTeamTable({
   startingBudget,
   leagueType,
   onSaveChanges,
+  onTeamNameChange,
+  onSaveAllTextFields,
+  teamNameSavedIndicatorToken,
   onDirtyChange,
   onRowsChange,
   onCrossTeamTransfer,
@@ -142,6 +148,7 @@ export default function LeagueTeamTable({
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
 
   const { players, isLoading: isLoadingPlayers } = usePlayers();
 
@@ -182,6 +189,7 @@ export default function LeagueTeamTable({
               ...propRow,
               search: formatPlayerDisplay(matchingPlayer),
               team: matchingPlayer.team,
+              price: localRow?.price ?? propRow.price,
               contract: localRow?.contract ?? '',
             }
           : propRow;
@@ -278,6 +286,27 @@ export default function LeagueTeamTable({
   useEffect(() => {
     onDirtyChange?.(teamId, isDirty);
   }, [teamId, isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (isDirty) {
+      setShowSavedIndicator(false);
+    }
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (teamNameSavedIndicatorToken === undefined) return;
+    setShowSavedIndicator(true);
+  }, [teamNameSavedIndicatorToken]);
+
+  useEffect(() => {
+    if (!showSavedIndicator) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setShowSavedIndicator(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [showSavedIndicator]);
 
   useEffect(() => {
     onRowsChange?.(
@@ -408,7 +437,7 @@ export default function LeagueTeamTable({
     );
   }
 
-  function handleSaveChanges() {
+  async function handleSaveChanges() {
     const invalidRows = rows.filter((row) => {
       const price = parsePrice(row.price);
       return (row.playerId && price <= 0) || (!row.playerId && price > 0);
@@ -427,7 +456,7 @@ export default function LeagueTeamTable({
       return;
     }
 
-    onSaveChanges?.({
+    await onSaveChanges?.({
       teamName: localTeamName.trim() || teamName,
       rows: rows.map((row) => ({
         rowId: row.rowId,
@@ -436,6 +465,7 @@ export default function LeagueTeamTable({
         contract: row.contract,
       })),
     });
+    setShowSavedIndicator(true);
   }
 
   return (
@@ -468,7 +498,21 @@ export default function LeagueTeamTable({
         ) : (
           <Input
             value={localTeamName}
-            onChange={(e) => setLocalTeamName(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setLocalTeamName(nextValue);
+              onTeamNameChange?.(teamId, nextValue);
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              e.stopPropagation();
+              if (onSaveAllTextFields) {
+                void onSaveAllTextFields();
+                return;
+              }
+              void handleSaveChanges();
+            }}
             onClick={(e) => e.stopPropagation()}
             size="sm"
             maxW="180px"
@@ -477,6 +521,16 @@ export default function LeagueTeamTable({
             isDisabled={isSaving}
           />
         )}
+        {!draftMode && !readOnly && showSavedIndicator ? (
+          <Text
+            color="green.600"
+            fontSize="sm"
+            fontWeight="bold"
+            aria-label="Saved to database"
+          >
+            ✓
+          </Text>
+        ) : null}
         <Text fontWeight="semibold" color="gray.700" fontSize="sm">
           Budget: ${currentBudget}
         </Text>
@@ -599,7 +653,7 @@ export default function LeagueTeamTable({
                   colorScheme="green"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSaveChanges();
+                    void handleSaveChanges();
                   }}
                   isLoading={isSaving}
                   isDisabled={!isDirty}
