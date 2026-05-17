@@ -58,7 +58,8 @@ export default function NotebookWorkspace({
   const formatStatNumber = (key: string, value: number): string => {
     const lower = key.toLowerCase();
     if (lower === 'ba' || lower === 'avg') return value.toFixed(3);
-    return value.toFixed(2);
+    if (lower === 'era') return value.toFixed(2);
+    return parseFloat(value.toFixed(2)).toString();
   };
 
   const [windowRect, setWindowRect] = useState<NotebookWindowRect>({

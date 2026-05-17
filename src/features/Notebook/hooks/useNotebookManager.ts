@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ERROR_MESSAGES } from '@/shared/constants';
-import { isApiError } from '@/shared/utils/api-client';
+import { externalApiClient, isApiError } from '@/shared/utils/api-client';
 import type { Notebook, Player } from '../types/notebook.types';
 import { useCreateNotebook } from './useCreateNotebook';
 import { useDeleteNotebook } from './useDeleteNotebook';
@@ -325,6 +325,28 @@ export function useNotebookManager() {
     setSelectedPlayerName(player.name);
     setSelectedPlayer(player);
   };
+
+  useEffect(() => {
+    if (!selectedPlayer?._id || selectedPlayer.stats !== undefined) return;
+
+    let active = true;
+    externalApiClient
+      .get<{ data: Player }>(`/api/players/${selectedPlayer._id}`)
+      .then((response) => {
+        if (active && response.data) {
+          setSelectedPlayer((current) =>
+            current?._id === response.data._id
+              ? { ...current, stats: response.data.stats ?? [] }
+              : current,
+          );
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [selectedPlayer?._id]);
 
   const closeNotebook = () => {
     setSelectedNotebookId(null);
