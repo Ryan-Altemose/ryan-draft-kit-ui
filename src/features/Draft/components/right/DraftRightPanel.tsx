@@ -319,6 +319,7 @@ export default function DraftRightPanel({
       <CompareModal
         isOpen={compareModal.isOpen}
         onClose={compareModal.onClose}
+        league={league ?? null}
         teams={teams}
         battingCategories={league.battingCategories}
         pitchingCategories={league.pitchingCategories}

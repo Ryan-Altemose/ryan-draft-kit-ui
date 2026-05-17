@@ -11,5 +11,9 @@ export function useLeagues(options?: UseLeaguesOptions) {
   return useQuery<LeaguesResponse>({
     queryKey: options?.queryKey ?? ['leagues'],
     queryFn: () => fetchLeagues({ endpoint: options?.endpoint }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

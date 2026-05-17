@@ -28,7 +28,7 @@ export default function RankingsPage() {
       positions: player.positions,
       playerType: player.playerType,
       league: player.league,
-      injuryStatus: player.injuryStatus,
+      injuryStatus: player.injuryStatus ?? '',
       active: player.active,
       age: player.age,
       batSide: player.batSide,
