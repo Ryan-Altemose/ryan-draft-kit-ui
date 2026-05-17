@@ -187,6 +187,44 @@ export async function proxyBackendRequest(
 
     const responseText = await response.text();
 
+    if (!response.ok) {
+      let message = response.statusText || 'Backend request failed';
+      const contentType = response.headers.get('content-type') ?? '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          const payload = JSON.parse(responseText) as {
+            message?: string;
+          };
+
+          if (typeof payload.message === 'string' && payload.message.trim()) {
+            message = payload.message;
+          }
+        } catch {
+          // ignore JSON parse failure and keep fallback message
+        }
+      } else {
+        const trimmed = responseText.trim();
+
+        if (trimmed && !trimmed.startsWith('<!DOCTYPE html')) {
+          message = trimmed;
+        }
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          message,
+          debug: {
+            endpoint,
+            upstreamUrl: backendUrl.toString(),
+            upstreamStatus: response.status,
+          },
+        },
+        { status: response.status },
+      );
+    }
+
     return new NextResponse(responseText, {
       status: response.status,
       headers: {

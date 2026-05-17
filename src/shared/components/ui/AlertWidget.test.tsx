@@ -24,7 +24,7 @@ describe('AlertWidget', () => {
     ).toBeTruthy();
   });
 
-  it('calls onClose when dismissed', () => {
+  it('calls onClose when closed', () => {
     const onClose = vi.fn();
 
     render(
@@ -38,7 +38,7 @@ describe('AlertWidget', () => {
       </ChakraProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByText('Close'));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

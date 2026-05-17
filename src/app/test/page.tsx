@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Box, Button, Code, Heading, Stack, Text } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Code,
+  Heading,
+  Input,
+  Select,
+  Stack,
+  Text,
+  Textarea,
+} from '@chakra-ui/react';
 import { buildLeagueDraftRosterJson } from '@/features/Draft/utils/buildLeagueDraftRosterJson';
 import type { League } from '@/features/Leagues/types/leagues.types';
 import { externalApiClient, localApiClient } from '@/shared/utils/api-client';
@@ -62,6 +72,17 @@ export default function TestPage() {
   const [notificationError, setNotificationError] = useState<string | null>(
     null,
   );
+  const [customNotificationType, setCustomNotificationType] =
+    useState('custom-test');
+  const [customNotificationMessage, setCustomNotificationMessage] = useState(
+    'Custom notification from /test',
+  );
+  const [customNotificationData, setCustomNotificationData] = useState(
+    '{\n  "source": "test-page"\n}',
+  );
+  const [notificationDelaySeconds, setNotificationDelaySeconds] = useState('0');
+  const [isSendingCustomNotification, setIsSendingCustomNotification] =
+    useState(false);
   const [isTimerPending, setIsTimerPending] = useState(false);
   const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
   const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
@@ -205,6 +226,83 @@ export default function TestPage() {
     }
   }
 
+  async function handleSendCustomNotification() {
+    try {
+      setNotificationError(null);
+      setIsSendingCustomNotification(true);
+
+      const trimmedType = customNotificationType.trim();
+      const trimmedMessage = customNotificationMessage.trim();
+
+      if (!trimmedType || !trimmedMessage) {
+        setNotificationError('Notification type and message are required.');
+        return;
+      }
+
+      let parsedData: Record<string, unknown> = {};
+
+      if (customNotificationData.trim()) {
+        const candidate = JSON.parse(customNotificationData) as unknown;
+
+        if (
+          !candidate ||
+          Array.isArray(candidate) ||
+          typeof candidate !== 'object'
+        ) {
+          setNotificationError('Notification data must be a JSON object.');
+          return;
+        }
+
+        parsedData = candidate as Record<string, unknown>;
+      }
+
+      const delayMs = Number(notificationDelaySeconds) * 1000;
+
+      if (delayMs > 0) {
+        const response = await externalApiClient.post<NotificationPushResponse>(
+          '/api/notifications/schedule',
+          {
+            type: trimmedType,
+            message: trimmedMessage,
+            delayMs,
+            data: parsedData,
+          },
+        );
+
+        if (!response.success) {
+          setNotificationError(
+            response.message ?? 'Failed to schedule custom notification.',
+          );
+        }
+
+        return;
+      }
+
+      const response = await externalApiClient.post<NotificationPushResponse>(
+        '/api/notifications/push',
+        {
+          type: trimmedType,
+          message: trimmedMessage,
+          data: parsedData,
+        },
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to send custom notification.',
+        );
+      }
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to send custom notification.',
+      );
+    } finally {
+      setIsSendingCustomNotification(false);
+    }
+  }
+
   function handleScheduleTimerNotification() {
     setNotificationError(null);
 
@@ -275,6 +373,56 @@ export default function TestPage() {
         >
           Send Timer Signal
         </Button>
+
+        <Stack
+          spacing={3}
+          borderWidth="1px"
+          borderRadius="md"
+          p={4}
+          bg="gray.50"
+        >
+          <Text fontWeight="semibold">Custom Notification Tester</Text>
+          <Input
+            value={customNotificationType}
+            onChange={(event) => setCustomNotificationType(event.target.value)}
+            placeholder="Notification type"
+          />
+          <Input
+            value={customNotificationMessage}
+            onChange={(event) =>
+              setCustomNotificationMessage(event.target.value)
+            }
+            placeholder="Notification message"
+          />
+          <Select
+            value={notificationDelaySeconds}
+            onChange={(event) =>
+              setNotificationDelaySeconds(event.target.value)
+            }
+          >
+            <option value="0">Send instantly</option>
+            <option value="1">Delay 1 second</option>
+            <option value="2">Delay 2 seconds</option>
+            <option value="3">Delay 3 seconds</option>
+            <option value="4">Delay 4 seconds</option>
+            <option value="5">Delay 5 seconds</option>
+          </Select>
+          <Textarea
+            minH="160px"
+            value={customNotificationData}
+            onChange={(event) => setCustomNotificationData(event.target.value)}
+            placeholder='{"source":"test-page"}'
+          />
+          <Button
+            alignSelf="flex-start"
+            colorScheme="green"
+            onClick={handleSendCustomNotification}
+            isLoading={isSendingCustomNotification}
+            loadingText="Sending notification"
+          >
+            Send Custom Notification
+          </Button>
+        </Stack>
 
         <Stack
           spacing={3}

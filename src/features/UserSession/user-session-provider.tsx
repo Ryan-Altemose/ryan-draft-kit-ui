@@ -36,6 +36,7 @@ function clearUserOwnedQueries(): void {
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.LEAGUE] });
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.NOTEBOOKS] });
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.NOTEBOOK] });
+  queryClient.removeQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] });
   queryClient.removeQueries({ queryKey: [QUERY_KEYS.CURRENT_USER_PROFILE] });
 }
 
