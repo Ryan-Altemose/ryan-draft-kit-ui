@@ -92,6 +92,8 @@ vi.mock('./components/LeagueTeamTable', () => ({
     takenPlayers = [],
     startingBudget,
     onSaveChanges,
+    onTeamNameChange,
+    onSaveAllTextFields,
   }: {
     team: LeagueTeam;
     rosterSlots?: Record<string, number>;
@@ -106,6 +108,8 @@ vi.mock('./components/LeagueTeamTable', () => ({
         contract: string;
       }>;
     }) => void;
+    onTeamNameChange?: (teamId: string, teamName: string) => void;
+    onSaveAllTextFields?: () => void;
   }) => {
     const [localTeamName, setLocalTeamName] = useState(team[1]);
     const buildRows = () =>
@@ -128,7 +132,19 @@ vi.mock('./components/LeagueTeamTable', () => ({
       startingBudget - rows.reduce((sum, row) => sum + row.price, 0);
 
     useEffect(() => {
-      setRows(buildRows());
+      setRows((currentRows) =>
+        buildRows().map((nextRow, index) => {
+          const currentRow = currentRows[index];
+          if (
+            currentRow &&
+            currentRow.playerId === nextRow.playerId &&
+            currentRow.price !== nextRow.price
+          ) {
+            return currentRow;
+          }
+          return nextRow;
+        }),
+      );
     }, [takenPlayers, rosterSlots]);
 
     const handlePriceChange = (index: number, value: string) => {
@@ -157,7 +173,15 @@ vi.mock('./components/LeagueTeamTable', () => ({
       <div>
         <input
           value={localTeamName}
-          onChange={(event) => setLocalTeamName(event.target.value)}
+          onChange={(event) => {
+            setLocalTeamName(event.target.value);
+            onTeamNameChange?.(team[0], event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              onSaveAllTextFields?.();
+            }
+          }}
         />
         <p>Budget: ${currentBudget}</p>
         {rows.map((row, index) => (
@@ -332,6 +356,9 @@ describe('LeagueDetailPage', () => {
 
     const priceInputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
     fireEvent.change(priceInputs[0], { target: { value: '30' } });
+    await waitFor(() => {
+      expect(priceInputs[0]?.value).toBe('30');
+    });
     fireEvent.change(screen.getByDisplayValue('Alpha'), {
       target: { value: 'Gamma' },
     });
@@ -350,6 +377,39 @@ describe('LeagueDetailPage', () => {
     ]);
     expect(args.input.takenPlayers).toEqual([
       ['player-1', 'team-1', 'C-0', 30, ''],
+      ['player-2', 'team-2', 'C-0', 45, ''],
+    ]);
+  });
+
+  it('saves all edited team names when Enter is pressed in a team name field', async () => {
+    render(
+      <ChakraProvider>
+        <LeagueDetailPage leagueId="league-123" />
+      </ChakraProvider>,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('Alpha'), {
+      target: { value: 'Gamma' },
+    });
+    fireEvent.change(screen.getByDisplayValue('Beta'), {
+      target: { value: 'Delta' },
+    });
+    fireEvent.keyDown(screen.getByDisplayValue('Delta'), {
+      key: 'Enter',
+      code: 'Enter',
+    });
+
+    await waitFor(() => {
+      expect(upsertMutateAsyncMock).toHaveBeenCalledTimes(1);
+    });
+
+    const args = upsertMutateAsyncMock.mock.calls[0][0];
+    expect(args.input.teamsData).toEqual([
+      ['team-1', 'Gamma', 240],
+      ['team-2', 'Delta', 215],
+    ]);
+    expect(args.input.takenPlayers).toEqual([
+      ['player-1', 'team-1', 'C-0', 20, ''],
       ['player-2', 'team-2', 'C-0', 45, ''],
     ]);
   });
