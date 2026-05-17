@@ -49,6 +49,26 @@ function rowPrefix(mode: 'minorLeague' | 'taxiSquad'): string {
   return mode === 'minorLeague' ? 'MiLB' : 'TAXI';
 }
 
+function playerHasDebutKey(player: Player): boolean {
+  const record = player as unknown as Record<string, unknown>;
+  return (
+    'mlbDebutDate' in record ||
+    'mlb_debut_date' in record ||
+    'mlbDebut' in record ||
+    'mlb_debut' in record
+  );
+}
+
+function getPlayerMlbDebutDate(player: Player): unknown {
+  const record = player as unknown as Record<string, unknown>;
+  return (
+    record.mlbDebutDate ??
+    record.mlb_debut_date ??
+    record.mlbDebut ??
+    record.mlb_debut
+  );
+}
+
 function buildRows(
   mode: 'minorLeague' | 'taxiSquad',
   slotCount: number,
@@ -137,13 +157,21 @@ export default function SimpleTeamTable({
     return Math.max(0, startingBudget - extraSpend);
   }, [localRows, takenPlayers, startingBudget]);
 
-  const eligiblePlayers = useMemo(
-    () =>
-      mode === 'minorLeague'
-        ? players.filter((p) => p.depthChartStatus === 'minors')
-        : players,
-    [mode, players],
-  );
+  const eligiblePlayers = useMemo(() => {
+    if (mode !== 'minorLeague') return players;
+
+    // API payloads may or may not include depth chart status after recent changes.
+    // Prefer "no MLB debut date" when available; fall back to prior heuristics.
+    const hasDebutInfo = players.some(playerHasDebutKey);
+
+    if (hasDebutInfo) {
+      return players.filter((player) => !getPlayerMlbDebutDate(player));
+    }
+
+    return players.filter(
+      (player) => player.depthChartStatus === 'minors' || !player.league,
+    );
+  }, [mode, players]);
 
   function getUnavailableIds(currentRowIndex: number): Set<string> {
     const ids = new Set(leagueTakenPlayerIds);

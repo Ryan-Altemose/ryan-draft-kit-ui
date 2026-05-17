@@ -9,6 +9,7 @@ export type Player = {
   team: string;
   league?: string;
   depthChartStatus?: 'starter' | 'backup' | 'reserve' | 'minors';
+  mlbDebutDate?: string | null;
   injuryStatus?: string;
   active?: boolean;
   age?: number;
