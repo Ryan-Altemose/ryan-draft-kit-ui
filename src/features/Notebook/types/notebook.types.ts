@@ -3,8 +3,9 @@
 import type { BaseEntity } from '@/shared/types/api';
 
 export type PlayerStat = {
-  label: string;
-  value: string | number;
+  season: string; // e.g. "2023"
+  type: 'hitter' | 'pitcher';
+  data: Record<string, number | string | null | undefined>;
 };
 
 export type Player = {

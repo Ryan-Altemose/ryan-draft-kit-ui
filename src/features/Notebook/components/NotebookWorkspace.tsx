@@ -260,18 +260,22 @@ export default function NotebookWorkspace({
                 focusBorderColor="green.400"
               />
             ) : selectedPlayerName ? (
-              <Flex
-                direction="column"
+              <Box
+                display="grid"
+                gridTemplateColumns="1fr 1fr"
+                gridTemplateRows="auto 1fr"
                 gap={3}
                 h={`calc(${windowRect.height}px - 88px)`}
+                minH="140px"
               >
-                {/* Player info */}
+                {/* Top-left: Player info */}
                 <Box
                   borderWidth="1px"
                   borderColor="gray.200"
                   borderRadius="md"
                   bg="gray.50"
                   p={3}
+                  overflow="hidden"
                 >
                   <Flex align="center" justify="space-between" gap={3} mb={2}>
                     <Text fontSize="sm" fontWeight="semibold" color="gray.700">
@@ -311,13 +315,13 @@ export default function NotebookWorkspace({
                   </Box>
                 </Box>
 
-                {/* Season stats */}
+                {/* Top-right: Real stats */}
                 <Box
                   borderWidth="1px"
                   borderColor="gray.200"
                   borderRadius="md"
                   overflow="hidden"
-                  flexShrink={0}
+                  minH="0"
                 >
                   <Flex
                     px={3}
@@ -336,32 +340,69 @@ export default function NotebookWorkspace({
                       textTransform="uppercase"
                       letterSpacing="wide"
                     >
-                      Season Stats
+                      Stats
                     </Text>
                   </Flex>
                   {selectedPlayer?.stats?.length ? (
-                    <TableContainer>
-                      <Table size="sm">
-                        <Thead>
-                          <Tr>
-                            {selectedPlayer.stats.map((s) => (
-                              <Th key={s.label} isNumeric>
-                                {s.label}
-                              </Th>
-                            ))}
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          <Tr>
-                            {selectedPlayer.stats.map((s) => (
-                              <Td key={s.label} isNumeric>
-                                {s.value}
-                              </Td>
-                            ))}
-                          </Tr>
-                        </Tbody>
-                      </Table>
-                    </TableContainer>
+                    (() => {
+                      const seasons = [...selectedPlayer.stats].sort((a, b) =>
+                        String(b.season).localeCompare(String(a.season)),
+                      );
+
+                      const statKeys = Array.from(
+                        new Set(
+                          seasons.flatMap((s) => Object.keys(s.data ?? {})),
+                        ),
+                      ).sort();
+
+                      const headerLabel = (key: string) => key.toUpperCase();
+
+                      return (
+                        <TableContainer overflowY="auto" maxH="100%">
+                          <Table size="sm" variant="simple">
+                            <Thead
+                              position="sticky"
+                              top={0}
+                              bg="white"
+                              zIndex={1}
+                            >
+                              <Tr>
+                                <Th>Year</Th>
+                                {statKeys.map((key) => (
+                                  <Th key={key} isNumeric>
+                                    {headerLabel(key)}
+                                  </Th>
+                                ))}
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {seasons.map((seasonRow) => (
+                                <Tr
+                                  key={`${seasonRow.type}-${seasonRow.season}`}
+                                >
+                                  <Td>{seasonRow.season}</Td>
+                                  {statKeys.map((key) => {
+                                    const value = seasonRow.data?.[key];
+                                    const display =
+                                      value === undefined || value === null
+                                        ? '-'
+                                        : String(value);
+                                    return (
+                                      <Td
+                                        key={`${seasonRow.season}-${key}`}
+                                        isNumeric
+                                      >
+                                        {display}
+                                      </Td>
+                                    );
+                                  })}
+                                </Tr>
+                              ))}
+                            </Tbody>
+                          </Table>
+                        </TableContainer>
+                      );
+                    })()
                   ) : (
                     <Text fontSize="xs" color="gray.400" px={3} py={3}>
                       Stats not yet available
@@ -369,10 +410,97 @@ export default function NotebookWorkspace({
                   )}
                 </Box>
 
-                {/* Notes */}
+                {/* Bottom-left: Projections (placeholder) */}
+                <Box
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  borderRadius="md"
+                  overflow="hidden"
+                >
+                  <Flex
+                    px={3}
+                    py={2}
+                    bg="gray.50"
+                    borderBottomWidth="1px"
+                    borderColor="gray.200"
+                    align="center"
+                  >
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color="gray.600"
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                    >
+                      Projections
+                    </Text>
+                  </Flex>
+                  <TableContainer>
+                    <Table size="sm" variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Stat</Th>
+                          <Th isNumeric>Proj</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {(() => {
+                          const playerType =
+                            selectedPlayer?.playerType === 'pitcher'
+                              ? 'pitcher'
+                              : 'hitter';
+
+                          const relevantStats = (
+                            selectedPlayer?.stats ?? []
+                          ).filter((s) => s.type === playerType);
+
+                          const keysFromRealStats = Array.from(
+                            new Set(
+                              relevantStats.flatMap((s) =>
+                                Object.keys(s.data ?? {}),
+                              ),
+                            ),
+                          ).sort();
+
+                          const fallbackKeys =
+                            playerType === 'pitcher'
+                              ? [
+                                  'innings',
+                                  'strikeouts',
+                                  'wins',
+                                  'losses',
+                                  'saves',
+                                  'era',
+                                ]
+                              : ['ba', 'hr', 'rbi', 'walk', 'sb'];
+
+                          const projectionKeys =
+                            keysFromRealStats.length > 0
+                              ? keysFromRealStats
+                              : fallbackKeys;
+
+                          const headerLabel = (key: string) =>
+                            key.toUpperCase();
+
+                          return projectionKeys.map((key) => (
+                            <Tr key={key}>
+                              <Td>{headerLabel(key)}</Td>
+                              <Td isNumeric color="gray.400">
+                                -
+                              </Td>
+                            </Tr>
+                          ));
+                        })()}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Bottom-right: Notes */}
                 <Textarea
-                  flex="1"
-                  minH="80px"
+                  minH="0"
+                  h="100%"
+                  alignSelf="stretch"
                   resize="none"
                   value={selectedNotebookContent}
                   onChange={(event) =>
@@ -384,7 +512,7 @@ export default function NotebookWorkspace({
                   placeholder="Write notes here..."
                   focusBorderColor="green.400"
                 />
-              </Flex>
+              </Box>
             ) : null}
             <Box
               position="absolute"
