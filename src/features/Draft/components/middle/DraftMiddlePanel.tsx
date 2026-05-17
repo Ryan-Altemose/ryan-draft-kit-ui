@@ -67,6 +67,8 @@ export default function DraftMiddlePanel({
       <Box flex="1" overflow="hidden" p={4}>
         <ValuationSearch
           valuations={valuations}
+          takenPlayers={takenPlayers}
+          leagueType={leagueType}
           onPlayerClick={onValuationPlayerClick}
         />
       </Box>

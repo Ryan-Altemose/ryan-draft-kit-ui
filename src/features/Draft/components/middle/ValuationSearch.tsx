@@ -24,24 +24,29 @@ import {
 } from '@chakra-ui/react';
 import { usePlayers } from '@/shared/hooks/usePlayers';
 import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
+import type { TakenPlayer } from '@/features/Leagues/types/leagues.types';
 
 type SortKey = 'name' | 'value';
 type SortDir = 'asc' | 'desc' | null;
 
 type ValuationSearchProps = {
   valuations?: Record<string, number>;
+  takenPlayers?: TakenPlayer[];
+  leagueType?: 'MLB' | 'AL' | 'NL';
   onPlayerClick?: (player: NotebookPlayer) => void;
 };
 
 export default function ValuationSearch({
   valuations = {},
+  takenPlayers = [],
+  leagueType,
   onPlayerClick,
 }: ValuationSearchProps) {
   const { players: allPlayers, isLoading } = usePlayers();
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [sortKey, setSortKey] = useState<SortKey | null>('value');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const positions = useMemo(
     () => Array.from(new Set(allPlayers.flatMap((p) => p.positions))).sort(),
@@ -50,7 +55,12 @@ export default function ValuationSearch({
 
   const displayed = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
+    const takenIds = new Set(takenPlayers.map(([playerId]) => playerId));
     const filtered = allPlayers.filter((p) => {
+      if (takenIds.has(p._id)) return false;
+      if (leagueType && leagueType !== 'MLB' && p.league !== leagueType) {
+        return false;
+      }
       const matchesSearch =
         !normalized || p.name.toLowerCase().includes(normalized);
       const matchesPosition =
@@ -64,7 +74,13 @@ export default function ValuationSearch({
         if (sortKey === 'value') {
           const valA = valuations[a._id] ?? -Infinity;
           const valB = valuations[b._id] ?? -Infinity;
-          return sortDir === 'asc' ? valA - valB : valB - valA;
+          const cmp = sortDir === 'asc' ? valA - valB : valB - valA;
+          if (cmp !== 0) return cmp;
+
+          // Stable fallback when values are equal/undefined: last name sorting
+          const lastA = a.name.split(' ').pop() ?? '';
+          const lastB = b.name.split(' ').pop() ?? '';
+          return lastA.localeCompare(lastB);
         }
         if (sortKey === 'name') {
           const lastA = a.name.split(' ').pop() ?? '';
@@ -83,7 +99,16 @@ export default function ValuationSearch({
     }
 
     return filtered.slice(0, 50);
-  }, [searchTerm, selectedPositions, sortKey, sortDir, allPlayers, valuations]);
+  }, [
+    searchTerm,
+    selectedPositions,
+    sortKey,
+    sortDir,
+    allPlayers,
+    valuations,
+    takenPlayers,
+    leagueType,
+  ]);
 
   function handleHeaderClick(key: SortKey) {
     if (sortKey !== key) {
