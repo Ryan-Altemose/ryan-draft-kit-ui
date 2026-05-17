@@ -19,3 +19,13 @@ export type NotificationsResponse = {
   success: boolean;
   data: Notification[];
 };
+
+export type NotificationsErrorResponse = {
+  success: false;
+  message: string;
+  debug?: {
+    endpoint?: string;
+    upstreamUrl?: string;
+    upstreamStatus?: number;
+  };
+};

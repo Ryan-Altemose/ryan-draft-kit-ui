@@ -10,8 +10,10 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { isApiError } from '@/shared/utils/api-client';
 import { useNotifications } from './hooks/useNotifications';
 import { useDismissNotification } from './hooks/useDismissNotification';
+import type { NotificationsErrorResponse } from './types/notifications.types';
 
 function formatTimestamp(timestamp: string): string {
   const parsed = new Date(timestamp);
@@ -27,6 +29,12 @@ export default function NotificationsPage() {
   const notificationsQuery = useNotifications();
   const dismissMutation = useDismissNotification();
   const notifications = notificationsQuery.data?.data ?? [];
+  const errorPayload =
+    isApiError(notificationsQuery.error) &&
+    notificationsQuery.error.data &&
+    typeof notificationsQuery.error.data === 'object'
+      ? (notificationsQuery.error.data as NotificationsErrorResponse)
+      : null;
 
   return (
     <Box maxW="900px" mx="auto" px={6} py={10}>
@@ -46,21 +54,50 @@ export default function NotificationsPage() {
         ) : null}
 
         {notificationsQuery.isError ? (
-          <Text color="red.500">
-            {notificationsQuery.error instanceof Error
-              ? notificationsQuery.error.message
-              : 'Unable to load notifications.'}
-          </Text>
+          <Stack
+            spacing={2}
+            borderWidth="1px"
+            borderRadius="md"
+            p={4}
+            bg="red.50"
+            borderColor="red.200"
+          >
+            <Text color="red.600" fontWeight="semibold">
+              Unable to load notifications
+            </Text>
+            <Text color="red.500">
+              {notificationsQuery.error instanceof Error
+                ? notificationsQuery.error.message
+                : 'Unable to load notifications.'}
+            </Text>
+            {errorPayload?.debug?.endpoint ? (
+              <Text color="gray.700">
+                Endpoint: <Code>{errorPayload.debug.endpoint}</Code>
+              </Text>
+            ) : null}
+            {errorPayload?.debug?.upstreamUrl ? (
+              <Text color="gray.700">
+                Upstream: <Code>{errorPayload.debug.upstreamUrl}</Code>
+              </Text>
+            ) : null}
+            {typeof errorPayload?.debug?.upstreamStatus === 'number' ? (
+              <Text color="gray.700">
+                Upstream status:{' '}
+                <Code>{String(errorPayload.debug.upstreamStatus)}</Code>
+              </Text>
+            ) : null}
+            <Text color="gray.600" fontSize="sm">
+              If you just added this route locally, restart the backend that
+              serves saved notifications and try again.
+            </Text>
+          </Stack>
         ) : null}
 
         {!notificationsQuery.isLoading &&
         !notificationsQuery.isError &&
         notifications.length === 0 ? (
           <Box borderWidth="1px" borderRadius="md" p={5} bg="gray.50">
-            <Text color="gray.600">
-              No saved notifications yet. New broadcasts will appear here even
-              if you were offline when they were sent.
-            </Text>
+            <Text color="gray.600">No new notifications.</Text>
           </Box>
         ) : null}
 
