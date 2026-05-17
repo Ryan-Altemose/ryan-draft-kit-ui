@@ -1,8 +1,15 @@
-import { apiClient } from '@/shared/utils/api-client';
+import { localApiClient } from '@/shared/utils/api-client';
 import type { LeagueDraftsResponse } from '../types/leagueDrafts.types';
+
+type FetchLeagueDraftsOptions = {
+  endpointBase?: '/api/leagues' | '/api/draft-save/leagues';
+};
 
 export async function fetchLeagueDrafts(
   leagueId: string,
+  options?: FetchLeagueDraftsOptions,
 ): Promise<LeagueDraftsResponse> {
-  return apiClient.get(`/api/leagues/${leagueId}/drafts`);
+  return localApiClient.get(
+    `${options?.endpointBase ?? '/api/leagues'}/${leagueId}/drafts`,
+  );
 }
