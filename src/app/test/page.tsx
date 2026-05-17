@@ -62,6 +62,7 @@ export default function TestPage() {
   const [notificationError, setNotificationError] = useState<string | null>(
     null,
   );
+  const [isTimerPending, setIsTimerPending] = useState(false);
   const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
   const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
   const [mongoDataError, setMongoDataError] = useState<string | null>(null);
@@ -204,6 +205,40 @@ export default function TestPage() {
     }
   }
 
+  function handleScheduleTimerNotification() {
+    setNotificationError(null);
+
+    setIsTimerPending(true);
+    externalApiClient
+      .post<NotificationPushResponse>('/api/notifications/schedule', {
+        type: 'timer-test',
+        message: 'Button timer 10 sec',
+        delayMs: 10_000,
+        data: {
+          source: 'test-page',
+          mode: 'timer',
+          delaySeconds: 10,
+        },
+      })
+      .then((response) => {
+        if (!response.success) {
+          setNotificationError(
+            response.message ?? 'Failed to schedule timer notification.',
+          );
+        }
+      })
+      .catch((error) => {
+        setNotificationError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to schedule timer notification.',
+        );
+      })
+      .finally(() => {
+        setIsTimerPending(false);
+      });
+  }
+
   return (
     <Box maxW="900px" mx="auto" px={6} py={10}>
       <Stack spacing={5}>
@@ -231,6 +266,16 @@ export default function TestPage() {
           Send Test Notification
         </Button>
 
+        <Button
+          alignSelf="flex-start"
+          colorScheme="orange"
+          onClick={handleScheduleTimerNotification}
+          isLoading={isTimerPending}
+          loadingText="Waiting 10 sec"
+        >
+          Send Timer Signal
+        </Button>
+
         <Stack
           spacing={3}
           borderWidth="1px"
@@ -250,6 +295,9 @@ export default function TestPage() {
           ) : (
             <Text color="gray.500">No notification has been received yet.</Text>
           )}
+          {isTimerPending ? (
+            <Text color="gray.500">Timer signal queued for 10 seconds.</Text>
+          ) : null}
           {notificationError ? (
             <Text color="red.500">{notificationError}</Text>
           ) : null}
