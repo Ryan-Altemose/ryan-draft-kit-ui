@@ -71,8 +71,13 @@ vi.mock('@/features/Leagues/hooks/useLeague', () => ({
   useLeague: vi.fn(),
 }));
 
+vi.mock('@/features/Leagues/hooks/useLeagueDrafts', () => ({
+  useLeagueDrafts: vi.fn(),
+}));
+
 import { useLeagues } from '@/features/Leagues/hooks/useLeagues';
 import { useLeague } from '@/features/Leagues/hooks/useLeague';
+import { useLeagueDrafts } from '@/features/Leagues/hooks/useLeagueDrafts';
 
 function renderPanel() {
   render(
@@ -106,6 +111,11 @@ describe('DraftLeftPanel', () => {
             : undefined,
         }) as ReturnType<typeof useLeague>,
     );
+
+    vi.mocked(useLeagueDrafts).mockReturnValue({
+      data: { success: true, data: [] },
+      isLoading: false,
+    } as ReturnType<typeof useLeagueDrafts>);
   });
 
   it('renders the league dropdown with all leagues', () => {
