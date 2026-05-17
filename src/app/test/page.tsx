@@ -17,6 +17,7 @@ import type { League } from '@/features/Leagues/types/leagues.types';
 import { externalApiClient, localApiClient } from '@/shared/utils/api-client';
 import { useNotificationCenter } from '@/shared/hooks/useNotificationCenter';
 import type { Player } from '@/shared/hooks/usePlayers';
+import type { NotificationPushResponse } from '@/features/Notifications/types/notifications.types';
 
 const backendExample = `{
   "_id": "<mongo-league-id>",
@@ -55,16 +56,6 @@ type PlayersResponse = {
   pagination?: {
     totalPages?: number;
   };
-};
-
-type NotificationPushResponse = {
-  success: boolean;
-  data?: {
-    pushed: boolean;
-    clients: number;
-    type: string;
-  };
-  message?: string;
 };
 
 export default function TestPage() {
@@ -218,6 +209,14 @@ export default function TestPage() {
         setNotificationError(
           response.message ?? 'Failed to push notification.',
         );
+        return;
+      }
+
+      if (response.data?.archive && !response.data.archive.archived) {
+        setNotificationError(
+          response.data.archive.message ??
+            'Notification was pushed, but saving it failed.',
+        );
       }
     } catch (error) {
       setNotificationError(
@@ -273,6 +272,14 @@ export default function TestPage() {
           setNotificationError(
             response.message ?? 'Failed to schedule custom notification.',
           );
+          return;
+        }
+
+        if (response.data?.archive && !response.data.archive.archived) {
+          setNotificationError(
+            response.data.archive.message ??
+              'Notification was scheduled, but saving it failed.',
+          );
         }
 
         return;
@@ -290,6 +297,14 @@ export default function TestPage() {
       if (!response.success) {
         setNotificationError(
           response.message ?? 'Failed to send custom notification.',
+        );
+        return;
+      }
+
+      if (response.data?.archive && !response.data.archive.archived) {
+        setNotificationError(
+          response.data.archive.message ??
+            'Notification was pushed, but saving it failed.',
         );
       }
     } catch (error) {
@@ -322,6 +337,14 @@ export default function TestPage() {
         if (!response.success) {
           setNotificationError(
             response.message ?? 'Failed to schedule timer notification.',
+          );
+          return;
+        }
+
+        if (response.data?.archive && !response.data.archive.archived) {
+          setNotificationError(
+            response.data.archive.message ??
+              'Notification was scheduled, but saving it failed.',
           );
         }
       })
