@@ -59,7 +59,7 @@ export default function AlertWidget({
         </ModalBody>
         <ModalFooter pt={0}>
           <Button colorScheme="orange" onClick={onClose}>
-            Dismiss
+            Close
           </Button>
         </ModalFooter>
       </ModalContent>

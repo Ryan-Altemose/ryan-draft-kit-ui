@@ -13,6 +13,7 @@ export const QUERY_KEYS = {
   LEAGUE: 'league',
   NOTEBOOKS: 'notebooks',
   NOTEBOOK: 'notebook',
+  NOTIFICATIONS: 'notifications',
   CURRENT_USER_PROFILE: 'current-user-profile',
 } as const;
 

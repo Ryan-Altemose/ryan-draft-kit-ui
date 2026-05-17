@@ -43,6 +43,7 @@ export default function Navbar() {
             <>
               <NavbarButton label="My Leagues" href="/leagues" />
               <NavbarButton label="Notebook" href="/notebook" />
+              <NavbarButton label="Notifications" href="/notifications" />
               <NavbarButton label="Profile" href="/profile" />
               <Text alignSelf="center" color="green.700" fontSize="sm">
                 {currentUser?.name}
