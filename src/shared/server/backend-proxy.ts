@@ -42,6 +42,35 @@ function getDraftSaveBackendUrl(): string {
   return backendUrl.replace(/\/+$/, '');
 }
 
+function getExternalApiUrl(): string {
+  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error(
+      'API_URL or NEXT_PUBLIC_API_URL is required for external API proxying',
+    );
+  }
+
+  return apiUrl.replace(/\/+$/, '');
+}
+
+function getNotificationStreamBackendUrl(): string {
+  const apiUrl =
+    process.env.NOTIFICATION_STREAM_URL ||
+    process.env.API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  if (!apiUrl) {
+    throw new Error(
+      'NOTIFICATION_STREAM_URL, API_URL, NEXT_PUBLIC_API_URL, BACKEND_URL, or NEXT_PUBLIC_BACKEND_URL is required for notification stream proxying',
+    );
+  }
+
+  return apiUrl.replace(/\/+$/, '');
+}
+
 function buildHeaders(request: Request, backendUserId?: string): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -70,15 +99,34 @@ export async function proxyBackendStreamRequest(
   endpoint: string,
 ): Promise<NextResponse> {
   try {
-    const backendUrl = new URL(`${getBackendUrl()}${endpoint}`);
+    const backendUrl = new URL(
+      `${getNotificationStreamBackendUrl()}${endpoint}`,
+    );
     const incomingUrl = new URL(request.url);
     backendUrl.search = incomingUrl.search;
 
     const response = await fetch(backendUrl.toString(), {
       method: request.method,
-      headers: buildHeaders(request),
+      headers: {
+        ...buildHeaders(request),
+        Accept: 'text/event-stream',
+      },
       cache: 'no-store',
     });
+
+    if (!response.ok) {
+      const message = (await response.text()).trim();
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            message ||
+            `Notification stream upstream returned ${response.status}`,
+        },
+        { status: response.status },
+      );
+    }
 
     if (!response.body) {
       return NextResponse.json(
