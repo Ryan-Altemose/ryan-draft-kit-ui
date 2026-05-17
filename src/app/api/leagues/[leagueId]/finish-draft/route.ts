@@ -1,4 +1,4 @@
-import { proxyBackendRequest } from '@/shared/server/backend-proxy';
+import { proxyDraftSaveBackendRequest } from '@/shared/server/backend-proxy';
 
 type RouteContext = {
   params: Promise<{ leagueId: string }>;
@@ -6,5 +6,8 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   const { leagueId } = await context.params;
-  return proxyBackendRequest(request, `/api/leagues/${leagueId}/finish-draft`);
+  return proxyDraftSaveBackendRequest(
+    request,
+    `/api/leagues/${leagueId}/finish-draft`,
+  );
 }
