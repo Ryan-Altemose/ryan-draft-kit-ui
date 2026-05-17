@@ -17,6 +17,7 @@ import type { Player as DraftPlayer } from '@/shared/hooks/usePlayers';
 import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
 import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
 import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
+import { useLeagueValuations } from '@/features/Valuations/hooks/useLeagueValuations';
 import { toDraftLeagueInput } from './utils/draftState';
 import DraftLeftPanel from './components/left/DraftLeftPanel';
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
@@ -36,6 +37,7 @@ export default function DraftPage() {
   const [selectedDraft, setSelectedDraft] = useState<LeagueDraft | null>(null);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
+  const valuationsQuery = useLeagueValuations(selectedLeague);
   const {
     selectedNotebookId,
     selectedNotebookName,
@@ -56,11 +58,17 @@ export default function DraftPage() {
   function saveDraftLeague(league: League) {
     setSelectedLeague(league);
 
-    void upsertLeagueMutation.mutateAsync({
-      input: toDraftLeagueInput(league),
-      existingLeague: league,
-      endpoint: '/api/draft-save/leagues',
-    });
+    void upsertLeagueMutation
+      .mutateAsync({
+        input: toDraftLeagueInput(league),
+        existingLeague: league,
+        endpoint: '/api/draft-save/leagues',
+      })
+      .then(() => {
+        void queryClient.invalidateQueries({
+          queryKey: ['league-valuations', league._id],
+        });
+      });
   }
 
   function handleUndo() {
@@ -171,6 +179,7 @@ export default function DraftPage() {
             onUndo={handleUndo}
             onFinishDraft={handleFinishDraft}
             onValuationPlayerClick={openPlayerNotebook}
+            valuations={valuationsQuery.data ?? {}}
             readOnly={Boolean(selectedDraft)}
           />
         </Box>
