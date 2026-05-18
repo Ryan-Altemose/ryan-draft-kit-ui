@@ -8,6 +8,7 @@ import type {
   TakenPlayer,
 } from '@/features/Leagues/types/leagues.types';
 import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
+import type { PlayerValuation } from '@/features/Valuations/types/valuations.types';
 import DraftBoard from './DraftBoard';
 import ValuationSearch from './ValuationSearch';
 
@@ -24,7 +25,10 @@ type DraftMiddlePanelProps = {
   onFinishDraft?: (name: string) => void | Promise<void>;
   onValuationPlayerClick?: (player: NotebookPlayer) => void;
   valuations?: Record<string, number>;
+  previewRows?: PlayerValuation[];
   isLoadingValuations?: boolean;
+  isLoadingValuationPreview?: boolean;
+  showPreviewFirst?: boolean;
   readOnly?: boolean;
 };
 
@@ -41,7 +45,10 @@ export default function DraftMiddlePanel({
   onFinishDraft,
   onValuationPlayerClick,
   valuations,
+  previewRows,
   isLoadingValuations,
+  isLoadingValuationPreview,
+  showPreviewFirst,
   readOnly = false,
 }: DraftMiddlePanelProps) {
   return (
@@ -69,7 +76,10 @@ export default function DraftMiddlePanel({
       <Box flex="1" overflow="hidden" p={4}>
         <ValuationSearch
           valuations={valuations}
+          previewRows={previewRows}
           isLoadingValuations={isLoadingValuations}
+          isLoadingValuationPreview={isLoadingValuationPreview}
+          showPreviewFirst={showPreviewFirst}
           takenPlayers={takenPlayers}
           leagueType={leagueType}
           onPlayerClick={onValuationPlayerClick}

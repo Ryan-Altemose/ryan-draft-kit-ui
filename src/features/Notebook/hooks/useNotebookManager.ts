@@ -336,7 +336,7 @@ export function useNotebookManager() {
         if (active && response.data) {
           setSelectedPlayer((current) =>
             current?._id === response.data._id
-              ? { ...current, stats: response.data.stats ?? [] }
+              ? { ...current, ...response.data }
               : current,
           );
         }

@@ -58,7 +58,6 @@ export default function Navbar() {
 
         <Flex gap={3}>
           <NavbarButton label="Stats" href="/stats" />
-          <NavbarButton label="Projections" href="/projections" />
           {isAuthenticated ? (
             <>
               <NavbarButton label="My Leagues" href="/leagues" />
