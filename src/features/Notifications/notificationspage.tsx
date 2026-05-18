@@ -25,54 +25,6 @@ function formatTimestamp(timestamp: string): string {
   return parsed.toLocaleString();
 }
 
-function stripSource(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(stripSource);
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([key]) => key !== 'source')
-        .map(([key, nestedValue]) => [key, stripSource(nestedValue)]),
-    );
-  }
-
-  return value;
-}
-
-function getRenderableData(
-  data: Record<string, unknown> | null | undefined,
-): Record<string, unknown> | null {
-  if (!data) {
-    return null;
-  }
-
-  const sanitized = stripSource(data);
-  if (
-    !sanitized ||
-    typeof sanitized !== 'object' ||
-    Array.isArray(sanitized) ||
-    Object.keys(sanitized).length === 0
-  ) {
-    return null;
-  }
-
-  return sanitized as Record<string, unknown>;
-}
-
-function formatNotificationData(
-  data: Record<string, unknown> | null | undefined,
-): string | null {
-  const sanitizedData = getRenderableData(data);
-
-  if (!sanitizedData) {
-    return null;
-  }
-
-  return JSON.stringify(sanitizedData, null, 2);
-}
-
 export default function NotificationsPage() {
   const notificationsQuery = useNotifications();
   const dismissMutation = useDismissNotification();
@@ -151,8 +103,6 @@ export default function NotificationsPage() {
 
         <Stack spacing={4}>
           {notifications.map((notification) => {
-            const renderedData = formatNotificationData(notification.data);
-
             return (
               <Box
                 key={notification._id}
@@ -175,11 +125,6 @@ export default function NotificationsPage() {
                       </Text>
                     </Flex>
                     <Text color="gray.800">{notification.message}</Text>
-                    {renderedData ? (
-                      <Code whiteSpace="pre-wrap" display="block" p={3}>
-                        {renderedData}
-                      </Code>
-                    ) : null}
                   </Stack>
 
                   <Button
