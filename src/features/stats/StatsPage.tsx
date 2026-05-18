@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Badge,
   Box,
   Button,
   Flex,
@@ -21,7 +20,6 @@ import {
   Table,
   TableContainer,
   Tbody,
-  Td,
   Text,
   Th,
   Thead,
@@ -42,6 +40,55 @@ const DEPTH_COLORS: Record<string, string> = {
   reserve: 'orange',
   minors: 'gray',
 };
+
+const BADGE_COLORS: Record<string, { bg: string; color: string }> = {
+  green: { bg: '#C6F6D5', color: '#276749' },
+  red: { bg: '#FED7D7', color: '#9B2C2C' },
+  blue: { bg: '#BEE3F8', color: '#2A4365' },
+  orange: { bg: '#FEEBC8', color: '#7B341E' },
+  gray: { bg: '#EDF2F7', color: '#4A5568' },
+};
+
+const ROW_CSS = `
+  .stats-tbody tr { cursor: pointer; }
+  .stats-tbody tr:hover td { background-color: #f0fff4; }
+  .stats-tbody td {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    line-height: 1rem;
+    border-bottom: 1px solid #EDF2F7;
+    vertical-align: middle;
+  }
+  .stats-tbody td.num { text-align: right; }
+  .stats-tbody td.nowrap { white-space: nowrap; }
+  .stats-tbody td.bold { font-weight: 500; }
+`;
+
+function NativeBadge({
+  colorScheme,
+  children,
+}: {
+  colorScheme: string;
+  children: React.ReactNode;
+}) {
+  const { bg, color } = BADGE_COLORS[colorScheme] ?? BADGE_COLORS.gray;
+  return (
+    <span
+      style={{
+        background: bg,
+        color,
+        padding: '0 6px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        fontWeight: 700,
+        lineHeight: '20px',
+        display: 'inline-block',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 const HITTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'DH'];
 const PITCHER_POSITIONS = ['SP', 'RP'];
@@ -295,6 +342,7 @@ export default function StatsPage() {
 
   return (
     <>
+      <style>{ROW_CSS}</style>
       <Box p={8}>
         <Flex align="center" justify="space-between" mb={6} wrap="wrap" gap={4}>
           <Heading>Player Stats</Heading>
@@ -442,7 +490,7 @@ export default function StatsPage() {
                       />
                     </Tr>
                   </Thead>
-                  <Tbody>
+                  <Tbody className="stats-tbody">
                     {hitters.map((player) => {
                       const stat = player.stats?.find(
                         (s) => s.season === season && s.type === 'hitter',
@@ -450,13 +498,11 @@ export default function StatsPage() {
                       const data =
                         stat?.type === 'hitter' ? stat.data : undefined;
                       return (
-                        <Tr
+                        <tr
                           key={player._id}
                           onClick={() => handlePlayerClick(player)}
-                          cursor="pointer"
-                          _hover={{ bg: 'green.100' }}
                         >
-                          <Td fontWeight="medium" whiteSpace="nowrap">
+                          <td className="bold nowrap">
                             {player.injuryNote ? (
                               <Tooltip
                                 label={player.injuryNote}
@@ -469,45 +515,43 @@ export default function StatsPage() {
                             ) : (
                               player.name
                             )}
-                          </Td>
-                          <Td>{player.team}</Td>
-                          <Td whiteSpace="nowrap">
+                          </td>
+                          <td>{player.team}</td>
+                          <td className="nowrap">
                             {player.positions.join(', ')}
-                          </Td>
-                          <Td isNumeric>{player.age ?? '-'}</Td>
-                          <Td>
-                            <Badge
+                          </td>
+                          <td className="num">{player.age ?? '-'}</td>
+                          <td>
+                            <NativeBadge
                               colorScheme={
                                 player.injuryStatus === 'active'
                                   ? 'green'
                                   : 'red'
                               }
-                              fontSize="xs"
                             >
                               {player.injuryStatus}
-                            </Badge>
-                          </Td>
-                          <Td>
+                            </NativeBadge>
+                          </td>
+                          <td>
                             {player.depthChartStatus ? (
-                              <Badge
+                              <NativeBadge
                                 colorScheme={
                                   DEPTH_COLORS[player.depthChartStatus] ??
                                   'gray'
                                 }
-                                fontSize="xs"
                               >
                                 {player.depthChartStatus}
-                              </Badge>
+                              </NativeBadge>
                             ) : (
                               '-'
                             )}
-                          </Td>
-                          <Td isNumeric>{data?.ba?.toFixed(3) ?? '-'}</Td>
-                          <Td isNumeric>{data?.hr ?? '-'}</Td>
-                          <Td isNumeric>{data?.rbi ?? '-'}</Td>
-                          <Td isNumeric>{data?.walk ?? '-'}</Td>
-                          <Td isNumeric>{data?.sb ?? '-'}</Td>
-                        </Tr>
+                          </td>
+                          <td className="num">{data?.ba?.toFixed(3) ?? '-'}</td>
+                          <td className="num">{data?.hr ?? '-'}</td>
+                          <td className="num">{data?.rbi ?? '-'}</td>
+                          <td className="num">{data?.walk ?? '-'}</td>
+                          <td className="num">{data?.sb ?? '-'}</td>
+                        </tr>
                       );
                     })}
                   </Tbody>
@@ -644,7 +688,7 @@ export default function StatsPage() {
                       />
                     </Tr>
                   </Thead>
-                  <Tbody>
+                  <Tbody className="stats-tbody">
                     {pitchers.map((player) => {
                       const stat = player.stats?.find(
                         (s) => s.season === season && s.type === 'pitcher',
@@ -652,13 +696,11 @@ export default function StatsPage() {
                       const data =
                         stat?.type === 'pitcher' ? stat.data : undefined;
                       return (
-                        <Tr
+                        <tr
                           key={player._id}
                           onClick={() => handlePlayerClick(player)}
-                          cursor="pointer"
-                          _hover={{ bg: 'green.100' }}
                         >
-                          <Td fontWeight="medium" whiteSpace="nowrap">
+                          <td className="bold nowrap">
                             {player.injuryNote ? (
                               <Tooltip
                                 label={player.injuryNote}
@@ -671,46 +713,48 @@ export default function StatsPage() {
                             ) : (
                               player.name
                             )}
-                          </Td>
-                          <Td>{player.team}</Td>
-                          <Td whiteSpace="nowrap">
+                          </td>
+                          <td>{player.team}</td>
+                          <td className="nowrap">
                             {player.positions.join(', ')}
-                          </Td>
-                          <Td isNumeric>{player.age ?? '-'}</Td>
-                          <Td>
-                            <Badge
+                          </td>
+                          <td className="num">{player.age ?? '-'}</td>
+                          <td>
+                            <NativeBadge
                               colorScheme={
                                 player.injuryStatus === 'active'
                                   ? 'green'
                                   : 'red'
                               }
-                              fontSize="xs"
                             >
                               {player.injuryStatus}
-                            </Badge>
-                          </Td>
-                          <Td>
+                            </NativeBadge>
+                          </td>
+                          <td>
                             {player.depthChartStatus ? (
-                              <Badge
+                              <NativeBadge
                                 colorScheme={
                                   DEPTH_COLORS[player.depthChartStatus] ??
                                   'gray'
                                 }
-                                fontSize="xs"
                               >
                                 {player.depthChartStatus}
-                              </Badge>
+                              </NativeBadge>
                             ) : (
                               '-'
                             )}
-                          </Td>
-                          <Td isNumeric>{data?.era?.toFixed(2) ?? '-'}</Td>
-                          <Td isNumeric>{data?.wins ?? '-'}</Td>
-                          <Td isNumeric>{data?.losses ?? '-'}</Td>
-                          <Td isNumeric>{data?.saves ?? '-'}</Td>
-                          <Td isNumeric>{data?.strikeouts ?? '-'}</Td>
-                          <Td isNumeric>{data?.innings?.toFixed(1) ?? '-'}</Td>
-                        </Tr>
+                          </td>
+                          <td className="num">
+                            {data?.era?.toFixed(2) ?? '-'}
+                          </td>
+                          <td className="num">{data?.wins ?? '-'}</td>
+                          <td className="num">{data?.losses ?? '-'}</td>
+                          <td className="num">{data?.saves ?? '-'}</td>
+                          <td className="num">{data?.strikeouts ?? '-'}</td>
+                          <td className="num">
+                            {data?.innings?.toFixed(1) ?? '-'}
+                          </td>
+                        </tr>
                       );
                     })}
                   </Tbody>
