@@ -11,13 +11,6 @@ const features = [
     href: '/draft',
   },
   {
-    title: 'Mock Draft',
-    description:
-      'Simulate through mock drafts to prepare for your real draft day',
-    buttonText: 'View Mock Draft',
-    href: '/mock-draft',
-  },
-  {
     title: 'Depth Charts',
     description: 'View full depth charts across MLB',
     buttonText: 'View Depth Charts',
