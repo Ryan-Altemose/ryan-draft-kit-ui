@@ -14,6 +14,7 @@ const PLAYERS = [
     positions: ['OF'],
     injuryStatus: 'active',
     league: 'AL',
+    playerType: 'hitter',
   },
   {
     _id: 'p2',
@@ -22,6 +23,7 @@ const PLAYERS = [
     positions: ['1B'],
     injuryStatus: 'active',
     league: 'NL',
+    playerType: 'hitter',
   },
   {
     _id: 'p3',
@@ -30,6 +32,7 @@ const PLAYERS = [
     positions: ['OF'],
     injuryStatus: 'active',
     league: 'AL',
+    playerType: 'hitter',
   },
   {
     _id: 'p4',
@@ -38,13 +41,56 @@ const PLAYERS = [
     positions: ['3B'],
     injuryStatus: 'active',
     league: 'AL',
+    playerType: 'hitter',
+  },
+];
+
+const PREVIEW_ROWS = [
+  {
+    playerId: 'p1',
+    name: 'Aaron Judge',
+    team: 'NYY',
+    positions: ['OF'],
+    injuryStatus: 'active',
+    playerType: 'hitter' as const,
+    dollarValue: 30,
+  },
+  {
+    playerId: 'p3',
+    name: 'Mike Trout',
+    team: 'LAA',
+    positions: ['OF'],
+    injuryStatus: 'active',
+    playerType: 'hitter' as const,
+    dollarValue: 25,
+  },
+  {
+    playerId: 'p4',
+    name: 'Jose Ramirez',
+    team: 'CLE',
+    positions: ['3B'],
+    injuryStatus: 'active',
+    playerType: 'hitter' as const,
+    dollarValue: 15,
+  },
+  {
+    playerId: 'p2',
+    name: 'Freddie Freeman',
+    team: 'LAD',
+    positions: ['1B'],
+    injuryStatus: 'active',
+    playerType: 'hitter' as const,
+    dollarValue: 10,
   },
 ];
 
 async function renderAndWait() {
   render(
     <ChakraProvider>
-      <ValuationSearch />
+      <ValuationSearch
+        valuations={{ p1: 30, p2: 10, p3: 25, p4: 15 }}
+        previewRows={PREVIEW_ROWS}
+      />
     </ChakraProvider>,
   );
   await screen.findByText('Freddie Freeman', undefined, { timeout: 3000 });
@@ -148,7 +194,10 @@ describe('ValuationSearch', () => {
     it('places valued players above unvalued ones when sorted by $ Value descending', async () => {
       render(
         <ChakraProvider>
-          <ValuationSearch valuations={{ p1: 30, p3: 25 }} />
+          <ValuationSearch
+            valuations={{ p1: 30, p2: 10, p3: 25, p4: 15 }}
+            previewRows={PREVIEW_ROWS}
+          />
         </ChakraProvider>,
       );
       await screen.findByText('Freddie Freeman', undefined, { timeout: 3000 });
@@ -164,17 +213,25 @@ describe('ValuationSearch', () => {
       const onPlayerClick = vi.fn();
       render(
         <ChakraProvider>
-          <ValuationSearch onPlayerClick={onPlayerClick} />
+          <ValuationSearch
+            valuations={{ p1: 30, p2: 10, p3: 25, p4: 15 }}
+            previewRows={PREVIEW_ROWS}
+            onPlayerClick={onPlayerClick}
+          />
         </ChakraProvider>,
       );
       await screen.findByText('Freddie Freeman', undefined, { timeout: 3000 });
 
-      // First row after load is Freeman (alphabetically first by last name)
+      // Default sort is by dollar value descending, so Judge is first.
       const rows = screen.getAllByRole('row').slice(1);
       fireEvent.click(rows[0]);
 
       expect(onPlayerClick).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Freddie Freeman' }),
+        expect.objectContaining({
+          _id: 'p1',
+          name: 'Aaron Judge',
+          team: 'NYY',
+        }),
       );
     });
   });
@@ -183,7 +240,11 @@ describe('ValuationSearch', () => {
     it('hides taken players', async () => {
       render(
         <ChakraProvider>
-          <ValuationSearch takenPlayers={[['p2', 't1', 'BENCH', 1, '']]} />
+          <ValuationSearch
+            valuations={{ p1: 30, p2: 10, p3: 25, p4: 15 }}
+            previewRows={PREVIEW_ROWS}
+            takenPlayers={[['p2', 't1', 'BENCH', 1, '']]}
+          />
         </ChakraProvider>,
       );
       await screen.findByText('Aaron Judge', undefined, { timeout: 3000 });
@@ -195,7 +256,11 @@ describe('ValuationSearch', () => {
     it('filters by leagueType (AL)', async () => {
       render(
         <ChakraProvider>
-          <ValuationSearch leagueType="AL" />
+          <ValuationSearch
+            valuations={{ p1: 30, p2: 10, p3: 25, p4: 15 }}
+            previewRows={PREVIEW_ROWS}
+            leagueType="AL"
+          />
         </ChakraProvider>,
       );
       await screen.findByText('Aaron Judge', undefined, { timeout: 3000 });
