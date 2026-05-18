@@ -250,7 +250,7 @@ export default function DraftRightPanel({
                 const [teamId] = team;
                 return (
                   <LeagueTeamTable
-                    key={teamId}
+                    key={`${league._id}-main-${teamId}`}
                     team={team}
                     rosterSlots={league.rosterSlots}
                     allTakenPlayers={takenPlayers}
@@ -274,7 +274,7 @@ export default function DraftRightPanel({
                 const [teamId] = team;
                 return (
                   <SimpleTeamTable
-                    key={teamId}
+                    key={`${league._id}-${rosterView}-${teamId}`}
                     team={team}
                     mode={rosterView}
                     slotCount={
