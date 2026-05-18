@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Code,
+  Flex,
   Heading,
   Input,
   Select,
@@ -58,6 +59,18 @@ type PlayersResponse = {
   };
 };
 
+type FakePersonActionResponse = {
+  success: boolean;
+  data?: {
+    action?: string;
+    exists?: boolean;
+    existed?: boolean;
+    notificationTriggered?: boolean;
+    player?: Player | null;
+  };
+  message?: string;
+};
+
 export default function TestPage() {
   const [showBackendLocation, setShowBackendLocation] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(
@@ -69,11 +82,18 @@ export default function TestPage() {
     'Custom notification from /test',
   );
   const [customNotificationData, setCustomNotificationData] = useState(
-    '{\n  "source": "test-page"\n}',
+    '{\n  "player": "Fake Player",\n  "status": "injured"\n}',
   );
   const [notificationDelaySeconds, setNotificationDelaySeconds] = useState('0');
   const [isSendingCustomNotification, setIsSendingCustomNotification] =
     useState(false);
+  const [fakePersonResult, setFakePersonResult] = useState<string | null>(null);
+  const [fakePersonRecord, setFakePersonRecord] = useState<Player | null>(null);
+  const [isCheckingFakePerson, setIsCheckingFakePerson] = useState(false);
+  const [isAddingFakePerson, setIsAddingFakePerson] = useState(false);
+  const [isRemovingFakePerson, setIsRemovingFakePerson] = useState(false);
+  const [isHealingFakePerson, setIsHealingFakePerson] = useState(false);
+  const [isInjuringFakePerson, setIsInjuringFakePerson] = useState(false);
   const [isTimerPending, setIsTimerPending] = useState(false);
   const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
   const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
@@ -200,7 +220,6 @@ export default function TestPage() {
           data: {
             player: 'Fake Player',
             status: 'injured',
-            source: 'test-page',
           },
         },
       );
@@ -318,6 +337,170 @@ export default function TestPage() {
     }
   }
 
+  async function handleCheckFakePerson() {
+    try {
+      setNotificationError(null);
+      setFakePersonResult(null);
+      setIsCheckingFakePerson(true);
+
+      const response = await externalApiClient.get<FakePersonActionResponse>(
+        '/api/players/test/fake-person',
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to check Fake Person in the database.',
+        );
+        return;
+      }
+
+      setFakePersonRecord(response.data?.player ?? null);
+      setFakePersonResult(
+        response.data?.exists
+          ? 'Fake Person is currently in the database.'
+          : 'Fake Person is not currently in the database.',
+      );
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to check Fake Person in the database.',
+      );
+    } finally {
+      setIsCheckingFakePerson(false);
+    }
+  }
+
+  async function handleAddFakePerson() {
+    try {
+      setNotificationError(null);
+      setFakePersonResult(null);
+      setIsAddingFakePerson(true);
+
+      const response = await externalApiClient.post<FakePersonActionResponse>(
+        '/api/players/test/fake-person',
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to add Fake Person to the database.',
+        );
+        return;
+      }
+
+      setFakePersonRecord(response.data?.player ?? null);
+      setFakePersonResult(
+        'Fake Person was added to the database with fresh random stats.',
+      );
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to add Fake Person to the database.',
+      );
+    } finally {
+      setIsAddingFakePerson(false);
+    }
+  }
+
+  async function handleRemoveFakePerson() {
+    try {
+      setNotificationError(null);
+      setFakePersonResult(null);
+      setIsRemovingFakePerson(true);
+
+      const response = await externalApiClient.delete<FakePersonActionResponse>(
+        '/api/players/test/fake-person',
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to remove Fake Person from the database.',
+        );
+        return;
+      }
+
+      setFakePersonRecord(null);
+      setFakePersonResult(
+        response.data?.existed
+          ? 'Fake Person was removed from the database.'
+          : 'Fake Person was already missing from the database.',
+      );
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to remove Fake Person from the database.',
+      );
+    } finally {
+      setIsRemovingFakePerson(false);
+    }
+  }
+
+  async function handleHealFakePerson() {
+    try {
+      setNotificationError(null);
+      setFakePersonResult(null);
+      setIsHealingFakePerson(true);
+
+      const response = await externalApiClient.post<FakePersonActionResponse>(
+        '/api/players/test/fake-person/healthy',
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to mark Fake Person healthy.',
+        );
+        return;
+      }
+
+      setFakePersonRecord(response.data?.player ?? null);
+      setFakePersonResult('Fake Person is now marked healthy.');
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to mark Fake Person healthy.',
+      );
+    } finally {
+      setIsHealingFakePerson(false);
+    }
+  }
+
+  async function handleInjureFakePerson() {
+    try {
+      setNotificationError(null);
+      setFakePersonResult(null);
+      setIsInjuringFakePerson(true);
+
+      const response = await externalApiClient.post<FakePersonActionResponse>(
+        '/api/players/test/fake-person/injured',
+      );
+
+      if (!response.success) {
+        setNotificationError(
+          response.message ?? 'Failed to mark Fake Person injured.',
+        );
+        return;
+      }
+
+      setFakePersonRecord(response.data?.player ?? null);
+      setFakePersonResult(
+        response.data?.notificationTriggered
+          ? 'Fake Person is now injured and a notification was triggered naturally.'
+          : 'Fake Person is already marked injured, so no new notification was sent.',
+      );
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to mark Fake Person injured.',
+      );
+    } finally {
+      setIsInjuringFakePerson(false);
+    }
+  }
+
   function handleScheduleTimerNotification() {
     setNotificationError(null);
 
@@ -328,7 +511,6 @@ export default function TestPage() {
         message: 'Button timer 10 sec',
         delayMs: 10_000,
         data: {
-          source: 'test-page',
           mode: 'timer',
           delaySeconds: 10,
         },
@@ -434,7 +616,7 @@ export default function TestPage() {
             minH="160px"
             value={customNotificationData}
             onChange={(event) => setCustomNotificationData(event.target.value)}
-            placeholder='{"source":"test-page"}'
+            placeholder='{"player":"Fake Player","status":"injured"}'
           />
           <Button
             alignSelf="flex-start"
@@ -595,6 +777,68 @@ export default function TestPage() {
             </Code>
           </Box>
         ) : null}
+
+        <Stack
+          spacing={3}
+          borderWidth="1px"
+          borderRadius="md"
+          p={4}
+          bg="gray.50"
+        >
+          <Text fontWeight="semibold">Fake Person Injury Tester</Text>
+          <Text color="gray.600" fontSize="sm">
+            These buttons operate on a dedicated test player in the API database
+            and let you trigger an injury notification through a normal player
+            update.
+          </Text>
+          <Flex gap={3} wrap="wrap">
+            <Button
+              colorScheme="blue"
+              onClick={handleAddFakePerson}
+              isLoading={isAddingFakePerson}
+            >
+              Add Fake Person
+            </Button>
+            <Button
+              colorScheme="teal"
+              variant="outline"
+              onClick={handleCheckFakePerson}
+              isLoading={isCheckingFakePerson}
+            >
+              Check If In DB
+            </Button>
+            <Button
+              colorScheme="red"
+              variant="outline"
+              onClick={handleRemoveFakePerson}
+              isLoading={isRemovingFakePerson}
+            >
+              Remove From DB
+            </Button>
+            <Button
+              colorScheme="green"
+              onClick={handleHealFakePerson}
+              isLoading={isHealingFakePerson}
+            >
+              He Is Healthy
+            </Button>
+            <Button
+              colorScheme="orange"
+              onClick={handleInjureFakePerson}
+              isLoading={isInjuringFakePerson}
+            >
+              He Is Now Injured
+            </Button>
+          </Flex>
+          {fakePersonResult ? (
+            <Text color="green.700">{fakePersonResult}</Text>
+          ) : null}
+          {fakePersonRecord ? (
+            <Code whiteSpace="pre-wrap" display="block" p={3}>
+              {JSON.stringify(fakePersonRecord, null, 2)}
+            </Code>
+          ) : null}
+        </Stack>
       </Stack>
     </Box>
   );

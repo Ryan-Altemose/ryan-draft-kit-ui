@@ -102,49 +102,46 @@ export default function NotificationsPage() {
         ) : null}
 
         <Stack spacing={4}>
-          {notifications.map((notification) => (
-            <Box
-              key={notification._id}
-              borderWidth="1px"
-              borderRadius="md"
-              p={5}
-              bg="white"
-            >
-              <Flex
-                gap={4}
-                justify="space-between"
-                align={{ base: 'flex-start', md: 'center' }}
-                direction={{ base: 'column', md: 'row' }}
+          {notifications.map((notification) => {
+            return (
+              <Box
+                key={notification._id}
+                borderWidth="1px"
+                borderRadius="md"
+                p={5}
+                bg="white"
               >
-                <Stack spacing={2} flex="1">
-                  <Flex gap={2} wrap="wrap" align="center">
-                    <Code>{notification.type}</Code>
-                    <Text fontSize="sm" color="gray.500">
-                      {formatTimestamp(notification.timestamp)}
-                    </Text>
-                  </Flex>
-                  <Text color="gray.800">{notification.message}</Text>
-                  {Object.keys(notification.data ?? {}).length > 0 ? (
-                    <Code whiteSpace="pre-wrap" display="block" p={3}>
-                      {JSON.stringify(notification.data, null, 2)}
-                    </Code>
-                  ) : null}
-                </Stack>
-
-                <Button
-                  colorScheme="red"
-                  variant="outline"
-                  isLoading={
-                    dismissMutation.isPending &&
-                    dismissMutation.variables === notification._id
-                  }
-                  onClick={() => dismissMutation.mutate(notification._id)}
+                <Flex
+                  gap={4}
+                  justify="space-between"
+                  align={{ base: 'flex-start', md: 'center' }}
+                  direction={{ base: 'column', md: 'row' }}
                 >
-                  Delete
-                </Button>
-              </Flex>
-            </Box>
-          ))}
+                  <Stack spacing={2} flex="1">
+                    <Flex gap={2} wrap="wrap" align="center">
+                      <Code>{notification.type}</Code>
+                      <Text fontSize="sm" color="gray.500">
+                        {formatTimestamp(notification.timestamp)}
+                      </Text>
+                    </Flex>
+                    <Text color="gray.800">{notification.message}</Text>
+                  </Stack>
+
+                  <Button
+                    colorScheme="red"
+                    variant="outline"
+                    isLoading={
+                      dismissMutation.isPending &&
+                      dismissMutation.variables === notification._id
+                    }
+                    onClick={() => dismissMutation.mutate(notification._id)}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              </Box>
+            );
+          })}
         </Stack>
       </Stack>
     </Box>
