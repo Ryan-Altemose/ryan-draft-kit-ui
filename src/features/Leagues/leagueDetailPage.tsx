@@ -64,13 +64,18 @@ function buildDisplayTeams(
 }
 
 export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
-  const { data, isLoading, error } = useLeague(leagueId);
+  const { data, isLoading, error } = useLeague(leagueId, {
+    endpointBase: '/api/draft-save/leagues',
+    queryKeyPrefix: 'draft-save-league',
+  });
   const router = useRouter();
   const editModal = useDisclosure();
   const deleteConfirm = useDisclosure();
   const compareModal = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const deleteLeagueMutation = useDeleteLeague();
+  const deleteLeagueMutation = useDeleteLeague({
+    endpoint: '/api/draft-save/leagues',
+  });
   const upsertLeagueMutation = useUpsertLeague();
   const [editedTeams, setEditedTeams] = useState<LeagueTeam[]>([]);
   const [editedTakenPlayers, setEditedTakenPlayers] = useState<TakenPlayer[]>(
@@ -247,6 +252,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
           teamsData: nextTeams,
         },
         existingLeague: currentLeague,
+        endpoint: '/api/draft-save/leagues',
       });
       if (savedTeamIds.length > 0) {
         const token = Date.now();
@@ -487,7 +493,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                   if (rosterView === 'minorLeague') {
                     return (
                       <SimpleTeamTable
-                        key={teamId}
+                        key={`${league._id}-minorLeague-${teamId}`}
                         team={team}
                         mode="minorLeague"
                         slotCount={league.minorLeagueSlotsPerTeam ?? 0}
@@ -518,7 +524,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                   if (rosterView === 'taxiSquad') {
                     return (
                       <SimpleTeamTable
-                        key={teamId}
+                        key={`${league._id}-taxiSquad-${teamId}`}
                         team={team}
                         mode="taxiSquad"
                         slotCount={league.taxiSquadPlayersPerTeam ?? 0}
@@ -548,7 +554,7 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
 
                   return (
                     <LeagueTeamTable
-                      key={teamId}
+                      key={`${league._id}-main-${teamId}`}
                       team={team}
                       rosterSlots={league.rosterSlots}
                       allTakenPlayers={editedTakenPlayers}

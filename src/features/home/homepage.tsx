@@ -11,13 +11,6 @@ const features = [
     href: '/draft',
   },
   {
-    title: 'Player Rankings',
-    description:
-      'View player rankings to inform your draft strategy and decisions',
-    buttonText: 'View Rankings',
-    href: '/rankings',
-  },
-  {
     title: 'Mock Draft',
     description:
       'Simulate through mock drafts to prepare for your real draft day',

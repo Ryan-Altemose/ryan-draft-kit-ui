@@ -16,6 +16,8 @@ export type Player = {
   playerType?: string;
   league?: string;
   injuryStatus: string;
+  depthChartStatus?: 'starter' | 'backup' | 'reserve' | 'minors';
+  depthChartOrder?: number;
   active?: boolean;
   age?: number;
   batSide?: string;

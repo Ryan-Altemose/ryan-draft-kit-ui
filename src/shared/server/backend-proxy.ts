@@ -40,18 +40,6 @@ function getDraftSaveBackendUrl(): string {
   return backendUrl.replace(/\/+$/, '');
 }
 
-function getExternalApiUrl(): string {
-  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-
-  if (!apiUrl) {
-    throw new Error(
-      'API_URL or NEXT_PUBLIC_API_URL is required for external API proxying',
-    );
-  }
-
-  return apiUrl.replace(/\/+$/, '');
-}
-
 function getNotificationStreamBackendUrl(): string {
   const apiUrl =
     process.env.NOTIFICATION_STREAM_URL ||

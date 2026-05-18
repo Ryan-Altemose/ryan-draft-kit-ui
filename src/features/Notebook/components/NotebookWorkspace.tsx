@@ -22,6 +22,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 import type { NotebookWindowRect, Player } from '../types/notebook.types';
+import { computeProjectedStats } from '../utils/computeProjectedStats';
 import {
   NOTEBOOK_WINDOW_DEFAULT_HEIGHT,
   NOTEBOOK_WINDOW_DEFAULT_WIDTH,
@@ -29,6 +30,13 @@ import {
   NOTEBOOK_WINDOW_MIN_WIDTH,
 } from '../utils/notebookWindow';
 import TopPlayersPanel from './TopPlayersPanel';
+
+const DEPTH_COLORS: Record<string, string> = {
+  starter: 'green',
+  backup: 'blue',
+  reserve: 'orange',
+  minors: 'gray',
+};
 
 type NotebookWorkspaceProps = {
   selectedNotebookId: string | null;
@@ -55,6 +63,25 @@ export default function NotebookWorkspace({
   onOpenPlayerNotebook,
   showLauncher = true,
 }: NotebookWorkspaceProps) {
+  const averagedStats =
+    selectedPlayer?.stats !== undefined
+      ? computeProjectedStats(selectedPlayer)
+      : null;
+  const formatDepthChart = (): string => {
+    if (!selectedPlayer?.depthChartStatus && !selectedPlayer?.depthChartOrder) {
+      return '-';
+    }
+
+    if (selectedPlayer?.depthChartStatus && selectedPlayer?.depthChartOrder) {
+      return `${selectedPlayer.depthChartStatus} (#${selectedPlayer.depthChartOrder})`;
+    }
+
+    return (
+      selectedPlayer?.depthChartStatus ??
+      String(selectedPlayer?.depthChartOrder ?? '-')
+    );
+  };
+
   const formatStatNumber = (key: string, value: number): string => {
     const lower = key.toLowerCase();
     if (lower === 'ba' || lower === 'avg') return value.toFixed(3);
@@ -314,6 +341,23 @@ export default function NotebookWorkspace({
                       Positions: {selectedPlayer?.positions.join(', ') ?? '-'}
                     </Text>
                     <Text>Type: {selectedPlayer?.playerType ?? '-'}</Text>
+                    <Text>
+                      Depth Chart:{' '}
+                      {selectedPlayer?.depthChartStatus ? (
+                        <Badge
+                          colorScheme={
+                            DEPTH_COLORS[selectedPlayer.depthChartStatus] ??
+                            'gray'
+                          }
+                          fontSize="xs"
+                          ml={1}
+                        >
+                          {formatDepthChart()}
+                        </Badge>
+                      ) : (
+                        formatDepthChart()
+                      )}
+                    </Text>
                     <Text>Age: {selectedPlayer?.age ?? '-'}</Text>
                     <Text>
                       Bats/Throws:{' '}
@@ -451,6 +495,8 @@ export default function NotebookWorkspace({
                   overflow="hidden"
                   boxShadow="sm"
                   _hover={{ borderColor: 'green.400' }}
+                  display="flex"
+                  flexDirection="column"
                 >
                   <Flex
                     px={3}
@@ -470,9 +516,9 @@ export default function NotebookWorkspace({
                       Projections
                     </Text>
                   </Flex>
-                  <TableContainer>
+                  <TableContainer overflowY="auto" maxH="calc(100% - 33px)">
                     <Table size="sm" variant="simple">
-                      <Thead>
+                      <Thead position="sticky" top={0} bg="white" zIndex={1}>
                         <Tr>
                           <Th>Stat</Th>
                           <Th isNumeric>Proj</Th>
@@ -484,18 +530,6 @@ export default function NotebookWorkspace({
                             selectedPlayer?.playerType === 'pitcher'
                               ? 'pitcher'
                               : 'hitter';
-
-                          const relevantStats = (
-                            selectedPlayer?.stats ?? []
-                          ).filter((s) => s.type === playerType);
-
-                          const keysFromRealStats = Array.from(
-                            new Set(
-                              relevantStats.flatMap((s) =>
-                                Object.keys(s.data ?? {}),
-                              ),
-                            ),
-                          ).sort();
 
                           const fallbackKeys =
                             playerType === 'pitcher'
@@ -510,47 +544,17 @@ export default function NotebookWorkspace({
                               : ['ba', 'hr', 'rbi', 'walk', 'sb'];
 
                           const projectionKeys =
-                            keysFromRealStats.length > 0
-                              ? keysFromRealStats
+                            averagedStats &&
+                            Object.keys(averagedStats).length > 0
+                              ? Object.keys(averagedStats).sort()
                               : fallbackKeys;
-
-                          const summed: Record<string, number> = {};
-                          const counts: Record<string, number> = {};
-
-                          for (const season of relevantStats) {
-                            for (const [key, value] of Object.entries(
-                              season.data ?? {},
-                            )) {
-                              if (typeof value !== 'number') continue;
-                              summed[key] = (summed[key] ?? 0) + value;
-                              counts[key] = (counts[key] ?? 0) + 1;
-                            }
-                          }
-
-                          const averaged: Record<string, number> =
-                            Object.fromEntries(
-                              Object.keys(summed).map((k) => [
-                                k,
-                                summed[k] / (counts[k] || 1),
-                              ]),
-                            );
-
-                          const formatProjectionValue = (
-                            key: string,
-                            value: number,
-                          ): string => {
-                            return formatStatNumber(key, value);
-                          };
-
-                          const headerLabel = (key: string) =>
-                            key.toUpperCase();
 
                           return projectionKeys.map((key) => (
                             <Tr key={key}>
-                              <Td>{headerLabel(key)}</Td>
+                              <Td>{key.toUpperCase()}</Td>
                               <Td isNumeric>
-                                {averaged[key] !== undefined
-                                  ? formatProjectionValue(key, averaged[key])
+                                {averagedStats?.[key] !== undefined
+                                  ? formatStatNumber(key, averagedStats[key])
                                   : '-'}
                               </Td>
                             </Tr>
