@@ -28,6 +28,7 @@ type DraftMiddlePanelProps = {
   previewRows?: PlayerValuation[];
   isLoadingValuations?: boolean;
   isLoadingValuationPreview?: boolean;
+  showPreviewFirst?: boolean;
   readOnly?: boolean;
 };
 
@@ -47,6 +48,7 @@ export default function DraftMiddlePanel({
   previewRows,
   isLoadingValuations,
   isLoadingValuationPreview,
+  showPreviewFirst,
   readOnly = false,
 }: DraftMiddlePanelProps) {
   return (
@@ -77,6 +79,7 @@ export default function DraftMiddlePanel({
           previewRows={previewRows}
           isLoadingValuations={isLoadingValuations}
           isLoadingValuationPreview={isLoadingValuationPreview}
+          showPreviewFirst={showPreviewFirst}
           takenPlayers={takenPlayers}
           leagueType={leagueType}
           onPlayerClick={onValuationPlayerClick}

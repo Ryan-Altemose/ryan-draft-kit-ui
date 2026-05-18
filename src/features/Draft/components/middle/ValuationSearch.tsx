@@ -59,6 +59,7 @@ type ValuationSearchProps = {
   previewRows?: PlayerValuation[];
   isLoadingValuations?: boolean;
   isLoadingValuationPreview?: boolean;
+  showPreviewFirst?: boolean;
   takenPlayers?: TakenPlayer[];
   leagueType?: 'MLB' | 'AL' | 'NL';
   onPlayerClick?: (player: NotebookPlayer) => void;
@@ -69,6 +70,7 @@ export default function ValuationSearch({
   previewRows = [],
   isLoadingValuations = false,
   isLoadingValuationPreview = false,
+  showPreviewFirst = false,
   takenPlayers = [],
   leagueType,
   onPlayerClick,
@@ -79,8 +81,7 @@ export default function ValuationSearch({
   const [sortKey, setSortKey] = useState<SortKey | null>('value');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const hasFullValuations = Object.keys(valuations).length > 0;
-  const usePreviewMode =
-    previewRows.length > 0 && (isLoadingPlayers || !hasFullValuations);
+  const usePreviewMode = previewRows.length > 0 && showPreviewFirst;
 
   const positions = useMemo(
     () =>
