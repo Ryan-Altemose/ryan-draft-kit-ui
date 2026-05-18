@@ -47,7 +47,6 @@ export const STORAGE_KEYS = {
 export const ROUTES = {
   HOME: '/',
   PLAYERS: '/players',
-  RANKINGS: '/rankings',
   DRAFT: '/draft',
   MY_TEAM: '/my-team',
 } as const;
