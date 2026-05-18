@@ -451,6 +451,68 @@ describe('LeagueTeamTable', () => {
     expect(screen.queryByDisplayValue('100')).toBeNull();
   });
 
+  it('updates a stale zero price when the same player later arrives with the saved price', async () => {
+    const { rerender } = render(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 999]}
+          startingBudget={260}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-1', 'C-0', 0, '']]}
+        />
+      </ChakraProvider>,
+    );
+
+    const header = await screen.findByText(/Budget:/);
+    fireEvent.click(header);
+
+    await waitFor(() =>
+      expect(screen.getByDisplayValue('A. Rutschman')).toBeTruthy(),
+    );
+    expect(screen.getByDisplayValue('0')).toBeTruthy();
+
+    rerender(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 999]}
+          startingBudget={260}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[['player-adley', 'team-1', 'C-0', 25, '']]}
+        />
+      </ChakraProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue('25')).toBeTruthy());
+  });
+
   it('excludes taken players from other teams from all dropdown options', async () => {
     await renderLeagueTeamTable(
       <ChakraProvider>

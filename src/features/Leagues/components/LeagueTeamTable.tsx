@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -145,6 +145,7 @@ export default function LeagueTeamTable({
     () => buildTeamRows(rosterSlots, takenPlayers),
     [rosterSlots, takenPlayers],
   );
+  const previousPropRowsRef = useRef(propRows);
   const [localTeamName, setLocalTeamName] = useState(teamName);
   const [localRows, setLocalRows] = useState(propRows);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -154,12 +155,18 @@ export default function LeagueTeamTable({
 
   useEffect(() => {
     setLocalTeamName(teamName);
+    const previousPropRows = previousPropRowsRef.current;
     const takenIds = new Set(
       (allTakenPlayers ?? takenPlayers).map(([id]) => id),
     );
     setLocalRows((currentRows) =>
       propRows.map((propRow, index) => {
         const localRow = currentRows[index];
+        const previousPropRow = previousPropRows[index];
+        const hasUnsavedLocalEdit =
+          localRow?.playerId === previousPropRow?.playerId &&
+          (localRow?.price !== previousPropRow?.price ||
+            localRow?.contract !== previousPropRow?.contract);
         // Local pick was claimed by another team — clear it
         if (
           !draftMode &&
@@ -189,12 +196,17 @@ export default function LeagueTeamTable({
               ...propRow,
               search: formatPlayerDisplay(matchingPlayer),
               team: matchingPlayer.team,
-              price: localRow?.price ?? propRow.price,
-              contract: localRow?.contract ?? '',
+              price: hasUnsavedLocalEdit
+                ? (localRow?.price ?? propRow.price)
+                : propRow.price,
+              contract: hasUnsavedLocalEdit
+                ? (localRow?.contract ?? propRow.contract)
+                : propRow.contract,
             }
           : propRow;
       }),
     );
+    previousPropRowsRef.current = propRows;
   }, [propRows, teamName, players, allTakenPlayers, takenPlayers, draftMode]);
 
   useEffect(() => {

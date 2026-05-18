@@ -154,7 +154,7 @@ export default function LeagueDraftDetailPage({
               );
               return (
                 <LeagueTeamTable
-                  key={teamId}
+                  key={`${draftId}-${teamId}`}
                   team={team}
                   rosterSlots={league.rosterSlots}
                   allTakenPlayers={takenPlayers}
