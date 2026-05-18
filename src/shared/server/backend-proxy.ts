@@ -80,6 +80,8 @@ export async function proxyBackendStreamRequest(
   endpoint: string,
 ): Promise<NextResponse> {
   try {
+    const session = await getAuthSession();
+    const backendUserId = session?.user?.backendUserId;
     const backendUrl = new URL(
       `${getNotificationStreamBackendUrl()}${endpoint}`,
     );
@@ -89,7 +91,7 @@ export async function proxyBackendStreamRequest(
     const response = await fetch(backendUrl.toString(), {
       method: request.method,
       headers: {
-        ...buildHeaders(request),
+        ...buildHeaders(request, backendUserId),
         Accept: 'text/event-stream',
       },
       cache: 'no-store',

@@ -59,6 +59,13 @@ type PlayersResponse = {
   };
 };
 
+type PlayerResponse = {
+  success: boolean;
+  data: Player;
+};
+
+const SPECIFIC_PLAYER_ID = '6a0a6ff71fdc7a00ab75988b';
+
 type FakePersonActionResponse = {
   success: boolean;
   data?: {
@@ -98,6 +105,24 @@ export default function TestPage() {
   const [mongoData, setMongoData] = useState<MongoLeagueData | null>(null);
   const [isLoadingMongoData, setIsLoadingMongoData] = useState(false);
   const [mongoDataError, setMongoDataError] = useState<string | null>(null);
+  const [randomPlayer, setRandomPlayer] = useState<Player | null>(null);
+  const [isLoadingRandomPlayer, setIsLoadingRandomPlayer] = useState(false);
+  const [randomPlayerError, setRandomPlayerError] = useState<string | null>(
+    null,
+  );
+  const [specificPlayer, setSpecificPlayer] = useState<Player | null>(null);
+  const [isLoadingSpecificPlayer, setIsLoadingSpecificPlayer] = useState(false);
+  const [specificPlayerError, setSpecificPlayerError] = useState<string | null>(
+    null,
+  );
+  const [specificPlayerDepthChart, setSpecificPlayerDepthChart] =
+    useState<Record<string, unknown> | null>(null);
+  const [
+    isLoadingSpecificPlayerDepthChart,
+    setIsLoadingSpecificPlayerDepthChart,
+  ] = useState(false);
+  const [specificPlayerDepthChartError, setSpecificPlayerDepthChartError] =
+    useState<string | null>(null);
   const [rosterJson, setRosterJson] = useState<unknown>(null);
   const [isLoadingRosterJson, setIsLoadingRosterJson] = useState(false);
   const [rosterJsonError, setRosterJsonError] = useState<string | null>(null);
@@ -205,6 +230,90 @@ export default function TestPage() {
       );
     } finally {
       setIsLoadingRosterJson(false);
+    }
+  }
+
+  async function handleLoadRandomPlayer() {
+    try {
+      setIsLoadingRandomPlayer(true);
+      setRandomPlayerError(null);
+
+      const players = await loadAllPlayers();
+
+      if (players.length === 0) {
+        setRandomPlayer(null);
+        setRandomPlayerError('No players were returned from the API.');
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * players.length);
+      setRandomPlayer(players[randomIndex] ?? null);
+    } catch (error) {
+      setRandomPlayerError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load a random player.',
+      );
+    } finally {
+      setIsLoadingRandomPlayer(false);
+    }
+  }
+
+  async function handleLoadSpecificPlayer() {
+    try {
+      setIsLoadingSpecificPlayer(true);
+      setSpecificPlayerError(null);
+
+      const response = await externalApiClient.get<PlayerResponse>(
+        `/api/players/${SPECIFIC_PLAYER_ID}`,
+        {
+          params: { _ts: Date.now() },
+          cache: 'no-store',
+        },
+      );
+
+      setSpecificPlayer(response.data);
+    } catch (error) {
+      setSpecificPlayerError(
+        error instanceof Error
+          ? error.message
+          : `Failed to load player ${SPECIFIC_PLAYER_ID}.`,
+      );
+    } finally {
+      setIsLoadingSpecificPlayer(false);
+    }
+  }
+
+  async function handleLoadSpecificPlayerDepthChart() {
+    try {
+      setIsLoadingSpecificPlayerDepthChart(true);
+      setSpecificPlayerDepthChartError(null);
+
+      const response = await externalApiClient.get<PlayerResponse>(
+        `/api/players/${SPECIFIC_PLAYER_ID}`,
+        {
+          params: { _ts: Date.now() },
+          cache: 'no-store',
+        },
+      );
+
+      const player = response.data;
+      setSpecificPlayerDepthChart({
+        _id: player._id,
+        name: player.name,
+        team: player.team,
+        positions: player.positions,
+        depthChartStatus: player.depthChartStatus ?? null,
+        depthChartOrder: player.depthChartOrder ?? null,
+      });
+    } catch (error) {
+      setSpecificPlayerDepthChartError(
+        error instanceof Error
+          ? error.message
+          : `Failed to load depth chart data for player ${SPECIFIC_PLAYER_ID}.`,
+      );
+    } finally {
+      setIsLoadingSpecificPlayerDepthChart(false);
     }
   }
 
@@ -774,6 +883,83 @@ export default function TestPage() {
             </Text>
             <Code whiteSpace="pre" display="block" p={4} mt={3}>
               {JSON.stringify(rosterJson, null, 2)}
+            </Code>
+          </Box>
+        ) : null}
+
+        <Button
+          alignSelf="flex-start"
+          colorScheme="purple"
+          onClick={handleLoadRandomPlayer}
+          isLoading={isLoadingRandomPlayer}
+        >
+          Show Random Player Data
+        </Button>
+
+        {randomPlayerError ? (
+          <Text color="red.500">{randomPlayerError}</Text>
+        ) : null}
+
+        {randomPlayer ? (
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Text fontWeight="semibold">Random player data</Text>
+            <Text mt={1} color="gray.500" fontSize="sm">
+              One full player record returned from the API.
+            </Text>
+            <Code whiteSpace="pre-wrap" display="block" p={4} mt={3}>
+              {JSON.stringify(randomPlayer, null, 2)}
+            </Code>
+          </Box>
+        ) : null}
+
+        <Button
+          alignSelf="flex-start"
+          colorScheme="purple"
+          variant="outline"
+          onClick={handleLoadSpecificPlayer}
+          isLoading={isLoadingSpecificPlayer}
+        >
+          Show Player 6a0a6ff71fdc7a00ab75988b Data
+        </Button>
+
+        {specificPlayerError ? (
+          <Text color="red.500">{specificPlayerError}</Text>
+        ) : null}
+
+        {specificPlayer ? (
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Text fontWeight="semibold">Specific player data</Text>
+            <Text mt={1} color="gray.500" fontSize="sm">
+              Full API record for <Code>{SPECIFIC_PLAYER_ID}</Code>.
+            </Text>
+            <Code whiteSpace="pre-wrap" display="block" p={4} mt={3}>
+              {JSON.stringify(specificPlayer, null, 2)}
+            </Code>
+          </Box>
+        ) : null}
+
+        <Button
+          alignSelf="flex-start"
+          colorScheme="purple"
+          variant="ghost"
+          onClick={handleLoadSpecificPlayerDepthChart}
+          isLoading={isLoadingSpecificPlayerDepthChart}
+        >
+          Show Player Depth Chart Data
+        </Button>
+
+        {specificPlayerDepthChartError ? (
+          <Text color="red.500">{specificPlayerDepthChartError}</Text>
+        ) : null}
+
+        {specificPlayerDepthChart ? (
+          <Box borderWidth="1px" borderRadius="md" p={4}>
+            <Text fontWeight="semibold">Specific player depth chart data</Text>
+            <Text mt={1} color="gray.500" fontSize="sm">
+              Depth chart fields for <Code>{SPECIFIC_PLAYER_ID}</Code>.
+            </Text>
+            <Code whiteSpace="pre-wrap" display="block" p={4} mt={3}>
+              {JSON.stringify(specificPlayerDepthChart, null, 2)}
             </Code>
           </Box>
         ) : null}
