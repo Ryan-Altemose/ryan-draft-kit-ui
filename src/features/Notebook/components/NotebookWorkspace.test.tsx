@@ -81,6 +81,8 @@ describe('NotebookWorkspace', () => {
             injuryStatus: 'active',
             playerType: 'hitter',
             league: 'AL',
+            depthChartStatus: 'starter',
+            depthChartOrder: 1,
             age: 32,
             batSide: 'R',
           }}
@@ -93,6 +95,8 @@ describe('NotebookWorkspace', () => {
     expect(screen.getByText('Player Info')).toBeTruthy();
     expect(screen.getByText('Team: NYY')).toBeTruthy();
     expect(screen.getByText('Positions: OF')).toBeTruthy();
+    expect(screen.getByText(/^Depth Chart:/)).toBeTruthy();
+    expect(screen.getByText('starter (#1)')).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText('Write notes here...'), {
       target: { value: 'Updated player note' },

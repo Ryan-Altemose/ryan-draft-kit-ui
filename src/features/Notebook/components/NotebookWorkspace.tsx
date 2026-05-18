@@ -30,6 +30,13 @@ import {
 } from '../utils/notebookWindow';
 import TopPlayersPanel from './TopPlayersPanel';
 
+const DEPTH_COLORS: Record<string, string> = {
+  starter: 'green',
+  backup: 'blue',
+  reserve: 'orange',
+  minors: 'gray',
+};
+
 type NotebookWorkspaceProps = {
   selectedNotebookId: string | null;
   selectedNotebookName: string | null;
@@ -55,6 +62,21 @@ export default function NotebookWorkspace({
   onOpenPlayerNotebook,
   showLauncher = true,
 }: NotebookWorkspaceProps) {
+  const formatDepthChart = (): string => {
+    if (!selectedPlayer?.depthChartStatus && !selectedPlayer?.depthChartOrder) {
+      return '-';
+    }
+
+    if (selectedPlayer?.depthChartStatus && selectedPlayer?.depthChartOrder) {
+      return `${selectedPlayer.depthChartStatus} (#${selectedPlayer.depthChartOrder})`;
+    }
+
+    return (
+      selectedPlayer?.depthChartStatus ??
+      String(selectedPlayer?.depthChartOrder ?? '-')
+    );
+  };
+
   const formatStatNumber = (key: string, value: number): string => {
     const lower = key.toLowerCase();
     if (lower === 'ba' || lower === 'avg') return value.toFixed(3);
@@ -314,6 +336,23 @@ export default function NotebookWorkspace({
                       Positions: {selectedPlayer?.positions.join(', ') ?? '-'}
                     </Text>
                     <Text>Type: {selectedPlayer?.playerType ?? '-'}</Text>
+                    <Text>
+                      Depth Chart:{' '}
+                      {selectedPlayer?.depthChartStatus ? (
+                        <Badge
+                          colorScheme={
+                            DEPTH_COLORS[selectedPlayer.depthChartStatus] ??
+                            'gray'
+                          }
+                          fontSize="xs"
+                          ml={1}
+                        >
+                          {formatDepthChart()}
+                        </Badge>
+                      ) : (
+                        formatDepthChart()
+                      )}
+                    </Text>
                     <Text>Age: {selectedPlayer?.age ?? '-'}</Text>
                     <Text>
                       Bats/Throws:{' '}
