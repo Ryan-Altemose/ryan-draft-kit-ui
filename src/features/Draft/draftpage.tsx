@@ -309,6 +309,7 @@ export default function DraftPage() {
             previewRows={valuationsQuery.previewRows}
             isLoadingValuations={valuationsQuery.isLoading}
             isLoadingValuationPreview={valuationsQuery.isLoadingPreview}
+            showPreviewFirst={valuationsQuery.showPreviewFirst}
             readOnly={Boolean(selectedDraft)}
           />
         </Box>

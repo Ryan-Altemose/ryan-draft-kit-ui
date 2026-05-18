@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchAllLeagueValuationsMap,
@@ -43,9 +44,12 @@ function leagueValuationsFingerprint(league: League): string {
   });
 }
 
-const PREVIEW_LIMIT = 50;
+const PREVIEW_LIMIT = 10;
 
 export function useLeagueValuations(league?: League | null) {
+  const [showPreviewFirst, setShowPreviewFirst] = useState(false);
+  const [previewStartedAt, setPreviewStartedAt] = useState<number | null>(null);
+
   const fullQuery = useQuery<Record<string, number>>({
     queryKey: league?._id
       ? ['league-valuations', league._id, leagueValuationsFingerprint(league)]
@@ -83,10 +87,39 @@ export function useLeagueValuations(league?: League | null) {
     refetchOnReconnect: true,
   });
 
+  useEffect(() => {
+    if (!league?._id) {
+      setShowPreviewFirst(false);
+      setPreviewStartedAt(null);
+      return;
+    }
+
+    setPreviewStartedAt(Date.now());
+    setShowPreviewFirst(true);
+  }, [league?._id, league ? leagueValuationsFingerprint(league) : undefined]);
+
+  useEffect(() => {
+    if (!showPreviewFirst) return;
+    if (!previewStartedAt) return;
+    if (fullQuery.isFetching || previewQuery.isFetching) return;
+    if (fullQuery.dataUpdatedAt < previewStartedAt) return;
+    if (previewQuery.dataUpdatedAt < previewStartedAt) return;
+
+    setShowPreviewFirst(false);
+  }, [
+    showPreviewFirst,
+    fullQuery.isFetching,
+    previewQuery.isFetching,
+    fullQuery.dataUpdatedAt,
+    previewQuery.dataUpdatedAt,
+    previewStartedAt,
+  ]);
+
   return {
     data: fullQuery.data ?? {},
     previewRows: previewQuery.data ?? [],
     isLoading: fullQuery.isLoading,
     isLoadingPreview: previewQuery.isLoading,
+    showPreviewFirst,
   };
 }
