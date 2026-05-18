@@ -80,7 +80,6 @@ export default function ValuationSearch({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey | null>('value');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const hasFullValuations = Object.keys(valuations).length > 0;
   const usePreviewMode = previewRows.length > 0 && showPreviewFirst;
 
   const positions = useMemo(
@@ -395,9 +394,13 @@ export default function ValuationSearch({
                     <Td>{player.team}</Td>
                     <Td>{player.positions.join(', ')}</Td>
                     <Td>
-                      {valuations[player._id] !== undefined
-                        ? `$${valuations[player._id]}`
-                        : '-'}
+                      {isLoadingValuations ? (
+                        <Spinner size="xs" color="gray.400" />
+                      ) : valuations[player._id] !== undefined ? (
+                        `$${valuations[player._id]}`
+                      ) : (
+                        '-'
+                      )}
                     </Td>
                   </Tr>
                 ))}

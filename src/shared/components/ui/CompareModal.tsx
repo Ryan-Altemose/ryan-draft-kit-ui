@@ -176,7 +176,7 @@ export default function CompareModal({
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Compare</ModalHeader>
+        <ModalHeader>Projected Team Totals</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
           <Grid templateColumns="1fr 1fr 1fr" gap={6} mb={6}>
