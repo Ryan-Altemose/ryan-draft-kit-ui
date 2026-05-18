@@ -34,13 +34,6 @@ import DraftLeftPanel, {
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
 
-function toNotebookPlayer(player: DraftPlayer): NotebookPlayer {
-  return {
-    ...player,
-    injuryStatus: player.injuryStatus ?? 'unknown',
-  };
-}
-
 function buildLegacyDraftLeague(league: League, draft: DraftSelection): League {
   const draftPicks = draft.draft_picks ?? [];
   const totalBudget = league.totalBudget ?? 0;
@@ -111,17 +104,11 @@ export default function DraftPage() {
   function saveDraftLeague(league: League) {
     setSelectedLeague(league);
 
-    void upsertLeagueMutation
-      .mutateAsync({
-        input: toDraftLeagueInput(league),
-        existingLeague: league,
-        endpoint: '/api/draft-save/leagues',
-      })
-      .then(() => {
-        void queryClient.invalidateQueries({
-          queryKey: ['league-valuations', league._id],
-        });
-      });
+    void upsertLeagueMutation.mutateAsync({
+      input: toDraftLeagueInput(league),
+      existingLeague: league,
+      endpoint: '/api/draft-save/leagues',
+    });
   }
 
   function handleUndo() {
@@ -191,8 +178,18 @@ export default function DraftPage() {
     }
   }
 
-  function handlePlayerNotebookOpen(player: DraftPlayer) {
-    openPlayerNotebook(toNotebookPlayer(player));
+  function handlePlayerNotebookOpen(player: NotebookPlayer) {
+    openPlayerNotebook({
+      ...player,
+      injuryStatus: player.injuryStatus ?? 'unknown',
+    });
+  }
+
+  function handleDraftRosterPlayerNotebookOpen(player: DraftPlayer) {
+    openPlayerNotebook({
+      ...player,
+      injuryStatus: player.injuryStatus ?? 'unknown',
+    });
   }
 
   const selectedArchivedDraftId =
@@ -307,9 +304,11 @@ export default function DraftPage() {
             onPickEntered={handlePickEntered}
             onUndo={handleUndo}
             onFinishDraft={handleFinishDraft}
-            onValuationPlayerClick={openPlayerNotebook}
-            valuations={valuationsQuery.data ?? {}}
+            onValuationPlayerClick={handlePlayerNotebookOpen}
+            valuations={valuationsQuery.data}
+            previewRows={valuationsQuery.previewRows}
             isLoadingValuations={valuationsQuery.isLoading}
+            isLoadingValuationPreview={valuationsQuery.isLoadingPreview}
             readOnly={Boolean(selectedDraft)}
           />
         </Box>
@@ -318,7 +317,7 @@ export default function DraftPage() {
             league={selectedLeague}
             onSaveRosters={handleSaveRosters}
             isSavingRosters={upsertLeagueMutation.isPending}
-            onPlayerNotebookOpen={handlePlayerNotebookOpen}
+            onPlayerNotebookOpen={handleDraftRosterPlayerNotebookOpen}
           />
         </Box>
       </Flex>
