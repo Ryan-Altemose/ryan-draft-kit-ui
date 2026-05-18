@@ -457,6 +457,8 @@ export default function NotebookWorkspace({
                   overflow="hidden"
                   boxShadow="sm"
                   _hover={{ borderColor: 'green.400' }}
+                  display="flex"
+                  flexDirection="column"
                 >
                   <Flex
                     px={3}
@@ -476,9 +478,9 @@ export default function NotebookWorkspace({
                       Projections
                     </Text>
                   </Flex>
-                  <TableContainer>
+                  <TableContainer overflowY="auto" maxH="calc(100% - 33px)">
                     <Table size="sm" variant="simple">
-                      <Thead>
+                      <Thead position="sticky" top={0} bg="white" zIndex={1}>
                         <Tr>
                           <Th>Stat</Th>
                           <Th isNumeric>Proj</Th>
