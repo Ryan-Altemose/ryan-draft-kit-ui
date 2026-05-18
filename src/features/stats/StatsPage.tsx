@@ -32,6 +32,9 @@ import {
 } from '@chakra-ui/react';
 import { usePlayers } from '@/shared/hooks/usePlayers';
 import type { Player } from '@/shared/hooks/usePlayers';
+import { useNotebookManager } from '@/features/Notebook/hooks/useNotebookManager';
+import NotebookWorkspace from '@/features/Notebook/components/NotebookWorkspace';
+import type { Player as NotebookPlayer } from '@/features/Notebook/types/notebook.types';
 
 const DEPTH_COLORS: Record<string, string> = {
   starter: 'green',
@@ -119,6 +122,31 @@ const SearchIcon = (
 
 export default function StatsPage() {
   const { players: allPlayers, isLoading } = usePlayers();
+  const {
+    selectedNotebookId,
+    selectedNotebookName,
+    selectedNotebookContent,
+    selectedPlayerName,
+    selectedPlayer,
+    updateNotebookContent,
+    updatePlayerContent,
+    openPlayerNotebook,
+    closeNotebook,
+  } = useNotebookManager();
+
+  function handlePlayerClick(player: Player) {
+    const notebookPlayer: NotebookPlayer = {
+      _id: player._id,
+      name: player.name,
+      team: player.team,
+      positions: player.positions,
+      playerType: player.playerType,
+      league: player.league,
+      injuryStatus: player.injuryStatus ?? 'active',
+      age: player.age,
+    };
+    openPlayerNotebook(notebookPlayer);
+  }
 
   const availableSeasons = useMemo(() => {
     const seasons = new Set<string>();
@@ -266,415 +294,450 @@ export default function StatsPage() {
   }
 
   return (
-    <Box p={8}>
-      <Flex align="center" justify="space-between" mb={6} wrap="wrap" gap={4}>
-        <Heading>Player Stats</Heading>
-        {availableSeasons.length > 0 && (
-          <Flex align="center" gap={2}>
-            <Text fontSize="sm" color="gray.600" fontWeight="medium">
-              Season:
-            </Text>
-            <Flex gap={2}>
-              {availableSeasons.map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  colorScheme={season === s ? 'green' : 'gray'}
-                  onClick={() => setSelectedSeason(s)}
-                >
-                  {s}
-                </Button>
-              ))}
-            </Flex>
-          </Flex>
-        )}
-      </Flex>
-
-      <Tabs colorScheme="green" variant="enclosed">
-        <TabList>
-          <Tab>Hitters ({hitters.length})</Tab>
-          <Tab>Pitchers ({pitchers.length})</Tab>
-        </TabList>
-
-        <TabPanels>
-          <TabPanel px={0} pt={4}>
-            <Flex gap={3} mb={4}>
-              <InputGroup maxW="300px">
-                <Input
-                  placeholder="Search player name"
-                  value={hitterSearch}
-                  onChange={(e) => setHitterSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') setHitterAppliedSearch(hitterSearch);
-                  }}
-                />
-                <InputRightElement>
-                  <IconButton
-                    aria-label="Search hitters"
+    <>
+      <Box p={8}>
+        <Flex align="center" justify="space-between" mb={6} wrap="wrap" gap={4}>
+          <Heading>Player Stats</Heading>
+          {availableSeasons.length > 0 && (
+            <Flex align="center" gap={2}>
+              <Text fontSize="sm" color="gray.600" fontWeight="medium">
+                Season:
+              </Text>
+              <Flex gap={2}>
+                {availableSeasons.map((s) => (
+                  <Button
+                    key={s}
                     size="sm"
-                    variant="ghost"
-                    icon={SearchIcon}
-                    onClick={() => setHitterAppliedSearch(hitterSearch)}
-                  />
-                </InputRightElement>
-              </InputGroup>
+                    colorScheme={season === s ? 'green' : 'gray'}
+                    onClick={() => setSelectedSeason(s)}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </Flex>
             </Flex>
+          )}
+        </Flex>
 
-            <Wrap mb={4} spacing={2}>
-              <WrapItem>
-                <Button
-                  size="sm"
-                  colorScheme={hitterPositions.length === 0 ? 'green' : 'gray'}
-                  onClick={() => setHitterPositions([])}
-                >
-                  All
-                </Button>
-              </WrapItem>
-              {HITTER_POSITIONS.map((pos) => (
-                <WrapItem key={pos}>
+        <Tabs colorScheme="green" variant="enclosed">
+          <TabList>
+            <Tab>Hitters ({hitters.length})</Tab>
+            <Tab>Pitchers ({pitchers.length})</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel px={0} pt={4}>
+              <Flex gap={3} mb={4}>
+                <InputGroup maxW="300px">
+                  <Input
+                    placeholder="Search player name"
+                    value={hitterSearch}
+                    onChange={(e) => setHitterSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter')
+                        setHitterAppliedSearch(hitterSearch);
+                    }}
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      aria-label="Search hitters"
+                      size="sm"
+                      variant="ghost"
+                      icon={SearchIcon}
+                      onClick={() => setHitterAppliedSearch(hitterSearch)}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </Flex>
+
+              <Wrap mb={4} spacing={2}>
+                <WrapItem>
                   <Button
                     size="sm"
                     colorScheme={
-                      hitterPositions.includes(pos) ? 'green' : 'gray'
+                      hitterPositions.length === 0 ? 'green' : 'gray'
                     }
-                    onClick={() =>
-                      setHitterPositions((prev) =>
-                        prev.includes(pos)
-                          ? prev.filter((p) => p !== pos)
-                          : [...prev, pos],
-                      )
-                    }
+                    onClick={() => setHitterPositions([])}
                   >
-                    {pos}
+                    All
                   </Button>
                 </WrapItem>
-              ))}
-            </Wrap>
+                {HITTER_POSITIONS.map((pos) => (
+                  <WrapItem key={pos}>
+                    <Button
+                      size="sm"
+                      colorScheme={
+                        hitterPositions.includes(pos) ? 'green' : 'gray'
+                      }
+                      onClick={() =>
+                        setHitterPositions((prev) =>
+                          prev.includes(pos)
+                            ? prev.filter((p) => p !== pos)
+                            : [...prev, pos],
+                        )
+                      }
+                    >
+                      {pos}
+                    </Button>
+                  </WrapItem>
+                ))}
+              </Wrap>
 
-            <TableContainer>
-              <Table variant="simple" size="sm">
-                <Thead bg="gray.50">
-                  <Tr>
-                    <SortableTh
-                      label="Name"
-                      field="name"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <Th>Team</Th>
-                    <Th>Pos</Th>
-                    <SortableTh
-                      label="Age"
-                      field="age"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <Th>Injury</Th>
-                    <Th>Depth</Th>
-                    <SortableTh
-                      label="BA"
-                      field="ba"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <SortableTh
-                      label="HR"
-                      field="hr"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <SortableTh
-                      label="RBI"
-                      field="rbi"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <SortableTh
-                      label="BB"
-                      field="walk"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                    <SortableTh
-                      label="SB"
-                      field="sb"
-                      currentField={hitterSortField}
-                      currentDir={hitterSortDir}
-                      onSort={toggleHitterSort}
-                    />
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {hitters.map((player) => {
-                    const stat = player.stats?.find(
-                      (s) => s.season === season && s.type === 'hitter',
-                    );
-                    const data =
-                      stat?.type === 'hitter' ? stat.data : undefined;
-                    return (
-                      <Tr key={player._id} _hover={{ bg: 'green.50' }}>
-                        <Td fontWeight="medium" whiteSpace="nowrap">
-                          {player.injuryNote ? (
-                            <Tooltip
-                              label={player.injuryNote}
-                              placement="right"
-                            >
-                              <Text as="span" cursor="help">
-                                {player.name}
-                              </Text>
-                            </Tooltip>
-                          ) : (
-                            player.name
-                          )}
-                        </Td>
-                        <Td>{player.team}</Td>
-                        <Td whiteSpace="nowrap">
-                          {player.positions.join(', ')}
-                        </Td>
-                        <Td isNumeric>{player.age ?? '-'}</Td>
-                        <Td>
-                          <Badge
-                            colorScheme={
-                              player.injuryStatus === 'active' ? 'green' : 'red'
-                            }
-                            fontSize="xs"
-                          >
-                            {player.injuryStatus}
-                          </Badge>
-                        </Td>
-                        <Td>
-                          {player.depthChartStatus ? (
+              <TableContainer>
+                <Table variant="simple" size="sm">
+                  <Thead bg="gray.50">
+                    <Tr>
+                      <SortableTh
+                        label="Name"
+                        field="name"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <Th>Team</Th>
+                      <Th>Pos</Th>
+                      <SortableTh
+                        label="Age"
+                        field="age"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <Th>Injury</Th>
+                      <Th>Depth</Th>
+                      <SortableTh
+                        label="BA"
+                        field="ba"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <SortableTh
+                        label="HR"
+                        field="hr"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <SortableTh
+                        label="RBI"
+                        field="rbi"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <SortableTh
+                        label="BB"
+                        field="walk"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                      <SortableTh
+                        label="SB"
+                        field="sb"
+                        currentField={hitterSortField}
+                        currentDir={hitterSortDir}
+                        onSort={toggleHitterSort}
+                      />
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {hitters.map((player) => {
+                      const stat = player.stats?.find(
+                        (s) => s.season === season && s.type === 'hitter',
+                      );
+                      const data =
+                        stat?.type === 'hitter' ? stat.data : undefined;
+                      return (
+                        <Tr
+                          key={player._id}
+                          onClick={() => handlePlayerClick(player)}
+                          cursor="pointer"
+                          _hover={{ bg: 'green.100' }}
+                        >
+                          <Td fontWeight="medium" whiteSpace="nowrap">
+                            {player.injuryNote ? (
+                              <Tooltip
+                                label={player.injuryNote}
+                                placement="right"
+                              >
+                                <Text as="span" cursor="help">
+                                  {player.name}
+                                </Text>
+                              </Tooltip>
+                            ) : (
+                              player.name
+                            )}
+                          </Td>
+                          <Td>{player.team}</Td>
+                          <Td whiteSpace="nowrap">
+                            {player.positions.join(', ')}
+                          </Td>
+                          <Td isNumeric>{player.age ?? '-'}</Td>
+                          <Td>
                             <Badge
                               colorScheme={
-                                DEPTH_COLORS[player.depthChartStatus] ?? 'gray'
+                                player.injuryStatus === 'active'
+                                  ? 'green'
+                                  : 'red'
                               }
                               fontSize="xs"
                             >
-                              {player.depthChartStatus}
+                              {player.injuryStatus}
                             </Badge>
-                          ) : (
-                            '-'
-                          )}
-                        </Td>
-                        <Td isNumeric>{data?.ba?.toFixed(3) ?? '-'}</Td>
-                        <Td isNumeric>{data?.hr ?? '-'}</Td>
-                        <Td isNumeric>{data?.rbi ?? '-'}</Td>
-                        <Td isNumeric>{data?.walk ?? '-'}</Td>
-                        <Td isNumeric>{data?.sb ?? '-'}</Td>
-                      </Tr>
-                    );
-                  })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                          </Td>
+                          <Td>
+                            {player.depthChartStatus ? (
+                              <Badge
+                                colorScheme={
+                                  DEPTH_COLORS[player.depthChartStatus] ??
+                                  'gray'
+                                }
+                                fontSize="xs"
+                              >
+                                {player.depthChartStatus}
+                              </Badge>
+                            ) : (
+                              '-'
+                            )}
+                          </Td>
+                          <Td isNumeric>{data?.ba?.toFixed(3) ?? '-'}</Td>
+                          <Td isNumeric>{data?.hr ?? '-'}</Td>
+                          <Td isNumeric>{data?.rbi ?? '-'}</Td>
+                          <Td isNumeric>{data?.walk ?? '-'}</Td>
+                          <Td isNumeric>{data?.sb ?? '-'}</Td>
+                        </Tr>
+                      );
+                    })}
+                  </Tbody>
+                </Table>
+              </TableContainer>
 
-            {hitters.length === 0 && (
-              <Box py={10} textAlign="center">
-                <Text color="gray.500">No hitters match your filters.</Text>
-              </Box>
-            )}
-          </TabPanel>
+              {hitters.length === 0 && (
+                <Box py={10} textAlign="center">
+                  <Text color="gray.500">No hitters match your filters.</Text>
+                </Box>
+              )}
+            </TabPanel>
 
-          <TabPanel px={0} pt={4}>
-            <Flex gap={3} mb={4}>
-              <InputGroup maxW="300px">
-                <Input
-                  placeholder="Search player name"
-                  value={pitcherSearch}
-                  onChange={(e) => setPitcherSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter')
-                      setPitcherAppliedSearch(pitcherSearch);
-                  }}
-                />
-                <InputRightElement>
-                  <IconButton
-                    aria-label="Search pitchers"
-                    size="sm"
-                    variant="ghost"
-                    icon={SearchIcon}
-                    onClick={() => setPitcherAppliedSearch(pitcherSearch)}
+            <TabPanel px={0} pt={4}>
+              <Flex gap={3} mb={4}>
+                <InputGroup maxW="300px">
+                  <Input
+                    placeholder="Search player name"
+                    value={pitcherSearch}
+                    onChange={(e) => setPitcherSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter')
+                        setPitcherAppliedSearch(pitcherSearch);
+                    }}
                   />
-                </InputRightElement>
-              </InputGroup>
-            </Flex>
+                  <InputRightElement>
+                    <IconButton
+                      aria-label="Search pitchers"
+                      size="sm"
+                      variant="ghost"
+                      icon={SearchIcon}
+                      onClick={() => setPitcherAppliedSearch(pitcherSearch)}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </Flex>
 
-            <Wrap mb={4} spacing={2}>
-              <WrapItem>
-                <Button
-                  size="sm"
-                  colorScheme={pitcherPositions.length === 0 ? 'green' : 'gray'}
-                  onClick={() => setPitcherPositions([])}
-                >
-                  All
-                </Button>
-              </WrapItem>
-              {PITCHER_POSITIONS.map((pos) => (
-                <WrapItem key={pos}>
+              <Wrap mb={4} spacing={2}>
+                <WrapItem>
                   <Button
                     size="sm"
                     colorScheme={
-                      pitcherPositions.includes(pos) ? 'green' : 'gray'
+                      pitcherPositions.length === 0 ? 'green' : 'gray'
                     }
-                    onClick={() =>
-                      setPitcherPositions((prev) =>
-                        prev.includes(pos)
-                          ? prev.filter((p) => p !== pos)
-                          : [...prev, pos],
-                      )
-                    }
+                    onClick={() => setPitcherPositions([])}
                   >
-                    {pos}
+                    All
                   </Button>
                 </WrapItem>
-              ))}
-            </Wrap>
+                {PITCHER_POSITIONS.map((pos) => (
+                  <WrapItem key={pos}>
+                    <Button
+                      size="sm"
+                      colorScheme={
+                        pitcherPositions.includes(pos) ? 'green' : 'gray'
+                      }
+                      onClick={() =>
+                        setPitcherPositions((prev) =>
+                          prev.includes(pos)
+                            ? prev.filter((p) => p !== pos)
+                            : [...prev, pos],
+                        )
+                      }
+                    >
+                      {pos}
+                    </Button>
+                  </WrapItem>
+                ))}
+              </Wrap>
 
-            <TableContainer>
-              <Table variant="simple" size="sm">
-                <Thead bg="gray.50">
-                  <Tr>
-                    <SortableTh
-                      label="Name"
-                      field="name"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <Th>Team</Th>
-                    <Th>Pos</Th>
-                    <SortableTh
-                      label="Age"
-                      field="age"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <Th>Injury</Th>
-                    <Th>Depth</Th>
-                    <SortableTh
-                      label="ERA"
-                      field="era"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <SortableTh
-                      label="W"
-                      field="wins"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <SortableTh
-                      label="L"
-                      field="losses"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <SortableTh
-                      label="SV"
-                      field="saves"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <SortableTh
-                      label="K"
-                      field="strikeouts"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                    <SortableTh
-                      label="IP"
-                      field="innings"
-                      currentField={pitcherSortField}
-                      currentDir={pitcherSortDir}
-                      onSort={togglePitcherSort}
-                    />
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {pitchers.map((player) => {
-                    const stat = player.stats?.find(
-                      (s) => s.season === season && s.type === 'pitcher',
-                    );
-                    const data =
-                      stat?.type === 'pitcher' ? stat.data : undefined;
-                    return (
-                      <Tr key={player._id} _hover={{ bg: 'green.50' }}>
-                        <Td fontWeight="medium" whiteSpace="nowrap">
-                          {player.injuryNote ? (
-                            <Tooltip
-                              label={player.injuryNote}
-                              placement="right"
-                            >
-                              <Text as="span" cursor="help">
-                                {player.name}
-                              </Text>
-                            </Tooltip>
-                          ) : (
-                            player.name
-                          )}
-                        </Td>
-                        <Td>{player.team}</Td>
-                        <Td whiteSpace="nowrap">
-                          {player.positions.join(', ')}
-                        </Td>
-                        <Td isNumeric>{player.age ?? '-'}</Td>
-                        <Td>
-                          <Badge
-                            colorScheme={
-                              player.injuryStatus === 'active' ? 'green' : 'red'
-                            }
-                            fontSize="xs"
-                          >
-                            {player.injuryStatus}
-                          </Badge>
-                        </Td>
-                        <Td>
-                          {player.depthChartStatus ? (
+              <TableContainer>
+                <Table variant="simple" size="sm">
+                  <Thead bg="gray.50">
+                    <Tr>
+                      <SortableTh
+                        label="Name"
+                        field="name"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <Th>Team</Th>
+                      <Th>Pos</Th>
+                      <SortableTh
+                        label="Age"
+                        field="age"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <Th>Injury</Th>
+                      <Th>Depth</Th>
+                      <SortableTh
+                        label="ERA"
+                        field="era"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <SortableTh
+                        label="W"
+                        field="wins"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <SortableTh
+                        label="L"
+                        field="losses"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <SortableTh
+                        label="SV"
+                        field="saves"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <SortableTh
+                        label="K"
+                        field="strikeouts"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                      <SortableTh
+                        label="IP"
+                        field="innings"
+                        currentField={pitcherSortField}
+                        currentDir={pitcherSortDir}
+                        onSort={togglePitcherSort}
+                      />
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {pitchers.map((player) => {
+                      const stat = player.stats?.find(
+                        (s) => s.season === season && s.type === 'pitcher',
+                      );
+                      const data =
+                        stat?.type === 'pitcher' ? stat.data : undefined;
+                      return (
+                        <Tr
+                          key={player._id}
+                          onClick={() => handlePlayerClick(player)}
+                          cursor="pointer"
+                          _hover={{ bg: 'green.100' }}
+                        >
+                          <Td fontWeight="medium" whiteSpace="nowrap">
+                            {player.injuryNote ? (
+                              <Tooltip
+                                label={player.injuryNote}
+                                placement="right"
+                              >
+                                <Text as="span" cursor="help">
+                                  {player.name}
+                                </Text>
+                              </Tooltip>
+                            ) : (
+                              player.name
+                            )}
+                          </Td>
+                          <Td>{player.team}</Td>
+                          <Td whiteSpace="nowrap">
+                            {player.positions.join(', ')}
+                          </Td>
+                          <Td isNumeric>{player.age ?? '-'}</Td>
+                          <Td>
                             <Badge
                               colorScheme={
-                                DEPTH_COLORS[player.depthChartStatus] ?? 'gray'
+                                player.injuryStatus === 'active'
+                                  ? 'green'
+                                  : 'red'
                               }
                               fontSize="xs"
                             >
-                              {player.depthChartStatus}
+                              {player.injuryStatus}
                             </Badge>
-                          ) : (
-                            '-'
-                          )}
-                        </Td>
-                        <Td isNumeric>{data?.era?.toFixed(2) ?? '-'}</Td>
-                        <Td isNumeric>{data?.wins ?? '-'}</Td>
-                        <Td isNumeric>{data?.losses ?? '-'}</Td>
-                        <Td isNumeric>{data?.saves ?? '-'}</Td>
-                        <Td isNumeric>{data?.strikeouts ?? '-'}</Td>
-                        <Td isNumeric>{data?.innings?.toFixed(1) ?? '-'}</Td>
-                      </Tr>
-                    );
-                  })}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                          </Td>
+                          <Td>
+                            {player.depthChartStatus ? (
+                              <Badge
+                                colorScheme={
+                                  DEPTH_COLORS[player.depthChartStatus] ??
+                                  'gray'
+                                }
+                                fontSize="xs"
+                              >
+                                {player.depthChartStatus}
+                              </Badge>
+                            ) : (
+                              '-'
+                            )}
+                          </Td>
+                          <Td isNumeric>{data?.era?.toFixed(2) ?? '-'}</Td>
+                          <Td isNumeric>{data?.wins ?? '-'}</Td>
+                          <Td isNumeric>{data?.losses ?? '-'}</Td>
+                          <Td isNumeric>{data?.saves ?? '-'}</Td>
+                          <Td isNumeric>{data?.strikeouts ?? '-'}</Td>
+                          <Td isNumeric>{data?.innings?.toFixed(1) ?? '-'}</Td>
+                        </Tr>
+                      );
+                    })}
+                  </Tbody>
+                </Table>
+              </TableContainer>
 
-            {pitchers.length === 0 && (
-              <Box py={10} textAlign="center">
-                <Text color="gray.500">No pitchers match your filters.</Text>
-              </Box>
-            )}
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Box>
+              {pitchers.length === 0 && (
+                <Box py={10} textAlign="center">
+                  <Text color="gray.500">No pitchers match your filters.</Text>
+                </Box>
+              )}
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+      <NotebookWorkspace
+        selectedNotebookId={selectedNotebookId}
+        selectedNotebookName={selectedNotebookName}
+        selectedNotebookContent={selectedNotebookContent}
+        onNotebookContentChange={updateNotebookContent}
+        onPlayerContentChange={updatePlayerContent}
+        selectedPlayerName={selectedPlayerName}
+        selectedPlayer={selectedPlayer}
+        onCloseNotebook={closeNotebook}
+        onOpenPlayerNotebook={openPlayerNotebook}
+        showLauncher={false}
+      />
+    </>
   );
 }
