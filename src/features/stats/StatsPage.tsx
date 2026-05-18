@@ -83,6 +83,7 @@ function NativeBadge({
         fontWeight: 700,
         lineHeight: '20px',
         display: 'inline-block',
+        textTransform: 'uppercase',
       }}
     >
       {children}

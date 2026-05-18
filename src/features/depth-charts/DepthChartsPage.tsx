@@ -160,7 +160,11 @@ function PositionGroup({
                 </Badge>
               )}
               {player.injuryStatus !== 'active' && (
-                <Badge fontSize="xs" colorScheme="red">
+                <Badge
+                  fontSize="xs"
+                  colorScheme="red"
+                  textTransform="uppercase"
+                >
                   {player.injuryStatus}
                 </Badge>
               )}
