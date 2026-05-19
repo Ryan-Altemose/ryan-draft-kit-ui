@@ -99,14 +99,17 @@ vi.mock('./components/LeagueTeamTable', () => ({
     team,
     rosterSlots = {},
     takenPlayers = [],
+    allTakenPlayers = [],
     startingBudget,
     onSaveChanges,
+    onRowsChange,
     onTeamNameChange,
     onSaveAllTextFields,
   }: {
     team: LeagueTeam;
     rosterSlots?: Record<string, number>;
     takenPlayers?: Array<[string, string, string, number, string]>;
+    allTakenPlayers?: Array<[string, string, string, number, string]>;
     startingBudget: number;
     onSaveChanges?: (payload: {
       teamName: string;
@@ -117,6 +120,15 @@ vi.mock('./components/LeagueTeamTable', () => ({
         contract: string;
       }>;
     }) => void;
+    onRowsChange?: (
+      teamId: string,
+      rows: Array<{
+        rowId: string;
+        playerId: string;
+        price: number;
+        contract: string;
+      }>,
+    ) => void;
     onTeamNameChange?: (teamId: string, teamName: string) => void;
     onSaveAllTextFields?: () => void;
   }) => {
@@ -146,6 +158,13 @@ vi.mock('./components/LeagueTeamTable', () => ({
           const currentRow = currentRows[index];
           if (
             currentRow &&
+            currentRow.playerId &&
+            currentRow.playerId !== nextRow.playerId
+          ) {
+            return currentRow;
+          }
+          if (
+            currentRow &&
             currentRow.playerId === nextRow.playerId &&
             currentRow.price !== nextRow.price
           ) {
@@ -155,6 +174,10 @@ vi.mock('./components/LeagueTeamTable', () => ({
         }),
       );
     }, [takenPlayers, rosterSlots]);
+
+    useEffect(() => {
+      onRowsChange?.(team[0], rows);
+    }, [onRowsChange, rows, team]);
 
     const handlePriceChange = (index: number, value: string) => {
       const price = Number.isNaN(Number(value)) ? 0 : Number(value);
@@ -199,6 +222,7 @@ vi.mock('./components/LeagueTeamTable', () => ({
           }}
         />
         <p>Budget: ${currentBudget}</p>
+        <p>All Taken: {allTakenPlayers.length}</p>
         {rows.map((row, index) => (
           <div key={row.rowId}>
             <span>{row.playerId}</span>
@@ -209,6 +233,16 @@ vi.mock('./components/LeagueTeamTable', () => ({
             />
           </div>
         ))}
+        {testRowOverrides[team[0]] ? (
+          <button
+            type="button"
+            onClick={() => {
+              setRows(testRowOverrides[team[0]]);
+            }}
+          >
+            Apply Rows {team[0]}
+          </button>
+        ) : null}
         <button type="button" onClick={handleSave}>
           Save Changes
         </button>
@@ -548,5 +582,32 @@ describe('LeagueDetailPage', () => {
     expect(args.input.takenPlayers).toEqual([
       ['player-1', 'team-2', 'C-0', 20, ''],
     ]);
+  });
+
+  it('updates league-wide taken players immediately for unsaved roster moves', async () => {
+    testRowOverrides = {
+      'team-1': [
+        {
+          rowId: 'C-0',
+          playerId: 'player-2',
+          price: 45,
+          contract: '',
+        },
+      ],
+    };
+
+    render(
+      <ChakraProvider>
+        <LeagueDetailPage leagueId="league-123" />
+      </ChakraProvider>,
+    );
+
+    expect(screen.getAllByText('All Taken: 2')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Rows team-1' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('All Taken: 1')).toHaveLength(2);
+    });
   });
 });
