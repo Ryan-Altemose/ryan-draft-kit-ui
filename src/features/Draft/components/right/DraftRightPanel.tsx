@@ -32,6 +32,7 @@ type Props = {
   onSaveRosters: (updatedTakenPlayers: TakenPlayer[]) => void;
   isSavingRosters?: boolean;
   onPlayerNotebookOpen?: (player: Player) => void;
+  resetKey?: number;
 };
 
 export default function DraftRightPanel({
@@ -39,6 +40,7 @@ export default function DraftRightPanel({
   onSaveRosters,
   isSavingRosters = false,
   onPlayerNotebookOpen,
+  resetKey,
 }: Props) {
   const [rosterView, setRosterView] = useState<
     'main' | 'minorLeague' | 'taxiSquad'
@@ -264,6 +266,7 @@ export default function DraftRightPanel({
                     isSaving={isSavingRosters}
                     colorIndex={index}
                     onPlayerNotebookOpen={onPlayerNotebookOpen}
+                    resetKey={resetKey}
                     draftMode
                   />
                 );

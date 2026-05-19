@@ -63,6 +63,7 @@ type LeagueTeamTableProps = {
   draftMode?: boolean;
   colorIndex?: number;
   onPlayerNotebookOpen?: (player: Player) => void;
+  resetKey?: number;
 };
 
 type TeamTableRow = {
@@ -138,6 +139,7 @@ export default function LeagueTeamTable({
   draftMode = false,
   colorIndex,
   onPlayerNotebookOpen,
+  resetKey,
 }: LeagueTeamTableProps) {
   const toast = useToast();
   const [teamId, teamName] = team;
@@ -208,6 +210,12 @@ export default function LeagueTeamTable({
     );
     previousPropRowsRef.current = propRows;
   }, [propRows, teamName, players, allTakenPlayers, takenPlayers, draftMode]);
+
+  useEffect(() => {
+    if (!resetKey) return;
+    setLocalRows(propRows);
+    setLocalTeamName(teamName);
+  }, [resetKey]);
 
   useEffect(() => {
     if (players.length === 0) return;

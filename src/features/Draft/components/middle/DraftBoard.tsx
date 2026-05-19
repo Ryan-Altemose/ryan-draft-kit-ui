@@ -340,24 +340,6 @@ export default function DraftBoard({
             <Tr>
               <Td colSpan={COLUMNS.length} borderTopWidth="2px" py={2}>
                 <Flex align="center" justify="space-between" w="100%" gap={2}>
-                  <Flex gap={2}>
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      onClick={handleEnterPick}
-                    >
-                      Enter Pick
-                    </Button>
-                    <Button
-                      size="sm"
-                      colorScheme="red"
-                      variant="outline"
-                      isDisabled={displayedDraftPicks.length === 0}
-                      onClick={onUndo}
-                    >
-                      Undo
-                    </Button>
-                  </Flex>
                   <Button
                     size="sm"
                     variant="outline"
@@ -367,6 +349,24 @@ export default function DraftBoard({
                   >
                     Finish Draft
                   </Button>
+                  <Flex gap={2}>
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      variant="outline"
+                      isDisabled={displayedDraftPicks.length === 0}
+                      onClick={onUndo}
+                    >
+                      Undo
+                    </Button>
+                    <Button
+                      size="sm"
+                      colorScheme="green"
+                      onClick={handleEnterPick}
+                    >
+                      Enter Pick
+                    </Button>
+                  </Flex>
                 </Flex>
               </Td>
             </Tr>
