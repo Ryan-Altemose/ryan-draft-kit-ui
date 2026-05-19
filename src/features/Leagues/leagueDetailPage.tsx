@@ -174,12 +174,18 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     }>,
   ): TakenPlayer[] {
     const rowsBySlot = new Map(rows.map((row) => [row.rowId, row]));
+    const selectedPlayerIds = new Set(
+      rows.map((row) => row.playerId).filter(Boolean),
+    );
     const updatedTakenPlayers: TakenPlayer[] = [];
     const handledSlots = new Set<string>();
 
     currentTakenPlayers.forEach((takenPlayer) => {
-      const [, takenPlayerTeamId, positionSlot] = takenPlayer;
+      const [takenPlayerId, takenPlayerTeamId, positionSlot] = takenPlayer;
       if (takenPlayerTeamId !== teamId) {
+        if (selectedPlayerIds.has(takenPlayerId)) {
+          return;
+        }
         updatedTakenPlayers.push(takenPlayer);
         return;
       }

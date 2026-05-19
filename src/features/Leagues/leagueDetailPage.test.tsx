@@ -21,6 +21,15 @@ const upsertMutateAsyncMock = vi.fn();
 let mockLeague: League;
 let mockError: Error | null = null;
 let mockIsLoading = false;
+let testRowOverrides: Record<
+  string,
+  Array<{
+    rowId: string;
+    playerId: string;
+    price: number;
+    contract: string;
+  }>
+> = {};
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
@@ -157,6 +166,12 @@ vi.mock('./components/LeagueTeamTable', () => ({
     };
 
     const handleSave = () => {
+      const overrideRows = testRowOverrides[team[0]];
+      if (overrideRows) {
+        onSaveChanges?.({ teamName: localTeamName, rows: overrideRows });
+        return;
+      }
+
       const invalidRows = rows.filter(
         (row) =>
           (row.playerId && row.price <= 0) || (!row.playerId && row.price > 0),
@@ -207,6 +222,7 @@ describe('LeagueDetailPage', () => {
     vi.clearAllMocks();
     mockError = null;
     mockIsLoading = false;
+    testRowOverrides = {};
     upsertMutateAsyncMock.mockResolvedValue({});
     mockLeague = {
       _id: 'league-123',
@@ -500,5 +516,37 @@ describe('LeagueDetailPage', () => {
     expect(screen.getByDisplayValue('35')).toBeTruthy();
     expect(screen.getByDisplayValue('22')).toBeTruthy();
     expect(screen.queryByDisplayValue('100')).toBeNull();
+  });
+
+  it('removes the old team entry when a player is moved to another team and saved', async () => {
+    testRowOverrides = {
+      'team-2': [
+        {
+          rowId: 'C-0',
+          playerId: 'player-1',
+          price: 20,
+          contract: '',
+        },
+      ],
+    };
+
+    render(
+      <ChakraProvider>
+        <LeagueDetailPage leagueId="league-123" />
+      </ChakraProvider>,
+    );
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /save changes/i })[1],
+    );
+
+    await waitFor(() => {
+      expect(upsertMutateAsyncMock).toHaveBeenCalledTimes(1);
+    });
+
+    const args = upsertMutateAsyncMock.mock.calls[0][0];
+    expect(args.input.takenPlayers).toEqual([
+      ['player-1', 'team-2', 'C-0', 20, ''],
+    ]);
   });
 });
