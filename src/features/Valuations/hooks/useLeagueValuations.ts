@@ -4,7 +4,6 @@ import {
   fetchAllLeagueValuationsMap,
   fetchLeagueValuationsPage,
 } from '../utils/fetchLeagueValuations';
-import { upsertExternalLeague } from '../utils/upsertExternalLeague';
 import type { League } from '@/features/Leagues/types/leagues.types';
 import type { PlayerValuation } from '../types/valuations.types';
 
@@ -54,10 +53,7 @@ export function useLeagueValuations(league?: League | null) {
     queryKey: league?._id
       ? ['league-valuations', league._id, leagueValuationsFingerprint(league)]
       : ['league-valuations', undefined],
-    queryFn: async () => {
-      const external = await upsertExternalLeague(league as League);
-      return fetchAllLeagueValuationsMap(external.data._id);
-    },
+    queryFn: async () => fetchAllLeagueValuationsMap(league as League),
     enabled: Boolean(league?._id),
     staleTime: 0,
     refetchOnWindowFocus: true,
@@ -73,9 +69,8 @@ export function useLeagueValuations(league?: League | null) {
         ]
       : ['league-valuations-preview', undefined],
     queryFn: async () => {
-      const external = await upsertExternalLeague(league as League);
       const response = await fetchLeagueValuationsPage(
-        external.data._id,
+        league as League,
         1,
         PREVIEW_LIMIT,
       );
