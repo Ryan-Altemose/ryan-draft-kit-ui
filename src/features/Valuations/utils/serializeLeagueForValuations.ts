@@ -1,9 +1,6 @@
-import { externalApiClient } from '@/shared/utils/api-client';
 import type { League } from '@/features/Leagues/types/leagues.types';
-import type { ExternalLeagueResponse } from '../types/valuations.types';
 
-type ExternalLeagueUpsertPayload = {
-  externalId: string;
+export type ValuationLeaguePayload = {
   name: string;
   description?: string;
   format: 'roto' | 'h2h-points' | 'h2h-category';
@@ -18,11 +15,12 @@ type ExternalLeagueUpsertPayload = {
   categoryWeights?: Record<string, number>;
 };
 
-function toExternalLeaguePayload(league: League): ExternalLeagueUpsertPayload {
+export function serializeLeagueForValuations(
+  league: League,
+): ValuationLeaguePayload {
   const rosterSlots = league.rosterSlots as unknown as Record<string, number>;
 
   return {
-    externalId: league.externalId,
     name: league.name,
     description: league.description,
     format: league.format,
@@ -48,14 +46,4 @@ function toExternalLeaguePayload(league: League): ExternalLeagueUpsertPayload {
     teams: league.teams,
     categoryWeights: league.categoryWeights,
   };
-}
-
-export async function upsertExternalLeague(
-  league: League,
-): Promise<ExternalLeagueResponse> {
-  const payload = toExternalLeaguePayload(league);
-  return externalApiClient.post<ExternalLeagueResponse>(
-    '/api/leagues',
-    payload,
-  );
 }

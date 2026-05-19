@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import type { League } from '@/features/Leagues/types/leagues.types';
-import { upsertExternalLeague } from '../utils/upsertExternalLeague';
 import { fetchAllLeagueValuations } from '../utils/fetchLeagueValuations';
 
 function stableStringify(value: unknown): string {
@@ -52,9 +51,8 @@ export function useLeagueProjections(league?: League | null) {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     queryFn: async () => {
-      const external = await upsertExternalLeague(league as League);
       const valuationsResponse = await fetchAllLeagueValuations(
-        external.data._id,
+        league as League,
       );
 
       const averagedStatsByPlayerId: Record<

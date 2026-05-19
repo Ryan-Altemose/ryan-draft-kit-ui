@@ -1,23 +1,25 @@
 import { externalApiClient } from '@/shared/utils/api-client';
+import type { League } from '@/features/Leagues/types/leagues.types';
 import type { LeagueValuationsResponse } from '../types/valuations.types';
+import { serializeLeagueForValuations } from './serializeLeagueForValuations';
 
 const PAGE_LIMIT = 100;
 
 export async function fetchLeagueValuationsPage(
-  leagueId: string,
+  league: League,
   page: number,
   limit: number = PAGE_LIMIT,
 ): Promise<LeagueValuationsResponse> {
-  return externalApiClient.get<LeagueValuationsResponse>(
-    `/api/valuations/${leagueId}`,
-    { params: { page, limit } },
-  );
+  return externalApiClient.post<LeagueValuationsResponse>('/api/valuations', {
+    league: serializeLeagueForValuations(league),
+    query: { page, limit },
+  });
 }
 
 export async function fetchAllLeagueValuations(
-  leagueId: string,
+  league: League,
 ): Promise<LeagueValuationsResponse> {
-  const first = await fetchLeagueValuationsPage(leagueId, 1, PAGE_LIMIT);
+  const first = await fetchLeagueValuationsPage(league, 1, PAGE_LIMIT);
   const total =
     first.data?.pagination?.total ?? first.data?.valuations?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
@@ -26,7 +28,7 @@ export async function fetchAllLeagueValuations(
 
   const remaining = await Promise.all(
     Array.from({ length: totalPages - 1 }, (_, index) =>
-      fetchLeagueValuationsPage(leagueId, index + 2, PAGE_LIMIT),
+      fetchLeagueValuationsPage(league, index + 2, PAGE_LIMIT),
     ),
   );
 
@@ -47,9 +49,9 @@ export async function fetchAllLeagueValuations(
 }
 
 export async function fetchAllLeagueValuationsMap(
-  leagueId: string,
+  league: League,
 ): Promise<Record<string, number>> {
-  const response = await fetchAllLeagueValuations(leagueId);
+  const response = await fetchAllLeagueValuations(league);
   const map: Record<string, number> = {};
   for (const valuation of response.data?.valuations ?? []) {
     map[valuation.playerId] = valuation.dollarValue;

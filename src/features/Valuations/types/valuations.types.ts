@@ -13,7 +13,8 @@ export type PlayerValuation = {
 };
 
 export type LeagueValuationsData = {
-  leagueId: string;
+  leagueId?: string;
+  leagueName: string;
   valuations: PlayerValuation[];
   pagination: { page: number; limit: number; total: number };
 };
@@ -21,13 +22,4 @@ export type LeagueValuationsData = {
 export type LeagueValuationsResponse = {
   success: boolean;
   data: LeagueValuationsData;
-};
-
-export type ExternalLeague = {
-  _id: string;
-};
-
-export type ExternalLeagueResponse = {
-  success: boolean;
-  data: ExternalLeague;
 };
