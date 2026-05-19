@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -45,6 +45,10 @@ export default function DraftPage() {
   const [isCopyingDraft, setIsCopyingDraft] = useState(false);
   const [showCopyDraftWarning, setShowCopyDraftWarning] = useState(false);
   const [rosterResetKey, setRosterResetKey] = useState(0);
+  const [pendingTakenPlayers, setPendingTakenPlayers] = useState<
+    TakenPlayer[] | null
+  >(null);
+  const [hasPendingRosterChanges, setHasPendingRosterChanges] = useState(false);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
   const valuationsQuery = useLeagueValuations(selectedLeague);
@@ -63,10 +67,22 @@ export default function DraftPage() {
   function handleLeagueChange(league: League | null) {
     setSelectedLeague(league);
     setSelectedDraft(null);
+    setPendingTakenPlayers(null);
+    setHasPendingRosterChanges(false);
   }
+
+  const currentTakenPlayers = useMemo(() => {
+    if (hasPendingRosterChanges && pendingTakenPlayers !== null) {
+      return pendingTakenPlayers;
+    }
+
+    return selectedLeague?.taken_players ?? [];
+  }, [hasPendingRosterChanges, pendingTakenPlayers, selectedLeague]);
 
   function saveDraftLeague(league: League) {
     setSelectedLeague(league);
+    setPendingTakenPlayers(null);
+    setHasPendingRosterChanges(false);
 
     void upsertLeagueMutation.mutateAsync({
       input: toDraftLeagueInput(league),
@@ -82,7 +98,7 @@ export default function DraftPage() {
 
     const [lastPickNumber, , , lastPlayerId] = picks[picks.length - 1];
     const newDraftPicks = picks.filter(([n]) => n !== lastPickNumber);
-    const newTakenPlayers = (selectedLeague.taken_players ?? []).filter(
+    const newTakenPlayers = currentTakenPlayers.filter(
       ([pid]) => pid !== lastPlayerId,
     );
 
@@ -108,10 +124,7 @@ export default function DraftPage() {
   function handlePickEntered(pick: DraftPick, takenEntry: TakenPlayer) {
     if (!selectedLeague) return;
 
-    const newTakenPlayers = [
-      ...(selectedLeague.taken_players ?? []),
-      takenEntry,
-    ];
+    const newTakenPlayers = [...currentTakenPlayers, takenEntry];
     const newDraftPicks = [...(selectedLeague.draft_picks ?? []), pick];
 
     saveDraftLeague({
@@ -125,6 +138,19 @@ export default function DraftPage() {
   async function handleFinishDraft(name: string) {
     if (!selectedLeague) return;
 
+    if (hasPendingRosterChanges && pendingTakenPlayers !== null) {
+      const updatedLeague = {
+        ...selectedLeague,
+        taken_players: pendingTakenPlayers,
+      };
+      setSelectedLeague(updatedLeague);
+      await upsertLeagueMutation.mutateAsync({
+        input: toDraftLeagueInput(updatedLeague),
+        existingLeague: updatedLeague,
+        endpoint: '/api/draft-save/leagues',
+      });
+    }
+
     const response = await localApiClient.post<LeagueResponse>(
       `/api/leagues/${selectedLeague._id}/finish-draft`,
       { name },
@@ -134,6 +160,8 @@ export default function DraftPage() {
       const updated = response.data;
       setSelectedLeague(updated);
       setRosterResetKey((k) => k + 1);
+      setPendingTakenPlayers(null);
+      setHasPendingRosterChanges(false);
       queryClient.setQueryData(['draft-save-league', updated._id], {
         success: true,
         data: updated,
@@ -177,6 +205,9 @@ export default function DraftPage() {
         const updated = response.data;
         setSelectedLeague(updated);
         setSelectedDraft(null);
+        setRosterResetKey((k) => k + 1);
+        setPendingTakenPlayers(null);
+        setHasPendingRosterChanges(false);
         queryClient.setQueryData(['draft-save-league', updated._id], {
           success: true,
           data: updated,
@@ -237,7 +268,7 @@ export default function DraftPage() {
         >
           <DraftMiddlePanel
             teams={selectedLeague?.teams ?? []}
-            takenPlayers={selectedLeague?.taken_players ?? []}
+            takenPlayers={currentTakenPlayers}
             draftPicks={
               selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
             }
@@ -261,6 +292,10 @@ export default function DraftPage() {
           <DraftRightPanel
             league={selectedLeague}
             onSaveRosters={handleSaveRosters}
+            onPendingRostersChange={(updatedTakenPlayers, hasDirtyChanges) => {
+              setPendingTakenPlayers(updatedTakenPlayers);
+              setHasPendingRosterChanges(hasDirtyChanges);
+            }}
             isSavingRosters={upsertLeagueMutation.isPending}
             onPlayerNotebookOpen={handleDraftRosterPlayerNotebookOpen}
             resetKey={rosterResetKey}

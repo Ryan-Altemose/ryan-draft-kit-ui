@@ -30,6 +30,10 @@ type TeamRow = {
 type Props = {
   league: League | null;
   onSaveRosters: (updatedTakenPlayers: TakenPlayer[]) => void;
+  onPendingRostersChange?: (
+    updatedTakenPlayers: TakenPlayer[],
+    hasDirtyChanges: boolean,
+  ) => void;
   isSavingRosters?: boolean;
   onPlayerNotebookOpen?: (player: Player) => void;
   resetKey?: number;
@@ -38,6 +42,7 @@ type Props = {
 export default function DraftRightPanel({
   league,
   onSaveRosters,
+  onPendingRostersChange,
   isSavingRosters = false,
   onPlayerNotebookOpen,
   resetKey,
@@ -63,8 +68,10 @@ export default function DraftRightPanel({
 
   // Reset transfer state whenever the persisted league data changes
   useEffect(() => {
+    setCurrentRowsByTeam({});
+    setDirtyTeamIds(new Set());
     setForcedEmptyPlayersByTeam({});
-  }, [league]);
+  }, [league, resetKey]);
 
   const handleDirtyChange = useCallback((teamId: string, isDirty: boolean) => {
     setDirtyTeamIds((prev) => {
@@ -134,27 +141,26 @@ export default function DraftRightPanel({
     return map;
   }, [teams, takenPlayers]);
 
-  function handleSave() {
-    if (!league) return;
+  const pendingTakenPlayers = useMemo(() => {
+    if (!league) return [];
 
     const existingTakenPlayers = league.taken_players ?? [];
-    const newTakenPlayers: TakenPlayer[] = [];
+    const nextTakenPlayers: TakenPlayer[] = [];
 
     for (const [teamId] of league.teams ?? []) {
       const rows = currentRowsByTeam[teamId];
 
       if (!rows) {
-        // Table not yet initialized — preserve original entries for this team
         existingTakenPlayers
           .filter(([, tid]) => tid === teamId)
-          .forEach((entry) => newTakenPlayers.push(entry));
+          .forEach((entry) => nextTakenPlayers.push(entry));
         continue;
       }
 
       for (const row of rows) {
         if (!row.playerId) continue;
 
-        newTakenPlayers.push([
+        nextTakenPlayers.push([
           row.playerId,
           teamId,
           row.rowId,
@@ -164,16 +170,23 @@ export default function DraftRightPanel({
       }
     }
 
-    // Preserve unslotted entries (e.g. positionSlot='DRAFT') not captured in any table row.
-    // Deduplicate by playerId so cross-team transfers don't re-add the old entry.
-    const processedPlayerIds = new Set(newTakenPlayers.map(([pid]) => pid));
+    const processedPlayerIds = new Set(nextTakenPlayers.map(([pid]) => pid));
     for (const entry of existingTakenPlayers) {
       if (!processedPlayerIds.has(entry[0])) {
-        newTakenPlayers.push(entry);
+        nextTakenPlayers.push(entry);
       }
     }
 
-    onSaveRosters(newTakenPlayers);
+    return nextTakenPlayers;
+  }, [currentRowsByTeam, league]);
+
+  useEffect(() => {
+    onPendingRostersChange?.(pendingTakenPlayers, dirtyTeamIds.size > 0);
+  }, [dirtyTeamIds, onPendingRostersChange, pendingTakenPlayers]);
+
+  function handleSave() {
+    if (!league) return;
+    onSaveRosters(pendingTakenPlayers);
   }
 
   const hasDirtyChanges = dirtyTeamIds.size > 0;
