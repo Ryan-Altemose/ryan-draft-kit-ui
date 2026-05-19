@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import DraftLeftPanel from './DraftLeftPanel';
 import type { League } from '@/features/Leagues/types/leagues.types';
+import type { LeagueDraft } from '@/features/Leagues/types/leagueDrafts.types';
 
 const mockLeagues: League[] = [
   {
@@ -60,6 +61,21 @@ const mockLeagues: League[] = [
     },
     teams: [['team-4', 'Team D', 300]],
     isDefault: false,
+  },
+];
+
+const mockDrafts: LeagueDraft[] = [
+  {
+    _id: 'draft-1',
+    leagueId: 'league-1',
+    name: '2026 Season',
+    taken_players: [],
+    draft_picks: [[1, 'team-1', 'team-1', 'player-1', 10]],
+    teams: [
+      ['team-1', 'Team A', 250],
+      ['team-2', 'Team B', 260],
+    ],
+    totalBudget: 260,
   },
 ];
 
@@ -206,5 +222,31 @@ describe('DraftLeftPanel', () => {
       target: { value: '' },
     });
     expect(screen.getByText(/select a league to view details/i)).toBeTruthy();
+  });
+
+  it('selects archived drafts by draft id from the draft history query', () => {
+    const onDraftChange = vi.fn();
+    vi.mocked(useLeagueDrafts).mockReturnValue({
+      data: { success: true, data: mockDrafts },
+      isLoading: false,
+    } as ReturnType<typeof useLeagueDrafts>);
+
+    render(
+      <ChakraProvider>
+        <DraftLeftPanel
+          onLeagueChange={vi.fn()}
+          onDraftChange={onDraftChange}
+        />
+      </ChakraProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText('League select'), {
+      target: { value: 'league-1' },
+    });
+    fireEvent.change(screen.getByLabelText('Draft select'), {
+      target: { value: 'draft-1' },
+    });
+
+    expect(onDraftChange).toHaveBeenLastCalledWith(mockDrafts[0]);
   });
 });

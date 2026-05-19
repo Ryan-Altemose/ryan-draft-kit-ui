@@ -34,43 +34,6 @@ import DraftLeftPanel, {
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
 
-function buildLegacyDraftLeague(league: League, draft: DraftSelection): League {
-  const draftPicks = draft.draft_picks ?? [];
-  const totalBudget = league.totalBudget ?? 0;
-  const spentByTeam = new Map<string, number>();
-
-  draftPicks.forEach(([, , winningTeamId, , salary]) => {
-    spentByTeam.set(
-      winningTeamId,
-      (spentByTeam.get(winningTeamId) ?? 0) + salary,
-    );
-  });
-
-  const teams =
-    (league.teams?.map(([teamId, teamName]) => [
-      teamId,
-      teamName,
-      Math.max(0, totalBudget - (spentByTeam.get(teamId) ?? 0)),
-    ]) as League['teams']) ?? [];
-
-  const takenPlayers: TakenPlayer[] = draftPicks.map(
-    ([, , winningTeamId, playerId, salary]) => [
-      playerId,
-      winningTeamId,
-      'DRAFT',
-      salary,
-      '',
-    ],
-  );
-
-  return {
-    ...league,
-    teams,
-    taken_players: takenPlayers,
-    draft_picks: draftPicks,
-  };
-}
-
 export default function DraftPage() {
   const searchParams = useSearchParams();
   const initialLeagueId = searchParams.get('leagueId') ?? undefined;
@@ -173,6 +136,9 @@ export default function DraftPage() {
         data: updated,
       });
       void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['draft-save-league-drafts', updated._id],
+      });
       void queryClient.invalidateQueries({ queryKey: ['leagues'] });
       void queryClient.invalidateQueries({ queryKey: ['league'] });
     }
@@ -192,8 +158,7 @@ export default function DraftPage() {
     });
   }
 
-  const selectedArchivedDraftId =
-    selectedDraft && '_id' in selectedDraft ? selectedDraft._id : undefined;
+  const selectedArchivedDraftId = selectedDraft?._id;
 
   async function copySelectedDraftToLiveDraft() {
     if (!selectedLeague || !selectedDraft) return;
@@ -201,49 +166,25 @@ export default function DraftPage() {
     try {
       setIsCopyingDraft(true);
 
-      if (selectedArchivedDraftId) {
-        const response = await localApiClient.post<LeagueResponse>(
-          `/api/draft-save/leagues/${selectedLeague._id}/drafts/${selectedArchivedDraftId}/copy`,
-        );
-
-        if (response?.success && response.data) {
-          const updated = response.data;
-          setSelectedLeague(updated);
-          setSelectedDraft(null);
-          queryClient.setQueryData(['draft-save-league', updated._id], {
-            success: true,
-            data: updated,
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ['draft-save-leagues'],
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ['league-valuations', updated._id],
-          });
-        }
-        return;
-      }
-
-      const updatedLeague = buildLegacyDraftLeague(
-        selectedLeague,
-        selectedDraft,
+      const response = await localApiClient.post<LeagueResponse>(
+        `/api/draft-save/leagues/${selectedLeague._id}/drafts/${selectedArchivedDraftId}/copy`,
       );
-      await upsertLeagueMutation.mutateAsync({
-        input: toDraftLeagueInput(updatedLeague),
-        existingLeague: updatedLeague,
-        endpoint: '/api/draft-save/leagues',
-      });
 
-      setSelectedLeague(updatedLeague);
-      setSelectedDraft(null);
-      queryClient.setQueryData(['draft-save-league', updatedLeague._id], {
-        success: true,
-        data: updatedLeague,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
-      void queryClient.invalidateQueries({
-        queryKey: ['league-valuations', updatedLeague._id],
-      });
+      if (response?.success && response.data) {
+        const updated = response.data;
+        setSelectedLeague(updated);
+        setSelectedDraft(null);
+        queryClient.setQueryData(['draft-save-league', updated._id], {
+          success: true,
+          data: updated,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ['draft-save-leagues'],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ['league-valuations', updated._id],
+        });
+      }
     } finally {
       setIsCopyingDraft(false);
       setShowCopyDraftWarning(false);
