@@ -122,7 +122,15 @@ export default function CompareModal({
   const takenPlayers: TakenPlayer[] = league?.taken_players ?? [];
 
   function getTeamPlayerIds(teamId: string): string[] {
-    return takenPlayers.filter(([, tid]) => tid === teamId).map(([pid]) => pid);
+    return takenPlayers
+      .filter(
+        ([, tid, slot]) =>
+          tid === teamId &&
+          !slot.startsWith('BENCH') &&
+          !slot.startsWith('MiLB') &&
+          !slot.startsWith('TAXI'),
+      )
+      .map(([pid]) => pid);
   }
 
   function computeTeamValue(
@@ -176,7 +184,13 @@ export default function CompareModal({
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Compare</ModalHeader>
+        <ModalHeader>
+          Projected Team Totals
+          <Text fontSize="xs" fontWeight="normal" color="gray.500" mt={1}>
+            Bench, minor league, and taxi squad players are excluded from these
+            totals.
+          </Text>
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
           <Grid templateColumns="1fr 1fr 1fr" gap={6} mb={6}>

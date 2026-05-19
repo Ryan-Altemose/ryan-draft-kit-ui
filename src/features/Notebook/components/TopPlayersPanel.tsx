@@ -77,7 +77,7 @@ export default function TopPlayersPanel({
                   colorScheme={
                     player.injuryStatus === 'active' ? 'green' : 'red'
                   }
-                  textTransform="capitalize"
+                  textTransform="uppercase"
                 >
                   {player.injuryStatus}
                 </Badge>

@@ -44,6 +44,7 @@ export default function DraftPage() {
   );
   const [isCopyingDraft, setIsCopyingDraft] = useState(false);
   const [showCopyDraftWarning, setShowCopyDraftWarning] = useState(false);
+  const [rosterResetKey, setRosterResetKey] = useState(0);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
   const valuationsQuery = useLeagueValuations(selectedLeague);
@@ -118,6 +119,7 @@ export default function DraftPage() {
       taken_players: newTakenPlayers,
       draft_picks: newDraftPicks,
     });
+    setRosterResetKey((k) => k + 1);
   }
 
   async function handleFinishDraft(name: string) {
@@ -131,6 +133,7 @@ export default function DraftPage() {
     if (response?.success && response.data) {
       const updated = response.data;
       setSelectedLeague(updated);
+      setRosterResetKey((k) => k + 1);
       queryClient.setQueryData(['draft-save-league', updated._id], {
         success: true,
         data: updated,
@@ -260,6 +263,7 @@ export default function DraftPage() {
             onSaveRosters={handleSaveRosters}
             isSavingRosters={upsertLeagueMutation.isPending}
             onPlayerNotebookOpen={handleDraftRosterPlayerNotebookOpen}
+            resetKey={rosterResetKey}
           />
         </Box>
       </Flex>

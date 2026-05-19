@@ -323,7 +323,7 @@ export default function NotebookWorkspace({
                           ? 'green'
                           : 'red'
                       }
-                      textTransform="capitalize"
+                      textTransform="uppercase"
                     >
                       {selectedPlayer?.injuryStatus ?? 'unknown'}
                     </Badge>
