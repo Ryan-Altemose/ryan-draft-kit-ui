@@ -1,18 +1,46 @@
 'use client';
 
-import { Spinner, Text, SimpleGrid, useDisclosure } from '@chakra-ui/react';
+import {
+  Spinner,
+  Text,
+  SimpleGrid,
+  useDisclosure,
+  useToast,
+} from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import { ERROR_MESSAGES } from '@/shared/constants';
 import { isApiError } from '@/shared/utils/api-client';
+import { usePlayers } from '@/shared/hooks/usePlayers';
 import { useLeagues } from '../hooks/useLeagues';
+import { downloadLeagueJson } from '../utils/exportLeague';
 import LeagueCard from './LeagueCard';
+import ImportLeagueModal from './ImportLeagueModal';
 import UpsertLeagueModal from './UpsertLeagueModal';
 
 export default function LeagueList() {
   const router = useRouter();
+  const toast = useToast();
   const { data, isLoading, error } = useLeagues();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { players, isLoading: isLoadingPlayers } = usePlayers();
+  const createModal = useDisclosure();
+  const importModal = useDisclosure();
   const leagues = data?.data ?? [];
+
+  function handleExport(league: (typeof leagues)[number]) {
+    try {
+      downloadLeagueJson(league, players);
+    } catch (exportError) {
+      toast({
+        title: 'Unable to export league',
+        description:
+          exportError instanceof Error ? exportError.message : 'Export failed',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    }
+  }
 
   if (isLoading) return <Spinner />;
 
@@ -29,12 +57,15 @@ export default function LeagueList() {
   return (
     <>
       <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
-        <LeagueCard isNew onClick={onOpen} />
+        <LeagueCard isNew onClick={createModal.onOpen} />
+        <LeagueCard isImport onClick={importModal.onOpen} />
         {leagues.map((league) => (
           <LeagueCard
             key={league._id}
             league={league}
             onClick={() => router.push(`/leagues/${league._id}`)}
+            onExport={() => handleExport(league)}
+            isExportDisabled={isLoadingPlayers}
           />
         ))}
       </SimpleGrid>
@@ -43,7 +74,14 @@ export default function LeagueList() {
           No leagues yet. Create a league to get started.
         </Text>
       ) : null}
-      <UpsertLeagueModal isOpen={isOpen} onClose={onClose} />
+      <UpsertLeagueModal
+        isOpen={createModal.isOpen}
+        onClose={createModal.onClose}
+      />
+      <ImportLeagueModal
+        isOpen={importModal.isOpen}
+        onClose={importModal.onClose}
+      />
     </>
   );
 }
