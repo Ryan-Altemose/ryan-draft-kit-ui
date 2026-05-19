@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -34,43 +34,6 @@ import DraftLeftPanel, {
 import DraftMiddlePanel from './components/middle/DraftMiddlePanel';
 import DraftRightPanel from './components/right/DraftRightPanel';
 
-function buildLegacyDraftLeague(league: League, draft: DraftSelection): League {
-  const draftPicks = draft.draft_picks ?? [];
-  const totalBudget = league.totalBudget ?? 0;
-  const spentByTeam = new Map<string, number>();
-
-  draftPicks.forEach(([, , winningTeamId, , salary]) => {
-    spentByTeam.set(
-      winningTeamId,
-      (spentByTeam.get(winningTeamId) ?? 0) + salary,
-    );
-  });
-
-  const teams =
-    (league.teams?.map(([teamId, teamName]) => [
-      teamId,
-      teamName,
-      Math.max(0, totalBudget - (spentByTeam.get(teamId) ?? 0)),
-    ]) as League['teams']) ?? [];
-
-  const takenPlayers: TakenPlayer[] = draftPicks.map(
-    ([, , winningTeamId, playerId, salary]) => [
-      playerId,
-      winningTeamId,
-      'DRAFT',
-      salary,
-      '',
-    ],
-  );
-
-  return {
-    ...league,
-    teams,
-    taken_players: takenPlayers,
-    draft_picks: draftPicks,
-  };
-}
-
 export default function DraftPage() {
   const searchParams = useSearchParams();
   const initialLeagueId = searchParams.get('leagueId') ?? undefined;
@@ -82,6 +45,10 @@ export default function DraftPage() {
   const [isCopyingDraft, setIsCopyingDraft] = useState(false);
   const [showCopyDraftWarning, setShowCopyDraftWarning] = useState(false);
   const [rosterResetKey, setRosterResetKey] = useState(0);
+  const [pendingTakenPlayers, setPendingTakenPlayers] = useState<
+    TakenPlayer[] | null
+  >(null);
+  const [hasPendingRosterChanges, setHasPendingRosterChanges] = useState(false);
   const upsertLeagueMutation = useUpsertLeague();
   const queryClient = useQueryClient();
   const valuationsQuery = useLeagueValuations(selectedLeague);
@@ -100,10 +67,22 @@ export default function DraftPage() {
   function handleLeagueChange(league: League | null) {
     setSelectedLeague(league);
     setSelectedDraft(null);
+    setPendingTakenPlayers(null);
+    setHasPendingRosterChanges(false);
   }
+
+  const currentTakenPlayers = useMemo(() => {
+    if (hasPendingRosterChanges && pendingTakenPlayers !== null) {
+      return pendingTakenPlayers;
+    }
+
+    return selectedLeague?.taken_players ?? [];
+  }, [hasPendingRosterChanges, pendingTakenPlayers, selectedLeague]);
 
   function saveDraftLeague(league: League) {
     setSelectedLeague(league);
+    setPendingTakenPlayers(null);
+    setHasPendingRosterChanges(false);
 
     void upsertLeagueMutation.mutateAsync({
       input: toDraftLeagueInput(league),
@@ -119,7 +98,7 @@ export default function DraftPage() {
 
     const [lastPickNumber, , , lastPlayerId] = picks[picks.length - 1];
     const newDraftPicks = picks.filter(([n]) => n !== lastPickNumber);
-    const newTakenPlayers = (selectedLeague.taken_players ?? []).filter(
+    const newTakenPlayers = currentTakenPlayers.filter(
       ([pid]) => pid !== lastPlayerId,
     );
 
@@ -145,10 +124,7 @@ export default function DraftPage() {
   function handlePickEntered(pick: DraftPick, takenEntry: TakenPlayer) {
     if (!selectedLeague) return;
 
-    const newTakenPlayers = [
-      ...(selectedLeague.taken_players ?? []),
-      takenEntry,
-    ];
+    const newTakenPlayers = [...currentTakenPlayers, takenEntry];
     const newDraftPicks = [...(selectedLeague.draft_picks ?? []), pick];
 
     saveDraftLeague({
@@ -162,6 +138,19 @@ export default function DraftPage() {
   async function handleFinishDraft(name: string) {
     if (!selectedLeague) return;
 
+    if (hasPendingRosterChanges && pendingTakenPlayers !== null) {
+      const updatedLeague = {
+        ...selectedLeague,
+        taken_players: pendingTakenPlayers,
+      };
+      setSelectedLeague(updatedLeague);
+      await upsertLeagueMutation.mutateAsync({
+        input: toDraftLeagueInput(updatedLeague),
+        existingLeague: updatedLeague,
+        endpoint: '/api/draft-save/leagues',
+      });
+    }
+
     const response = await localApiClient.post<LeagueResponse>(
       `/api/leagues/${selectedLeague._id}/finish-draft`,
       { name },
@@ -171,11 +160,16 @@ export default function DraftPage() {
       const updated = response.data;
       setSelectedLeague(updated);
       setRosterResetKey((k) => k + 1);
+      setPendingTakenPlayers(null);
+      setHasPendingRosterChanges(false);
       queryClient.setQueryData(['draft-save-league', updated._id], {
         success: true,
         data: updated,
       });
       void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['draft-save-league-drafts', updated._id],
+      });
       void queryClient.invalidateQueries({ queryKey: ['leagues'] });
       void queryClient.invalidateQueries({ queryKey: ['league'] });
     }
@@ -195,8 +189,7 @@ export default function DraftPage() {
     });
   }
 
-  const selectedArchivedDraftId =
-    selectedDraft && '_id' in selectedDraft ? selectedDraft._id : undefined;
+  const selectedArchivedDraftId = selectedDraft?._id;
 
   async function copySelectedDraftToLiveDraft() {
     if (!selectedLeague || !selectedDraft) return;
@@ -204,49 +197,28 @@ export default function DraftPage() {
     try {
       setIsCopyingDraft(true);
 
-      if (selectedArchivedDraftId) {
-        const response = await localApiClient.post<LeagueResponse>(
-          `/api/draft-save/leagues/${selectedLeague._id}/drafts/${selectedArchivedDraftId}/copy`,
-        );
-
-        if (response?.success && response.data) {
-          const updated = response.data;
-          setSelectedLeague(updated);
-          setSelectedDraft(null);
-          queryClient.setQueryData(['draft-save-league', updated._id], {
-            success: true,
-            data: updated,
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ['draft-save-leagues'],
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ['league-valuations', updated._id],
-          });
-        }
-        return;
-      }
-
-      const updatedLeague = buildLegacyDraftLeague(
-        selectedLeague,
-        selectedDraft,
+      const response = await localApiClient.post<LeagueResponse>(
+        `/api/draft-save/leagues/${selectedLeague._id}/drafts/${selectedArchivedDraftId}/copy`,
       );
-      await upsertLeagueMutation.mutateAsync({
-        input: toDraftLeagueInput(updatedLeague),
-        existingLeague: updatedLeague,
-        endpoint: '/api/draft-save/leagues',
-      });
 
-      setSelectedLeague(updatedLeague);
-      setSelectedDraft(null);
-      queryClient.setQueryData(['draft-save-league', updatedLeague._id], {
-        success: true,
-        data: updatedLeague,
-      });
-      void queryClient.invalidateQueries({ queryKey: ['draft-save-leagues'] });
-      void queryClient.invalidateQueries({
-        queryKey: ['league-valuations', updatedLeague._id],
-      });
+      if (response?.success && response.data) {
+        const updated = response.data;
+        setSelectedLeague(updated);
+        setSelectedDraft(null);
+        setRosterResetKey((k) => k + 1);
+        setPendingTakenPlayers(null);
+        setHasPendingRosterChanges(false);
+        queryClient.setQueryData(['draft-save-league', updated._id], {
+          success: true,
+          data: updated,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ['draft-save-leagues'],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ['league-valuations', updated._id],
+        });
+      }
     } finally {
       setIsCopyingDraft(false);
       setShowCopyDraftWarning(false);
@@ -296,7 +268,7 @@ export default function DraftPage() {
         >
           <DraftMiddlePanel
             teams={selectedLeague?.teams ?? []}
-            takenPlayers={selectedLeague?.taken_players ?? []}
+            takenPlayers={currentTakenPlayers}
             draftPicks={
               selectedDraft?.draft_picks ?? selectedLeague?.draft_picks ?? []
             }
@@ -320,6 +292,10 @@ export default function DraftPage() {
           <DraftRightPanel
             league={selectedLeague}
             onSaveRosters={handleSaveRosters}
+            onPendingRostersChange={(updatedTakenPlayers, hasDirtyChanges) => {
+              setPendingTakenPlayers(updatedTakenPlayers);
+              setHasPendingRosterChanges(hasDirtyChanges);
+            }}
             isSavingRosters={upsertLeagueMutation.isPending}
             onPlayerNotebookOpen={handleDraftRosterPlayerNotebookOpen}
             resetKey={rosterResetKey}

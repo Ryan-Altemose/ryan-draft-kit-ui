@@ -158,6 +158,12 @@ export default function LeagueTeamTable({
   useEffect(() => {
     setLocalTeamName(teamName);
     const previousPropRows = previousPropRowsRef.current;
+    const playerTeamMap = new Map(
+      (allTakenPlayers ?? takenPlayers).map(([id, takenTeamId]) => [
+        id,
+        takenTeamId,
+      ]),
+    );
     const takenIds = new Set(
       (allTakenPlayers ?? takenPlayers).map(([id]) => id),
     );
@@ -174,7 +180,8 @@ export default function LeagueTeamTable({
           !draftMode &&
           localRow?.playerId &&
           localRow.playerId !== propRow.playerId &&
-          takenIds.has(localRow.playerId)
+          playerTeamMap.get(localRow.playerId) !== undefined &&
+          playerTeamMap.get(localRow.playerId) !== teamId
         ) {
           return { ...propRow, search: '', team: '', price: '0' };
         }

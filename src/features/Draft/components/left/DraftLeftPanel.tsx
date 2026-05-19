@@ -5,22 +5,11 @@ import { Button, Divider, Flex, Select, Spinner } from '@chakra-ui/react';
 import { useLeagues } from '@/features/Leagues/hooks/useLeagues';
 import { useLeague } from '@/features/Leagues/hooks/useLeague';
 import { useLeagueDrafts } from '@/features/Leagues/hooks/useLeagueDrafts';
-import type {
-  League,
-  LeagueDraft as EmbeddedLeagueDraft,
-} from '@/features/Leagues/types/leagues.types';
-import type { LeagueDraft as ArchivedLeagueDraft } from '@/features/Leagues/types/leagueDrafts.types';
+import type { League } from '@/features/Leagues/types/leagues.types';
+import type { LeagueDraft } from '@/features/Leagues/types/leagueDrafts.types';
 import LeagueInfo from './LeagueInfo';
 
-export type DraftSelection =
-  | ArchivedLeagueDraft
-  | (EmbeddedLeagueDraft & {
-      _id?: string;
-      taken_players?: never;
-      teams?: never;
-      leagueId?: string;
-      totalBudget?: number;
-    });
+export type DraftSelection = LeagueDraft;
 
 type Props = {
   onLeagueChange: (league: League | null) => void;
@@ -45,7 +34,7 @@ export default function DraftLeftPanel({
   });
   const leagues = data?.data ?? [];
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
-  const [selectedDraftName, setSelectedDraftName] = useState<string>('');
+  const [selectedDraftId, setSelectedDraftId] = useState<string>('');
   const { data: leagueData } = useLeague(selectedLeagueId || undefined, {
     endpointBase: '/api/draft-save/leagues',
     queryKeyPrefix: 'draft-save-league',
@@ -81,25 +70,23 @@ export default function DraftLeftPanel({
   function handleLeagueChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const id = e.target.value;
     setSelectedLeagueId(id);
-    setSelectedDraftName('');
+    setSelectedDraftId('');
     lastEmittedLeague.current = null;
     onDraftChange(null);
     if (!id) onLeagueChange(null);
   }
 
-  const drafts = useMemo(() => {
-    const draftsByName = new Map<string, DraftSelection>();
+  const drafts = useMemo(
+    () => leagueDraftsData?.data ?? [],
+    [leagueDraftsData?.data],
+  );
 
-    (leagueData?.data?.drafts ?? []).forEach((draft) => {
-      draftsByName.set(draft.name, draft);
-    });
+  useEffect(() => {
+    if (!selectedDraftId) return;
 
-    (leagueDraftsData?.data ?? []).forEach((draft) => {
-      draftsByName.set(draft.name, draft);
-    });
-
-    return Array.from(draftsByName.values());
-  }, [leagueData?.data?.drafts, leagueDraftsData?.data]);
+    const draft = drafts.find((entry) => entry._id === selectedDraftId) ?? null;
+    onDraftChange(draft);
+  }, [drafts, onDraftChange, selectedDraftId]);
 
   return (
     <Flex direction="column" gap={3} p={4}>
@@ -125,25 +112,25 @@ export default function DraftLeftPanel({
         placeholder="Previous drafts"
         size="sm"
         aria-label="Draft select"
-        value={selectedDraftName}
+        value={selectedDraftId}
         onChange={(e) => {
-          const name = e.target.value;
-          setSelectedDraftName(name);
-          const draft =
-            name && drafts.length > 0
-              ? (drafts.find((d) => d.name === name) ?? null)
-              : null;
-          onDraftChange(draft);
+          const draftId = e.target.value;
+          setSelectedDraftId(draftId);
+          onDraftChange(
+            draftId && drafts.length > 0
+              ? (drafts.find((d) => d._id === draftId) ?? null)
+              : null,
+          );
         }}
         isDisabled={!selectedLeagueId || drafts.length === 0}
       >
         {drafts.map((draft) => (
-          <option key={draft.name} value={draft.name}>
+          <option key={draft._id} value={draft._id}>
             {draft.name}
           </option>
         ))}
       </Select>
-      {selectedDraftName ? (
+      {selectedDraftId ? (
         <Button
           size="sm"
           colorScheme="green"

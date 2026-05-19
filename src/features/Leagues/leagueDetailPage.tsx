@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -81,6 +81,17 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   const [editedTakenPlayers, setEditedTakenPlayers] = useState<TakenPlayer[]>(
     [],
   );
+  const [currentRowsByTeam, setCurrentRowsByTeam] = useState<
+    Record<
+      string,
+      Array<{
+        rowId: string;
+        playerId: string;
+        price: number;
+        contract: string;
+      }>
+    >
+  >({});
   const [teamNameSavedIndicatorTokens, setTeamNameSavedIndicatorTokens] =
     useState<Record<string, number>>({});
   const [dirtyTeamNameIds, setDirtyTeamNameIds] = useState<string[]>([]);
@@ -118,9 +129,18 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     );
     const nextTakenPlayers = league.taken_players ?? [];
     setEditedTakenPlayers(nextTakenPlayers);
+    setCurrentRowsByTeam({});
     setTeamNameSavedIndicatorTokens({});
     setDirtyTeamNameIds([]);
   }, [league]);
+
+  const liveMainRosterTakenPlayers = useMemo(() => {
+    let nextTakenPlayers = editedTakenPlayers;
+    for (const [teamId, rows] of Object.entries(currentRowsByTeam)) {
+      nextTakenPlayers = updateTeamTakenPlayers(nextTakenPlayers, teamId, rows);
+    }
+    return nextTakenPlayers;
+  }, [currentRowsByTeam, editedTakenPlayers]);
 
   useEffect(() => {
     if (isNotFound) {
@@ -128,34 +148,10 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     }
   }, [isNotFound, router]);
 
-  if (isLoading) return <Spinner />;
-  if (error) {
-    if (isForbidden) {
-      return <Text>{ERROR_MESSAGES.FORBIDDEN}</Text>;
-    }
-
-    if (isNotFound) {
-      return <Text>{ERROR_MESSAGES.NOT_FOUND}</Text>;
-    }
-
-    return <Text>Unable to load league</Text>;
-  }
-  if (!league) return <Text>League not found</Text>;
-  const currentLeague = league;
-  const teamCount =
-    currentLeague.teams?.length ??
-    parseTeamsFromDescription(currentLeague.description);
-  const leagueIdToDelete = currentLeague._id;
-  const persistedTeams = buildDisplayTeams(
-    currentLeague.teams,
-    teamCount,
-    currentLeague.totalBudget ?? 0,
-  );
-  const displayTeams = editedTeams.length > 0 ? editedTeams : persistedTeams;
-
   async function handleDelete() {
     try {
-      await deleteLeagueMutation.mutateAsync(leagueIdToDelete);
+      if (!league) return;
+      await deleteLeagueMutation.mutateAsync(league._id);
       deleteConfirm.onClose();
       router.push('/leagues');
     } catch (err) {
@@ -174,12 +170,18 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     }>,
   ): TakenPlayer[] {
     const rowsBySlot = new Map(rows.map((row) => [row.rowId, row]));
+    const selectedPlayerIds = new Set(
+      rows.map((row) => row.playerId).filter(Boolean),
+    );
     const updatedTakenPlayers: TakenPlayer[] = [];
     const handledSlots = new Set<string>();
 
     currentTakenPlayers.forEach((takenPlayer) => {
-      const [, takenPlayerTeamId, positionSlot] = takenPlayer;
+      const [takenPlayerId, takenPlayerTeamId, positionSlot] = takenPlayer;
       if (takenPlayerTeamId !== teamId) {
+        if (selectedPlayerIds.has(takenPlayerId)) {
+          return;
+        }
         updatedTakenPlayers.push(takenPlayer);
         return;
       }
@@ -223,6 +225,17 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   ) {
     try {
       if (!league) return;
+      const currentLeague = league;
+      const teamCount =
+        currentLeague.teams?.length ??
+        parseTeamsFromDescription(currentLeague.description);
+      const persistedTeams = buildDisplayTeams(
+        currentLeague.teams,
+        teamCount,
+        currentLeague.totalBudget ?? 0,
+      );
+      const displayTeams =
+        editedTeams.length > 0 ? editedTeams : persistedTeams;
       await upsertLeagueMutation.mutateAsync({
         input: {
           name: currentLeague.name,
@@ -272,6 +285,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
   }
 
   function handleTeamNameChange(teamId: string, teamName: string) {
+    if (!league) return;
+    const teamCount =
+      league.teams?.length ?? parseTeamsFromDescription(league.description);
+    const persistedTeams = buildDisplayTeams(
+      league.teams,
+      teamCount,
+      league.totalBudget ?? 0,
+    );
     setEditedTeams(
       (currentTeams) =>
         currentTeams.map((currentTeam) =>
@@ -301,9 +322,64 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
     return saveLeagueChanges(editedTeams, editedTakenPlayers, dirtyTeamNameIds);
   }
 
+  const handleRowsChange = useCallback(
+    (
+      changedTeamId: string,
+      rows: Array<{
+        rowId: string;
+        playerId: string;
+        price: number;
+        contract: string;
+      }>,
+    ) => {
+      setCurrentRowsByTeam((prev) => {
+        const existing = prev[changedTeamId];
+        if (
+          existing &&
+          existing.length === rows.length &&
+          existing.every(
+            (row, index) =>
+              row.rowId === rows[index]?.rowId &&
+              row.playerId === rows[index]?.playerId &&
+              row.price === rows[index]?.price &&
+              row.contract === rows[index]?.contract,
+          )
+        ) {
+          return prev;
+        }
+        return { ...prev, [changedTeamId]: rows };
+      });
+    },
+    [],
+  );
+
   function handlePlayerNotebookOpen(player: RosterPlayer) {
     openPlayerNotebook(toNotebookPlayer(player));
   }
+
+  if (isLoading) return <Spinner />;
+  if (error) {
+    if (isForbidden) {
+      return <Text>{ERROR_MESSAGES.FORBIDDEN}</Text>;
+    }
+
+    if (isNotFound) {
+      return <Text>{ERROR_MESSAGES.NOT_FOUND}</Text>;
+    }
+
+    return <Text>Unable to load league</Text>;
+  }
+  if (!league) return <Text>League not found</Text>;
+  const currentLeague = league;
+  const teamCount =
+    currentLeague.teams?.length ??
+    parseTeamsFromDescription(currentLeague.description);
+  const persistedTeams = buildDisplayTeams(
+    currentLeague.teams,
+    teamCount,
+    currentLeague.totalBudget ?? 0,
+  );
+  const displayTeams = editedTeams.length > 0 ? editedTeams : persistedTeams;
 
   return (
     <>
@@ -557,13 +633,14 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                       key={`${league._id}-main-${teamId}`}
                       team={team}
                       rosterSlots={league.rosterSlots}
-                      allTakenPlayers={editedTakenPlayers}
+                      allTakenPlayers={liveMainRosterTakenPlayers}
                       takenPlayers={takenPlayersForTeam}
                       startingBudget={league.totalBudget ?? 0}
                       leagueType={league.leagueType}
                       isSaving={upsertLeagueMutation.isPending}
                       colorIndex={index}
                       onPlayerNotebookOpen={handlePlayerNotebookOpen}
+                      onRowsChange={handleRowsChange}
                       onTeamNameChange={handleTeamNameChange}
                       onSaveAllTextFields={saveAllTeamNameChanges}
                       teamNameSavedIndicatorToken={
@@ -582,6 +659,11 @@ export default function LeagueDetailPage({ leagueId }: { leagueId: string }) {
                         );
                         setEditedTeams(nextTeams);
                         setEditedTakenPlayers(nextTakenPlayers);
+                        setCurrentRowsByTeam((prev) => {
+                          const next = { ...prev };
+                          delete next[teamId];
+                          return next;
+                        });
                         return saveLeagueChanges(
                           nextTeams,
                           nextTakenPlayers,

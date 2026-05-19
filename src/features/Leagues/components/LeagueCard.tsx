@@ -1,20 +1,34 @@
 'use client';
 
-import { Box, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import type { League } from '../types/leagues.types';
 
 interface LeagueCardProps {
   league?: League;
   isNew?: boolean;
+  isImport?: boolean;
   onClick?: () => void;
+  onExport?: () => void;
+  isExportDisabled?: boolean;
 }
 
 export default function LeagueCard({
   league,
   isNew,
+  isImport,
   onClick,
+  onExport,
+  isExportDisabled = false,
 }: LeagueCardProps) {
-  if (isNew) {
+  if (isNew || isImport) {
+    const color = isImport ? 'blue.500' : 'green.500';
+    const hoverColor = isImport ? 'blue.50' : 'green.50';
+    const activeColor = isImport ? 'blue.100' : 'green.100';
+    const borderColor = isImport ? 'blue.500' : 'green.500';
+    const hoverBorderColor = isImport ? 'blue.400' : 'green.400';
+    const icon = isImport ? '⇪' : '+';
+    const label = isImport ? 'Import League' : 'New League';
+
     return (
       <Box
         as="button"
@@ -22,29 +36,24 @@ export default function LeagueCard({
         minH="130px"
         borderRadius="lg"
         border="2px solid"
-        borderColor="green.500"
+        borderColor={borderColor}
         bg="white"
         display="flex"
         flexDirection="column"
         alignItems="center"
         justifyContent="center"
         gap={1}
-        _hover={{ bg: 'green.50', borderColor: 'green.400' }}
-        _active={{ bg: 'green.100' }}
+        _hover={{ bg: hoverColor, borderColor: hoverBorderColor }}
+        _active={{ bg: activeColor }}
         transition="all 0.15s ease"
         cursor="pointer"
         onClick={onClick}
       >
-        <Text
-          fontSize="3xl"
-          lineHeight={1}
-          color="green.500"
-          fontWeight="light"
-        >
-          +
+        <Text fontSize="3xl" lineHeight={1} color={color} fontWeight="light">
+          {icon}
         </Text>
-        <Text fontSize="sm" fontWeight="semibold" color="green.500">
-          New League
+        <Text fontSize="sm" fontWeight="semibold" color={color}>
+          {label}
         </Text>
       </Box>
     );
@@ -84,11 +93,29 @@ export default function LeagueCard({
         {teamCount} {teamCount === 1 ? 'team' : 'teams'}
       </Text>
 
-      {league?.totalBudget !== undefined && (
-        <Text fontSize="sm" color="gray.500">
-          ${league.totalBudget} budget
-        </Text>
-      )}
+      <Flex align="center" justify="space-between" mt="auto" gap={3}>
+        {league?.totalBudget !== undefined ? (
+          <Text fontSize="sm" color="gray.500">
+            ${league.totalBudget} budget
+          </Text>
+        ) : (
+          <Box />
+        )}
+        {onExport ? (
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="blue"
+            onClick={(event) => {
+              event.stopPropagation();
+              onExport();
+            }}
+            isDisabled={isExportDisabled}
+          >
+            Export JSON
+          </Button>
+        ) : null}
+      </Flex>
     </Box>
   );
 }

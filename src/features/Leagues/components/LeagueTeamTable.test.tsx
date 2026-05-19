@@ -669,6 +669,44 @@ describe('LeagueTeamTable', () => {
     expect(options).toContain('William Contreras');
   });
 
+  it('preserves an unsaved local selection when allTakenPlayers shows the player on the same team', async () => {
+    await renderLeagueTeamTable(
+      <ChakraProvider>
+        <LeagueTeamTable
+          team={['team-1', 'Alpha', 100]}
+          startingBudget={100}
+          rosterSlots={{
+            C: 1,
+            '1B': 0,
+            '2B': 0,
+            '3B': 0,
+            SS: 0,
+            CI: 0,
+            MI: 0,
+            OF: 0,
+            DH: 0,
+            SP: 0,
+            RP: 0,
+            UTIL: 0,
+            BENCH: 0,
+          }}
+          takenPlayers={[]}
+          allTakenPlayers={[['player-adley', 'team-1', 'C-0', 20]]}
+        />
+      </ChakraProvider>,
+    );
+
+    const input = screen.getByPlaceholderText('Search players...');
+    fireEvent.change(input, { target: { value: 'Adley Rutschman' } });
+
+    await waitFor(() =>
+      expect(
+        (screen.getByPlaceholderText('Search players...') as HTMLInputElement)
+          .value,
+      ).toBe('Adley Rutschman'),
+    );
+  });
+
   it('starts collapsed showing only the header, not the table rows', async () => {
     render(
       <ChakraProvider>
